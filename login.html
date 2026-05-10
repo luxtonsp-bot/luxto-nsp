@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingresar — Luz de Cristo</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --y:#F5C518;--o:#C4703A;--b:#4A8FA8;
+  --ink:#1c1814;--paper:#FBF7EE;--white:#fff;
+  --muted:#5e554a;--err:#d94040;--ok:#2e9e6b;
+  --border:#e8e2d4;
+  --grad:linear-gradient(135deg,#F5C518,#e09a2e,#C4703A);
+  --grad-oscuro:linear-gradient(160deg,#2a2218,#3a2e1f,#553e22);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--grad-oscuro);
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  position:relative;overflow:hidden;
+}
+body::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 50%,rgba(245,197,24,.15),transparent 55%),
+    radial-gradient(ellipse at 80% 50%,rgba(196,112,58,.15),transparent 55%);
+  pointer-events:none;
+}
+
+.card{
+  position:relative;z-index:1;
+  width:100%;max-width:440px;
+  background:rgba(255,255,255,.04);
+  backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:28px;
+  padding:48px 44px;
+  box-shadow:0 30px 80px rgba(0,0,0,.4);
+}
+
+.card-logo{
+  display:flex;flex-direction:column;align-items:center;
+  margin-bottom:32px;
+}
+.card-logo img{
+  width:72px;height:72px;object-fit:contain;
+  filter:drop-shadow(0 8px 24px rgba(245,197,24,.5));
+  margin-bottom:14px;
+  animation:floatLogo 7s ease-in-out infinite;
+}
+@keyframes floatLogo{
+  0%,100%{transform:translateY(0) rotate(-2deg);}
+  50%{transform:translateY(-8px) rotate(2deg);}
+}
+.card-title{
+  font-family:'Lora',serif;font-size:26px;font-weight:600;
+  color:rgba(255,248,231,.95);text-align:center;line-height:1.2;
+}
+.card-sub{
+  font-size:13px;color:rgba(255,248,231,.45);
+  text-align:center;margin-top:6px;
+}
+
+form{display:flex;flex-direction:column;gap:18px;}
+
+.field{display:flex;flex-direction:column;gap:6px;}
+label{font-size:12px;font-weight:700;color:rgba(255,248,231,.6);letter-spacing:.5px;text-transform:uppercase;}
+input{
+  width:100%;padding:14px 16px;
+  background:rgba(255,255,255,.07);
+  border:1.5px solid rgba(255,255,255,.10);
+  border-radius:12px;
+  font-family:'Inter',sans-serif;font-size:15px;
+  color:rgba(255,248,231,.95);outline:none;
+  transition:border-color .2s,background .2s;
+}
+input::placeholder{color:rgba(255,248,231,.25);}
+input:focus{border-color:var(--y);background:rgba(255,255,255,.10);}
+input.error{border-color:var(--err);}
+
+.forgot{
+  text-align:right;
+  font-size:12px;
+  color:rgba(255,248,231,.4);
+  cursor:pointer;text-decoration:underline;
+  background:none;border:none;
+  transition:color .2s;
+  align-self:flex-end;margin-top:-8px;
+}
+.forgot:hover{color:var(--y);}
+
+.btn-submit{
+  width:100%;padding:16px;border-radius:100px;
+  background:var(--grad);color:white;
+  font-family:'Inter',sans-serif;font-size:16px;font-weight:700;
+  border:none;cursor:pointer;margin-top:4px;
+  box-shadow:0 14px 30px -10px rgba(196,112,58,.6);
+  transition:all .25s;
+}
+.btn-submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 20px 40px -10px rgba(196,112,58,.7);}
+.btn-submit:disabled{opacity:.6;cursor:not-allowed;}
+
+.divider{
+  display:flex;align-items:center;gap:12px;
+  color:rgba(255,255,255,.2);font-size:13px;
+}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08);}
+
+.link-reg{
+  text-align:center;font-size:14px;
+  color:rgba(255,248,231,.45);
+}
+.link-reg a{color:var(--y);font-weight:700;text-decoration:none;}
+.link-reg a:hover{text-decoration:underline;}
+
+.back-link{
+  display:block;text-align:center;margin-top:20px;
+  font-size:13px;color:rgba(255,248,231,.3);
+  text-decoration:none;transition:color .2s;
+}
+.back-link:hover{color:rgba(255,248,231,.6);}
+
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:white;
+  padding:14px 24px;border-radius:100px;
+  font-size:14px;font-weight:600;
+  opacity:0;transition:all .3s;pointer-events:none;
+  max-width:90vw;text-align:center;z-index:999;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.err{background:var(--err);}
+#toast.ok{background:var(--ok);}
+
+/* Reset modal */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;z-index:100;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--paper);border-radius:24px;
+  padding:40px 36px;max-width:400px;width:90%;
+  text-align:center;
+}
+.modal h3{font-family:'Lora',serif;font-size:22px;color:var(--ink);margin-bottom:10px;}
+.modal p{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6;}
+.modal input{
+  background:white;border:1.5px solid var(--border);
+  border-radius:12px;color:var(--ink);margin-bottom:16px;
+}
+.modal input::placeholder{color:var(--muted);}
+.modal input:focus{border-color:var(--o);}
+.modal-btns{display:flex;gap:12px;}
+.modal-btns button{
+  flex:1;padding:13px;border-radius:100px;
+  font-family:'Inter',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;border:none;transition:all .2s;
+}
+.modal-cancel{background:var(--border);color:var(--ink);}
+.modal-cancel:hover{background:#d4ccbd;}
+.modal-send{background:var(--grad);color:white;box-shadow:0 8px 20px -8px rgba(196,112,58,.5);}
+.modal-send:hover{transform:translateY(-1px);}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-logo">
+    <img src="logo_luxto.png" alt="Logo" onerror="this.style.display='none'">
+    <div class="card-title">Bienvenido/a de vuelta</div>
+    <div class="card-sub">Portal de miembros · Luz de Cristo</div>
+  </div>
+
+  <form id="formLogin" novalidate>
+    <div class="field">
+      <label>Gmail</label>
+      <input type="email" id="email" placeholder="tunombre@gmail.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button type="button" class="forgot" onclick="abrirReset()">¿Olvidaste tu contraseña?</button>
+    <button type="submit" class="btn-submit" id="btnLogin">Ingresar →</button>
+    <div class="divider">o</div>
+    <div class="link-reg">¿No tienes cuenta? <a href="registro.html">Regístrate aquí</a></div>
+  </form>
+
+  <a href="index.html" class="back-link">← Volver al inicio</a>
+</div>
+
+<!-- Modal reset contraseña -->
+<div class="modal-overlay" id="modalReset">
+  <div class="modal">
+    <h3>Recuperar contraseña</h3>
+    <p>Ingresa tu Gmail y te enviaremos un enlace para crear una nueva contraseña.</p>
+    <input type="email" id="resetEmail" placeholder="tunombre@gmail.com">
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="cerrarReset()">Cancelar</button>
+      <button class="modal-send" onclick="enviarReset()">Enviar enlace</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp }                    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail }
+                                            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+  authDomain:        "luxto-nsp.firebaseapp.com",
+  projectId:         "luxto-nsp",
+  storageBucket:     "luxto-nsp.firebasestorage.app",
+  messagingSenderId: "3542836325",
+  appId:             "1:3542836325:web:cf65cd50edcc431500d28c"
+};
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+function toast(msg, tipo="") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className   = "show " + tipo;
+  setTimeout(() => t.className = "", 3500);
+}
+
+function setLoading(si) {
+  const btn     = document.getElementById("btnLogin");
+  btn.disabled  = si;
+  btn.textContent = si ? "Ingresando..." : "Ingresar →";
+}
+
+// Login
+document.getElementById("formLogin").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("email").value.trim();
+  const pass  = document.getElementById("password").value;
+  if (!email || !pass) { toast("Completa todos los campos", "err"); return; }
+  setLoading(true);
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    toast("¡Bienvenido/a!", "ok");
+    setTimeout(() => window.location.href = "dashboard.html", 1200);
+  } catch(err) {
+    let msg = "Error al ingresar.";
+    if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password")
+      msg = "Email o contraseña incorrectos.";
+    if (err.code === "auth/user-not-found")
+      msg = "No existe cuenta con ese email. ¿Quieres registrarte?";
+    if (err.code === "auth/too-many-requests")
+      msg = "Demasiados intentos. Espera unos minutos.";
+    toast(msg, "err");
+    setLoading(false);
+  }
+});
+
+// Reset contraseña — expuesto globalmente para el onclick
+window.abrirReset = () => {
+  document.getElementById("resetEmail").value = document.getElementById("email").value;
+  document.getElementById("modalReset").classList.add("open");
+};
+window.cerrarReset = () => document.getElementById("modalReset").classList.remove("open");
+window.enviarReset = async () => {
+  const email = document.getElementById("resetEmail").value.trim();
+  if (!email) { toast("Ingresa tu email", "err"); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    toast("¡Enlace enviado! Revisa tu bandeja.", "ok");
+    window.cerrarReset();
+  } catch(err) {
+    toast("No se encontró cuenta con ese email.", "err");
+  }
+};
+</script>
+</body>
+</html>
