@@ -641,6 +641,9 @@ window.cerrarSesion = async () => {
 window.enviarSugerencia = async () => {
   const txt = document.getElementById("txtSugerencia").value.trim();
   if (!txt) { toast("Escribe tu sugerencia primero", "err"); return; }
+  const btn = document.querySelector("#txtSugerencia ~ .btn-enviar");
+  btn.disabled = true;
+  btn.textContent = "Enviando...";
   try {
     await fetch(API, { method: "POST", body: JSON.stringify({
       accion:     "guardarSugerencia",
@@ -650,7 +653,12 @@ window.enviarSugerencia = async () => {
     })});
     document.getElementById("txtSugerencia").value = "";
     toast("¡Sugerencia enviada! Gracias 🙏", "ok");
-  } catch(e) { toast("Error al enviar. Intenta de nuevo.", "err"); }
+  } catch(e) {
+    toast("Error al enviar. Intenta de nuevo.", "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Enviar sugerencia →";
+  }
 };
 
 // ── Feedback estrellas ────────────────────────────────
@@ -665,6 +673,9 @@ window.selectStar = (val) => {
 window.enviarFeedback = async () => {
   const txt = document.getElementById("txtFeedback").value.trim();
   if (!calificacion) { toast("Selecciona una calificación ⭐", "err"); return; }
+  const btn = document.querySelector("#txtFeedback ~ .btn-enviar");
+  btn.disabled = true;
+  btn.textContent = "Enviando...";
   try {
     await fetch(API, { method: "POST", body: JSON.stringify({
       accion:       "guardarFeedback",
@@ -677,7 +688,12 @@ window.enviarFeedback = async () => {
     window.selectStar(0);
     calificacion = 0;
     toast("¡Feedback enviado! Gracias por tu opinión 🙏", "ok");
-  } catch(e) { toast("Error al enviar. Intenta de nuevo.", "err"); }
+  } catch(e) {
+    toast("Error al enviar. Intenta de nuevo.", "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Enviar feedback →";
+  }
 };
 </script>
 </body>
