@@ -111,7 +111,7 @@ nav.scrolled .nav-inner { height: 72px; }
 .nav-links { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; list-style: none; background: rgba(255,255,255,.55); border: 1px solid rgba(245,197,24,.18); padding: 6px; border-radius: 100px; backdrop-filter: blur(10px); box-shadow: 0 6px 20px -10px rgba(20,17,13,.10); }
 .nav-logo { display: flex; align-items: center; gap: 14px; text-decoration: none; transition: transform var(--t-base); }
 .nav-logo:hover { transform: scale(1.02); }
-.nav-logo img { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(245,197,24,.35)); transition: transform var(--t-spring); }
+.nav-logo img { width: 68px; height: 68px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(245,197,24,.35)); transition: transform var(--t-spring); }
 .nav-logo:hover img { transform: rotate(-8deg) scale(1.06); }
 .nav-logo-text { font-family: 'Lora', serif; font-weight: 600; font-size: 19px; color: var(--texto); line-height: 1.1; }
 .nav-logo-sub { font-size: 10px; color: var(--naranja); font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; margin-top: 3px; }
@@ -208,6 +208,37 @@ nav.scrolled .nav-inner { height: 72px; }
 .ig-handle svg { width: 20px; height: 20px; }
 .ig-handle:hover { background: var(--rosa); color: var(--blanco); transform: translateY(-2px); }
 .ig-embed-wrap { background: var(--blanco); border-radius: var(--radio-lg); padding: 40px; box-shadow: var(--sombra); border: 1px solid rgba(196,134,154,.18); }
+
+/* REDES SOCIALES — sección Instagram */
+.redes-sociales { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.red-social {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 18px; border-radius: 100px;
+  text-decoration: none; font-weight: 600; font-size: 14px;
+  background: var(--blanco); color: var(--texto);
+  box-shadow: var(--sombra-sm); transition: all var(--t-base);
+  border: 1.5px solid transparent;
+}
+.red-social:hover { transform: translateY(-2px); color: var(--blanco); }
+.red-ig:hover { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); border-color: transparent; }
+.red-fb:hover { background: #1877F2; }
+.red-tt:hover { background: #000000; }
+.red-yt:hover { background: #FF0000; }
+
+/* REDES SOCIALES — footer */
+.footer-redes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.footer-red {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  text-decoration: none; color: rgba(255,248,231,.7);
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  transition: all var(--t-base);
+}
+.footer-red:hover { transform: translateY(-3px); color: var(--negro); }
+.footer-red-ig:hover { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); border-color: transparent; color: white; }
+.footer-red-fb:hover { background: #1877F2; border-color: transparent; color: white; }
+.footer-red-tt:hover { background: #ffffff; border-color: transparent; color: #000000; }
+.footer-red-yt:hover { background: #FF0000; border-color: transparent; color: white; }
 
 /* CORO */
 #coro { padding: 140px 0; background: var(--blanco); position: relative; overflow: hidden; }
@@ -522,12 +553,26 @@ footer .container { position: relative; z-index: 2; }
     <div class="ig-header fade-in">
       <div>
         <p class="section-label">Actividades y comunidad</p>
-        <h2 class="section-title">Síguenos en <em>Instagram</em></h2>
+        <h2 class="section-title">Síguenos en <em>redes</em></h2>
       </div>
-      <a href="https://www.instagram.com/luxto_nsp" target="_blank" rel="noopener" class="ig-handle">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-        @luxto_nsp
-      </a>
+      <div class="redes-sociales">
+        <a href="https://www.instagram.com/luxto_nsp" target="_blank" rel="noopener" class="red-social red-ig" title="Instagram">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          <span>Instagram</span>
+        </a>
+        <a href="https://www.facebook.com/Luxto.nsp" target="_blank" rel="noopener" class="red-social red-fb" title="Facebook">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          <span>Facebook</span>
+        </a>
+        <a href="https://www.tiktok.com/@luxto_nsp" target="_blank" rel="noopener" class="red-social red-tt" title="TikTok">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+          <span>TikTok</span>
+        </a>
+        <a href="https://www.youtube.com/@luxto_nsp" target="_blank" rel="noopener" class="red-social red-yt" title="YouTube">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="white"/></svg>
+          <span>YouTube</span>
+        </a>
+      </div>
     </div>
 
     <div class="ig-embed-wrap fade-in fade-in-delay-1">
@@ -679,10 +724,20 @@ footer .container { position: relative; z-index: 2; }
         </ul>
         <div style="margin-top:24px;">
           <div class="footer-col-title">Síguenos</div>
-          <a href="https://www.instagram.com/luxto_nsp" target="_blank" class="footer-ig">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-            @luxto_nsp
-          </a>
+          <div class="footer-redes">
+            <a href="https://www.instagram.com/luxto_nsp" target="_blank" rel="noopener" class="footer-red footer-red-ig" title="Instagram @luxto_nsp">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            </a>
+            <a href="https://www.facebook.com/Luxto.nsp" target="_blank" rel="noopener" class="footer-red footer-red-fb" title="Facebook Luxto.nsp">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+            </a>
+            <a href="https://www.tiktok.com/@luxto_nsp" target="_blank" rel="noopener" class="footer-red footer-red-tt" title="TikTok @luxto_nsp">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+            </a>
+            <a href="https://www.youtube.com/@luxto_nsp" target="_blank" rel="noopener" class="footer-red footer-red-yt" title="YouTube @luxto_nsp">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="white"/></svg>
+            </a>
+          </div>
         </div>
       </div>
     </div>
