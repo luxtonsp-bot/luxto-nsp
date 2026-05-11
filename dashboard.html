@@ -564,11 +564,14 @@ window.subirFoto = async function(input) {
     document.getElementById("perfilFoto").src = base64;
     document.getElementById("topbarFoto").src = base64;
     try {
-      const res  = await fetch(API, { method:"POST", body: JSON.stringify({
+      const res  = await fetch(API, { 
+      method:"POST", 
+      body: JSON.stringify({
         accion: "guardarFotoUrl",
-        fila:   filaActual,
+        email: usuarioActual.email,
         base64: base64
-      })});
+      })
+    });
       const data = await res.json();
       if (data.ok) {
         toast("¡Foto guardada! ✓", "ok");
