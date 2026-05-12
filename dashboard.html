@@ -297,6 +297,11 @@ textarea:focus{border-color:var(--o);background:white;}
       <span class="topbar-logo-name">Luz de Cristo</span>
     </a>
     <div class="topbar-sep"></div>
+    <div id="adminBtnWrap" style="display:none;">
+      <a href="admin.html" class="btn-logout" style="text-decoration:none;">
+        ⚙️ Admin
+      </a>
+    </div>
     <div class="topbar-nombre">
       <span id="topbarNombre">Cargando...</span>
       <img src="" alt="foto" class="topbar-avatar" id="topbarFoto" onerror="this.src=''">
@@ -458,6 +463,12 @@ let usuarioActual = null;
 let nombreActual  = "";
 let filaActual    = null;
 let calificacion  = 0;
+const ADMINS = [
+  "henry.alfaro1@unmsm.edu.pe",
+  "jorgediego.123.2002@gmail.com",
+  "gianfracamones@gmail.com",
+  "alvarorodrigosalazar.2001@gmail.com"
+];
 
 // ── Toast ─────────────────────────────────────────────
 function toast(msg, tipo="") {
@@ -486,8 +497,13 @@ function convertirUrlDrive(url) {
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   usuarioActual = user;
-  cargarDashboard(user.email);
-  verificarModoAsamblea();
+
+if (ADMINS.includes(user.email)) {
+  document.getElementById("adminBtnWrap").style.display = "block";
+}
+
+cargarDashboard(user.email);
+verificarModoAsamblea();
 });
 
 // ── Cargar dashboard desde Apps Script ───────────────
