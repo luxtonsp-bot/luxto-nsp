@@ -107,7 +107,7 @@ body{
 }
 .perfil-foto-btn:hover{transform:scale(1.12);}
 #inputFoto{display:none;}
-.perfil-info{}
+/* FIX: .perfil-info{} eliminado (regla CSS vacía innecesaria) */
 .perfil-saludo{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:4px;}
 .perfil-nombre{font-family:'Lora',serif;font-size:28px;font-weight:600;color:var(--ink);margin-bottom:8px;}
 .perfil-badges{display:flex;gap:8px;flex-wrap:wrap;}
@@ -293,7 +293,7 @@ textarea:focus{border-color:var(--o);background:white;}
 <header id="topbar">
   <div class="topbar-inner">
     <a href="index.html" class="topbar-logo">
-      <img src="logo_luxto.png" alt="Logo" onerror="this.style.display='none'">
+      <img src="logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
       <span class="topbar-logo-name">Luz de Cristo</span>
     </a>
     <div class="topbar-sep"></div>
@@ -304,7 +304,9 @@ textarea:focus{border-color:var(--o);background:white;}
     </div>
     <div class="topbar-nombre">
       <span id="topbarNombre">Cargando...</span>
-      <img src="" alt="foto" class="topbar-avatar" id="topbarFoto" onerror="this.src=''">
+      <!-- FIX: onerror sin loop — oculta el avatar si falla en vez de loop infinito -->
+      <img src="" alt="foto" class="topbar-avatar" id="topbarFoto"
+           onerror="this.onerror=null;this.style.display='none'">
     </div>
     <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
   </div>
@@ -315,10 +317,11 @@ textarea:focus{border-color:var(--o);background:white;}
   <!-- BANNER CUMPLEAÑOS -->
   <div id="bannerCumple">
     <div class="cumple-emoji">🎂</div>
-    <div class="cumple-msg" id="cumpleMsg"></div>
+    <!-- FIX: innerHTML reemplazado por un <span> con textContent (anti-XSS) -->
+    <div class="cumple-msg"><span id="cumpleMsg"></span></div>
   </div>
 
-  <!-- MODO ASAMBLEA (se muestra solo si está activo) -->
+  <!-- MODO ASAMBLEA (se muestra solo si está activo en Firebase RTDB) -->
   <div id="modoAsamblea">
     <div class="asamblea-card">
       <div class="asamblea-title">¡Hay asamblea activa!</div>
@@ -331,7 +334,7 @@ textarea:focus{border-color:var(--o);background:white;}
   <div class="perfil-header">
     <div class="perfil-foto-wrap">
       <img src="" alt="Foto de perfil" class="perfil-foto" id="perfilFoto"
-           onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 96 96%22><circle cx=%2248%22 cy=%2248%22 r=%2248%22 fill=%22%23e8e2d4%22/><circle cx=%2248%22 cy=%2238%22 r=%2218%22 fill=%22%23c4b89a%22/><ellipse cx=%2248%22 cy=%2282%22 rx=%2228%22 ry=%2220%22 fill=%22%23c4b89a%22/></svg>'">
+           onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 96 96%22><circle cx=%2248%22 cy=%2248%22 r=%2248%22 fill=%22%23e8e2d4%22/><circle cx=%2248%22 cy=%2238%22 r=%2218%22 fill=%22%23c4b89a%22/><ellipse cx=%2248%22 cy=%2282%22 rx=%2228%22 ry=%2220%22 fill=%22%23c4b89a%22/></svg>'">
       <div class="perfil-foto-btn" onclick="document.getElementById('inputFoto').click()" title="Cambiar foto">✏️</div>
       <input type="file" id="inputFoto" accept="image/*" onchange="subirFoto(this)">
     </div>
@@ -444,6 +447,9 @@ textarea:focus{border-color:var(--o);background:white;}
 import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut }
                             from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+// FIX 🔴 CRÍTICO: importar Firebase Realtime DB para modo asamblea
+import { getDatabase, ref, onValue }
+                            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
@@ -451,17 +457,20 @@ const firebaseConfig = {
   projectId:         "luxto-nsp",
   storageBucket:     "luxto-nsp.firebasestorage.app",
   messagingSenderId: "3542836325",
-  appId:             "1:3542836325:web:cf65cd50edcc431500d28c"
+  appId:             "1:3542836325:web:cf65cd50edcc431500d28c",
+  // FIX: añadir databaseURL necesario para Realtime DB
+  databaseURL:       "https://luxto-nsp-default-rtdb.firebaseio.com"
 };
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+// FIX: instanciar la Realtime DB
+const db   = getDatabase(app);
 
 const API = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
 
 // ── Estado ────────────────────────────────────────────
 let usuarioActual = null;
 let nombreActual  = "";
-let filaActual    = null;
 let calificacion  = 0;
 const ADMINS = [
   "henry.alfaro1@unmsm.edu.pe",
@@ -478,10 +487,6 @@ function toast(msg, tipo="") {
 }
 
 // ── Convierte URL de Drive a thumbnail público ────────
-// La URL uc?export=view hace redirects que los navegadores
-// bloquean desde dominios externos (GitHub Pages).
-// El endpoint thumbnail?sz=w400 devuelve la imagen directo,
-// sin redirects, y funciona en <img> desde cualquier dominio.
 function convertirUrlDrive(url) {
   if (!url) return "";
   let id = "";
@@ -498,40 +503,41 @@ onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   usuarioActual = user;
 
-if (ADMINS.includes(user.email)) {
-  document.getElementById("adminBtnWrap").style.display = "block";
-}
+  if (ADMINS.includes(user.email)) {
+    document.getElementById("adminBtnWrap").style.display = "block";
+  }
 
-cargarDashboard(user.email);
-verificarModoAsamblea();
+  cargarDashboard(user.email);
+  verificarModoAsamblea(); // FIX: ahora usa Firebase RTDB en tiempo real
 });
 
 // ── Cargar dashboard desde Apps Script ───────────────
 async function cargarDashboard(email) {
   try {
     const res  = await fetch(API, {
-      method: "POST",
-      body:   JSON.stringify({ accion: "getDashboard", email })
+      method:  "POST",
+      // FIX: Content-Type explícito para mayor compatibilidad
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ accion: "getDashboard", email })
     });
     const data = await res.json();
     if (!data.ok) { toast("Error al cargar datos: " + data.error, "err"); return; }
 
     // Nombre
     nombreActual = data.nombre;
-    filaActual   = data.fila;
     document.getElementById("perfilNombre").textContent = data.nombre;
     document.getElementById("topbarNombre").textContent = data.nombre.split(" ")[0];
 
-    // ── FOTO: convertir URL antes de asignar ──────────
+    // Foto
     if (data.fotoUrl) {
       const urlMostrar = convertirUrlDrive(data.fotoUrl);
       document.getElementById("perfilFoto").src = urlMostrar;
       document.getElementById("topbarFoto").src = urlMostrar;
     }
 
-    // Cumpleaños
+    // FIX anti-XSS: cumpleaños usa textContent en vez de innerHTML
     if (data.esCumple) {
-      document.getElementById("cumpleMsg").innerHTML = data.msgCumple;
+      document.getElementById("cumpleMsg").textContent = data.msgCumple;
       document.getElementById("bannerCumple").classList.add("visible");
     }
 
@@ -540,7 +546,8 @@ async function cargarDashboard(email) {
     if (e) {
       document.getElementById("statAsist").textContent  = e.asistencias;
       document.getElementById("statTard").textContent   = e.tardanzas;
-      document.getElementById("statFaltas").textContent = e.faltas !== "—" ? e.faltas : "—";
+      // FIX: ternario redundante eliminado — e.faltas ya tiene el valor correcto
+      document.getElementById("statFaltas").textContent = e.faltas;
 
       const pct = parseFloat(e.porcentaje) || 0;
       document.getElementById("statFidel").textContent = Math.round(pct) + "%";
@@ -555,15 +562,37 @@ async function cargarDashboard(email) {
         ? (Math.round(parseFloat(e.promedioRetraso) * 10) / 10) + " min" : "0 min";
       document.getElementById("rUltima").textContent    = e.ultimaAsistencia;
 
-      // Estado badge
+      // FIX anti-XSS: estado badge con textContent en vez de innerHTML con interpolación
       const estadoEl  = document.getElementById("rEstado");
       const badgesEl  = document.getElementById("perfilBadges");
       const estadoStr = (e.estado || "").toString();
-      let estadoClass = "badge-estado-activo", estadoText = "🟢 Activo";
-      if (estadoStr.includes("riesgo") || estadoStr.includes("🟡")) { estadoClass = "badge-estado-riesgo";    estadoText = "🟡 En riesgo"; }
-      if (estadoStr.includes("nactivo") || estadoStr.includes("🔴")) { estadoClass = "badge-estado-inactivo"; estadoText = "🔴 Inactivo"; }
+
+      let estadoClass = "badge-estado-activo";
+      let estadoText  = "🟢 Activo";
+      if (estadoStr.includes("riesgo") || estadoStr.includes("🟡")) {
+        estadoClass = "badge-estado-riesgo";
+        estadoText  = "🟡 En riesgo";
+      }
+      if (estadoStr.includes("nactivo") || estadoStr.includes("🔴")) {
+        estadoClass = "badge-estado-inactivo";
+        estadoText  = "🔴 Inactivo";
+      }
+
       estadoEl.textContent = estadoText;
-      badgesEl.innerHTML = `<span class="badge-pill ${estadoClass}">${estadoText}</span><span class="badge-pill badge-generacion">@luxto_nsp</span>`;
+
+      // FIX: construir badges con DOM API en vez de innerHTML para evitar XSS
+      badgesEl.innerHTML = ""; // limpiar
+
+      const badgeEstado = document.createElement("span");
+      badgeEstado.className = "badge-pill " + estadoClass;
+      badgeEstado.textContent = estadoText;
+
+      const badgeGen = document.createElement("span");
+      badgeGen.className = "badge-pill badge-generacion";
+      badgeGen.textContent = "@luxto_nsp";
+
+      badgesEl.appendChild(badgeEstado);
+      badgesEl.appendChild(badgeGen);
     }
 
   } catch(err) {
@@ -571,59 +600,58 @@ async function cargarDashboard(email) {
   }
 }
 
-// ── Verificar modo asamblea ───────────────────────────
-async function verificarModoAsamblea() {
-  try {
-    const res  = await fetch(API + "?accion=modoAsamblea");
-    const data = await res.json();
-    if (data.ok && data.activo) {
-      document.getElementById("modoAsamblea").classList.add("visible");
-    }
-  } catch(e) { /* silencioso */ }
+// ── FIX 🔴 CRÍTICO: Verificar modo asamblea vía Firebase RTDB ──
+// Antes: fetch a Apps Script (que no sabe nada del toggle del admin)
+// Ahora: onValue en tiempo real — el banner aparece/desaparece sin recargar
+function verificarModoAsamblea() {
+  onValue(ref(db, "asamblea/activa"), (snap) => {
+    const activa = snap.val() === true;
+    document.getElementById("modoAsamblea").classList.toggle("visible", activa);
+  });
 }
 
 // ── Subir foto → Drive vía Apps Script ───────────────
 window.subirFoto = async function(input) {
   if (!input.files[0]) return;
   toast("Subiendo foto...");
-  const file       = input.files[0];
-  const compressed = await comprimirImagen(file, 400, 0.82);
-  const reader     = new FileReader();
+  const file = input.files[0];
 
-  reader.onload = async (ev) => {
-    const base64 = ev.target.result;
+  // FIX: comprimir dentro del try/finally para que el toast no quede colgado
+  try {
+    const compressed = await comprimirImagen(file, 400, 0.82);
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = (ev) => resolve(ev.target.result);
+      reader.onerror = ()  => reject(new Error("No se pudo leer el archivo"));
+      reader.readAsDataURL(compressed);
+    });
 
-    // Preview inmediato con el base64 local (mientras sube)
+    // Preview inmediato
     document.getElementById("perfilFoto").src = base64;
-    document.getElementById("topbarFoto").src = base64;
+    document.getElementById("topbarFoto").src  = base64;
 
-    try {
-      const res  = await fetch(API, {
-        method: "POST",
-        body:   JSON.stringify({
-          accion:  "guardarFotoUrl",
-          email:   usuarioActual.email,
-          base64:  base64
-        })
-      });
-      const data = await res.json();
+    const res  = await fetch(API, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        accion: "guardarFotoUrl",
+        email:  usuarioActual.email,
+        base64: base64
+      })
+    });
+    const data = await res.json();
 
-      if (data.ok) {
-        // ── FOTO: usar thumbnail URL una vez confirmada ──
-        const urlMostrar = convertirUrlDrive(data.fotoUrl);
-        document.getElementById("perfilFoto").src = urlMostrar;
-        document.getElementById("topbarFoto").src = urlMostrar;
-        toast("¡Foto guardada! ✓", "ok");
-      } else {
-        // La foto ya está como preview local, avisamos del error
-        toast("Foto visible solo en esta sesión. Error: " + data.error, "");
-      }
-    } catch(e) {
-      toast("Foto visible solo en esta sesión. Intenta de nuevo.", "");
+    if (data.ok) {
+      const urlMostrar = convertirUrlDrive(data.fotoUrl);
+      document.getElementById("perfilFoto").src = urlMostrar;
+      document.getElementById("topbarFoto").src  = urlMostrar;
+      toast("¡Foto guardada! ✓", "ok");
+    } else {
+      toast("Foto visible solo en esta sesión. Error: " + data.error, "");
     }
-  };
-
-  reader.readAsDataURL(compressed);
+  } catch(e) {
+    toast("No se pudo subir la foto. Intenta de nuevo.", "err");
+  }
 };
 
 // ── Comprimir imagen antes de subir ──────────────────
@@ -661,12 +689,16 @@ window.enviarSugerencia = async () => {
   btn.disabled = true;
   btn.textContent = "Enviando...";
   try {
-    await fetch(API, { method: "POST", body: JSON.stringify({
-      accion:     "guardarSugerencia",
-      nombre:     nombreActual,
-      email:      usuarioActual.email,
-      sugerencia: txt
-    })});
+    await fetch(API, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        accion:     "guardarSugerencia",
+        nombre:     nombreActual,
+        email:      usuarioActual.email,
+        sugerencia: txt
+      })
+    });
     document.getElementById("txtSugerencia").value = "";
     toast("¡Sugerencia enviada! Gracias 🙏", "ok");
   } catch(e) {
@@ -693,13 +725,17 @@ window.enviarFeedback = async () => {
   btn.disabled = true;
   btn.textContent = "Enviando...";
   try {
-    await fetch(API, { method: "POST", body: JSON.stringify({
-      accion:       "guardarFeedback",
-      nombre:       nombreActual,
-      email:        usuarioActual.email,
-      calificacion: calificacion,
-      comentario:   txt
-    })});
+    await fetch(API, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        accion:       "guardarFeedback",
+        nombre:       nombreActual,
+        email:        usuarioActual.email,
+        calificacion: calificacion,
+        comentario:   txt
+      })
+    });
     document.getElementById("txtFeedback").value = "";
     window.selectStar(0);
     calificacion = 0;
@@ -714,29 +750,3 @@ window.enviarFeedback = async () => {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
