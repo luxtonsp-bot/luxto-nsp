@@ -367,6 +367,13 @@ body::before {
 }
 .btn-ok:hover { background:rgba(45,186,111,.28); }
 
+/* ── NUEVO: botón finalizar ── */
+.btn-warn {
+  background:rgba(212,136,26,.15); color:#f0b060;
+  border:1px solid rgba(212,136,26,.35);
+}
+.btn-warn:hover { background:rgba(212,136,26,.28); border-color:rgba(212,136,26,.55); }
+
 /* ── HISTORIAL ── */
 .historial {}
 .hist-lista {
@@ -446,12 +453,18 @@ body::before {
           <div class="estado-label off" id="estadoLabel">⚫ Inactivo</div>
           <div class="estado-sub" id="estadoSub">Activa el modo para que los miembros participen</div>
         </div>
-        <label class="toggle">
-          <input type="checkbox" id="toggleAsamblea" onchange="toggleModoAsamblea(this.checked)">
-          <div class="toggle-track">
-            <div class="toggle-thumb"></div>
-          </div>
-        </label>
+        <!-- ── CAMBIO: botón finalizar + toggle envueltos juntos ── -->
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="btn btn-warn" id="btnFinalizar" style="display:none;" onclick="finalizarAsamblea()">
+            🏁 Finalizar asamblea
+          </button>
+          <label class="toggle">
+            <input type="checkbox" id="toggleAsamblea" onchange="toggleModoAsamblea(this.checked)">
+            <div class="toggle-track">
+              <div class="toggle-thumb"></div>
+            </div>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -679,17 +692,21 @@ function escucharAsamblea() {
   });
 }
 
+// ── CAMBIO: actualizarEstadoUI muestra/oculta el botón finalizar ──
 function actualizarEstadoUI(activa) {
-  const label = document.getElementById("estadoLabel");
-  const sub   = document.getElementById("estadoSub");
+  const label  = document.getElementById("estadoLabel");
+  const sub    = document.getElementById("estadoSub");
+  const btnFin = document.getElementById("btnFinalizar");
   if (activa) {
-    label.textContent = "🟢 Activo";
-    label.className   = "estado-label on";
-    sub.textContent   = "Los miembros ya pueden ingresar a la asamblea";
+    label.textContent        = "🟢 Activo";
+    label.className          = "estado-label on";
+    sub.textContent          = "Los miembros ya pueden ingresar a la asamblea";
+    btnFin.style.display     = "inline-flex";
   } else {
-    label.textContent = "⚫ Inactivo";
-    label.className   = "estado-label off";
-    sub.textContent   = "Activa el modo para que los miembros participen";
+    label.textContent        = "⚫ Inactivo";
+    label.className          = "estado-label off";
+    sub.textContent          = "Activa el modo para que los miembros participen";
+    btnFin.style.display     = "none";
   }
 }
 
@@ -705,6 +722,17 @@ window.toggleModoAsamblea = async function(activa) {
     preguntaNumActual = 0;
   }
   toast(activa ? "✅ Asamblea activada" : "Asamblea desactivada", activa ? "ok" : "");
+};
+
+// ── NUEVO: finalizar asamblea y disparar podio ────────
+window.finalizarAsamblea = async function() {
+  const ok = confirm("¿Finalizar la asamblea? Se mostrará el podio final a todos los participantes.");
+  if (!ok) return;
+  await set(ref(db,"asamblea/preguntaActual/estado"), "cerrada");
+  await set(ref(db,"asamblea/activa"), false);
+  await set(ref(db,"asamblea/estado"), "finalizada");
+  document.getElementById("btnFinalizar").style.display = "none";
+  toast("🏁 Asamblea finalizada — podio en vivo", "ok");
 };
 
 // ── Lanzar pregunta ───────────────────────────────────
