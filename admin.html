@@ -516,8 +516,14 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getDatabase(app);
 
-// ── Solo Paolo puede acceder ──────────────────────────
-const ADMIN_EMAIL = "henry.alfaro1@unmsm.edu.pe"; // tu email
+// ── Solo coordinadores pueden acceder ────────────────
+const ADMINS = [
+  "henry.alfaro1@unmsm.edu.pe",
+  "paolosotil97@gmail.com",
+  "jorgediego.123.2002@gmail.com",
+  "gianfracamones@gmail.com",
+  "alvarorodrigosalazar.2001@gmail.com"
+];
 
 // ── Estado ────────────────────────────────────────────
 let preguntaNumActual = 0;
@@ -535,7 +541,7 @@ function toast(msg, tipo="") {
 onAuthStateChanged(auth, (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   // Verificar que es admin
-  if (user.email !== ADMIN_EMAIL && user.email !== "paolosotil97@gmail.com") {
+  if (!ADMINS.includes(user.email)) {
     toast("Acceso restringido al coordinador", "err");
     setTimeout(() => window.location.href = "dashboard.html", 2000);
     return;
