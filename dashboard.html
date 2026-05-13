@@ -514,11 +514,11 @@ onAuthStateChanged(auth, async (user) => {
 // ── Cargar dashboard desde Apps Script ───────────────
 async function cargarDashboard(email) {
   try {
+    // IMPORTANTE: Apps Script requiere fetch SIN Content-Type header.
+    // Con "application/json" el navegador hace preflight OPTIONS que Apps Script no maneja → CORS error.
     const res  = await fetch(API, {
-      method:  "POST",
-      // FIX: Content-Type explícito para mayor compatibilidad
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ accion: "getDashboard", email })
+      method: "POST",
+      body:   JSON.stringify({ accion: "getDashboard", email })
     });
     const data = await res.json();
     if (!data.ok) { toast("Error al cargar datos: " + data.error, "err"); return; }
@@ -631,9 +631,8 @@ window.subirFoto = async function(input) {
     document.getElementById("topbarFoto").src  = base64;
 
     const res  = await fetch(API, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
+      method: "POST",
+      body:   JSON.stringify({
         accion: "guardarFotoUrl",
         email:  usuarioActual.email,
         base64: base64
@@ -690,9 +689,8 @@ window.enviarSugerencia = async () => {
   btn.textContent = "Enviando...";
   try {
     await fetch(API, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
+      method: "POST",
+      body:   JSON.stringify({
         accion:     "guardarSugerencia",
         nombre:     nombreActual,
         email:      usuarioActual.email,
@@ -726,9 +724,8 @@ window.enviarFeedback = async () => {
   btn.textContent = "Enviando...";
   try {
     await fetch(API, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
+      method: "POST",
+      body:   JSON.stringify({
         accion:       "guardarFeedback",
         nombre:       nombreActual,
         email:        usuarioActual.email,
