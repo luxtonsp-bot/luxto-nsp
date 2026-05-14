@@ -742,12 +742,15 @@ window.finalizarAsamblea = async function() {
 
 // ── Reiniciar ranking (borrar respuestas acumuladas) ──
 window.reiniciarRanking = async function() {
-    const ok = confirm("¿Reiniciar el ranking? Se borrarán todas las respuestas acumuladas. Los miembros verán el ranking en cero.");
+    const ok = confirm("¿Reiniciar el ranking? Se borrarán todas las respuestas acumuladas de esta asamblea.");
     if (!ok) return;
     await remove(ref(db, "asamblea/respuestas"));
+    preguntaNumActual = 0;
+    document.getElementById("statConectados").textContent = "0";
+    document.getElementById("statAciertos").textContent = "0";
+    document.getElementById("rankingCard").classList.remove("visible");
     toast("🔄 Ranking reiniciado", "ok");
 };
-
 // ── Lanzar pregunta ───────────────────────────────────
 window.lanzarPregunta = async function() {
   const texto    = document.getElementById("npTexto").value.trim();
