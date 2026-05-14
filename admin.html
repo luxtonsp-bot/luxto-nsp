@@ -455,7 +455,10 @@ body::before {
         </div>
         <!-- ── CAMBIO: botón finalizar + toggle envueltos juntos ── -->
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
-          <button class="btn btn-warn" id="btnFinalizar" style="display:none;" onclick="finalizarAsamblea()">
+          <button class="btn btn-danger" id="btnResetRanking" style="display:none;" onclick="reiniciarRanking()">
+                    🔄 Reiniciar ranking
+                </button>
+                <button class="btn btn-warn" id="btnFinalizar" style="display:none;" onclick="finalizarAsamblea()">
             🏁 Finalizar asamblea
           </button>
           <label class="toggle">
@@ -702,11 +705,13 @@ function actualizarEstadoUI(activa) {
     label.className          = "estado-label on";
     sub.textContent          = "Los miembros ya pueden ingresar a la asamblea";
     btnFin.style.display     = "inline-flex";
+ document.getElementById("btnResetRanking").style.display = "inline-flex";
   } else {
     label.textContent        = "⚫ Inactivo";
     label.className          = "estado-label off";
     sub.textContent          = "Activa el modo para que los miembros participen";
     btnFin.style.display     = "none";
+ document.getElementById("btnResetRanking").style.display = "none";
   }
 }
 
@@ -733,6 +738,14 @@ window.finalizarAsamblea = async function() {
   await set(ref(db,"asamblea/estado"), "finalizada");
   document.getElementById("btnFinalizar").style.display = "none";
   toast("🏁 Asamblea finalizada — podio en vivo", "ok");
+};
+
+// ── Reiniciar ranking (borrar respuestas acumuladas) ──
+window.reiniciarRanking = async function() {
+    const ok = confirm("¿Reiniciar el ranking? Se borrarán todas las respuestas acumuladas. Los miembros verán el ranking en cero.");
+    if (!ok) return;
+    await remove(ref(db, "asamblea/respuestas"));
+    toast("🔄 Ranking reiniciado", "ok");
 };
 
 // ── Lanzar pregunta ───────────────────────────────────
