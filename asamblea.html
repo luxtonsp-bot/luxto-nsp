@@ -342,6 +342,7 @@ const API  = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_S
 let usuarioActual    = null;
 let nombreActual     = "";
 let fotoActual       = "";
+let fotoOriginal = ""; // URL original del Apps Script
 let puntosTotal      = 0;
 let preguntaActualId = null;
 let timerInterval    = null;
@@ -381,6 +382,7 @@ onAuthStateChanged(auth, async (user) => {
     if (data.ok) {
       nombreActual = data.nombre;
       fotoActual   = data.fotoUrl ? convertirUrlDrive(data.fotoUrl) : "";
+                                fotoOriginal = data.fotoUrl || "";
       document.getElementById("topbarNombre").textContent = nombreActual.split(" ")[0];
       if (fotoActual) document.getElementById("topbarFoto").src = fotoActual;
     }
