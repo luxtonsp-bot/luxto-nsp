@@ -458,6 +458,9 @@ body::before {
           <button class="btn btn-danger" id="btnResetRanking" style="display:none;" onclick="reiniciarRanking()">
                     🔄 Reiniciar ranking
                 </button>
+                <button class="btn btn-danger" id="btnResetGlobal" onclick="reiniciarRankingGlobal()" title="Borra el acumulado histórico de todas las asambleas">
+                    ♻️ Reiniciar ranking global
+                </button>
                 <button class="btn btn-warn" id="btnFinalizar" style="display:none;" onclick="finalizarAsamblea()">
             🏁 Finalizar asamblea
           </button>
@@ -630,8 +633,11 @@ function toast(msg, tipo="") {
 }
 function convertirUrlDrive(url) {
   if (!url) return "";
-  const m = url.match(/id=([a-zA-Z0-9_-]+)/);
-  if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w80";
+  if (url.includes("drive.google.com/thumbnail")) return url;
+  let m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+       || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
+       || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w160";
   return url;
 }
 function avatarFallback(nombre) {
@@ -717,39 +723,87 @@ function actualizarEstadoUI(activa) {
 
 // ── Toggle asamblea ───────────────────────────────────
 window.toggleModoAsamblea = async function(activa) {
-  await set(ref(db,"asamblea/activa"), activa);
-  if (!activa) {
-    await set(ref(db,"asamblea/estado"), "finalizada");
-    await set(ref(db,"asamblea/preguntaActual/estado"), "esperando");
-    document.getElementById("rankingCard").classList.remove("visible");
-  } else {
-    await set(ref(db,"asamblea/estado"), "activa");
+  if (activa) {
+    // ── NUEVA ASAMBLEA: borrar respuestas anteriores y limpiar pregunta residual ──
+    // Esto garantiza ranking en blanco + que los participantes vean la pantalla de espera.
+    await remove(ref(db, "asamblea/respuestas"));
+    await set(ref(db, "asamblea/preguntaActual"), {
+      estado: "esperando", numero: 0,
+      texto: "", opciones: [], correcta: -1, duracion: 20,
+      id: "waiting_" + Date.now(), ts: Date.now()
+    });
+    await set(ref(db, "asamblea/activa"), true);
+    await set(ref(db, "asamblea/estado"), "activa");
     preguntaNumActual = 0;
+  } else {
+    await set(ref(db, "asamblea/activa"), false);
+    await set(ref(db, "asamblea/estado"), "finalizada");
+    await set(ref(db, "asamblea/preguntaActual/estado"), "esperando");
+    document.getElementById("rankingCard").classList.remove("visible");
   }
-  toast(activa ? "✅ Asamblea activada" : "Asamblea desactivada", activa ? "ok" : "");
+  toast(activa ? "✅ Asamblea activada (ranking en blanco)" : "Asamblea desactivada", activa ? "ok" : "");
 };
 
-// ── NUEVO: finalizar asamblea y disparar podio ────────
+// ── Acumular puntos de esta asamblea en el ranking GLOBAL ──
+async function acumularEnRankingGlobal() {
+  const snap = await get(ref(db, "asamblea/respuestas"));
+  const respuestas = snap.val();
+  if (!respuestas) return;
+  const acum = {};
+  Object.values(respuestas).forEach(pregResp => {
+    Object.values(pregResp).forEach(r => {
+      if (!r || !r.email) return;
+      const key = r.email.replace(/[.#$\[\]]/g, "_");
+      if (!acum[key]) acum[key] = { nombre: r.nombre || "?", email: r.email, fotoUrl: r.fotoUrl || "", pts: 0 };
+      acum[key].pts += (r.puntos || 0);
+    });
+  });
+  // Sumar a lo ya guardado
+  for (const key of Object.keys(acum)) {
+    const prevSnap = await get(ref(db, "rankingGlobal/" + key));
+    const prev = prevSnap.val() || { pts: 0 };
+    await set(ref(db, "rankingGlobal/" + key), {
+      nombre: acum[key].nombre,
+      email:  acum[key].email,
+      fotoUrl: acum[key].fotoUrl || prev.fotoUrl || "",
+      pts: (prev.pts || 0) + acum[key].pts,
+      ultimaAsamblea: Date.now()
+    });
+  }
+}
+
+// ── NUEVO: finalizar asamblea, acumular en global y disparar podio ────────
 window.finalizarAsamblea = async function() {
-  const ok = confirm("¿Finalizar la asamblea? Se mostrará el podio final a todos los participantes.");
+  const ok = confirm("¿Finalizar la asamblea? Los puntos se sumarán al ranking global y se mostrará el podio.");
   if (!ok) return;
+  await acumularEnRankingGlobal();
   await set(ref(db,"asamblea/preguntaActual/estado"), "cerrada");
   await set(ref(db,"asamblea/activa"), false);
   await set(ref(db,"asamblea/estado"), "finalizada");
   document.getElementById("btnFinalizar").style.display = "none";
-  toast("🏁 Asamblea finalizada — podio en vivo", "ok");
+  toast("🏁 Asamblea finalizada — puntos acumulados al ranking global", "ok");
 };
 
 // ── Reiniciar ranking (borrar respuestas acumuladas) ──
 window.reiniciarRanking = async function() {
-    const ok = confirm("¿Reiniciar el ranking? Se borrarán todas las respuestas acumuladas de esta asamblea.");
+    const ok = confirm("¿Reiniciar el ranking de ESTA asamblea? Se borrarán todas las respuestas acumuladas.");
     if (!ok) return;
     await remove(ref(db, "asamblea/respuestas"));
     preguntaNumActual = 0;
     document.getElementById("statConectados").textContent = "0";
     document.getElementById("statAciertos").textContent = "0";
     document.getElementById("rankingCard").classList.remove("visible");
-    toast("🔄 Ranking reiniciado", "ok");
+    toast("🔄 Ranking de la asamblea reiniciado", "ok");
+};
+
+// ── Reiniciar ranking GLOBAL (acumulado histórico) ──
+window.reiniciarRankingGlobal = async function() {
+    const ok = confirm("¿Reiniciar el ranking GLOBAL? Se borrará el acumulado histórico de todas las asambleas. Esta acción no se puede deshacer.");
+    if (!ok) return;
+    const ok2 = confirm("⚠️ Última confirmación: ¿De verdad quieres borrar TODO el ranking global?");
+    if (!ok2) return;
+    await remove(ref(db, "rankingGlobal"));
+    toast("♻️ Ranking global reiniciado", "ok");
 };
 // ── Lanzar pregunta ───────────────────────────────────
 window.lanzarPregunta = async function() {
