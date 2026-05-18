@@ -362,10 +362,13 @@ function show(id) {
 }
 function convertirUrlDrive(url) {
   if (!url) return "";
-  const m = url.match(/id=([a-zA-Z0-9_-]+)/);
-  if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w80";
-  const m2 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (m2) return "https://drive.google.com/thumbnail?id=" + m2[1] + "&sz=w80";
+  // Si ya es un thumbnail de Drive, devolverla tal cual
+  if (url.includes("drive.google.com/thumbnail")) return url;
+  // Patrones conocidos: id=FILEID  |  /d/FILEID/  |  /file/d/FILEID  |  uc?id=FILEID  |  open?id=FILEID
+  let m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+       || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
+       || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w160";
   return url;
 }
 function avatarFallback(nombre) {
@@ -446,8 +449,9 @@ function iniciarEscucha() {
       podioMostrado = false;
     }
 
-    if (!data.preguntaActual || data.preguntaActual.estado === "esperando") {
-      // Asamblea activa pero esperando pregunta → pantalla de espera
+    // ── FIX: cualquier estado que NO sea "activa" → pantalla de espera ──
+    // (cubre: sin preguntaActual, "esperando", "cerrada" residual de sesión previa)
+    if (!data.preguntaActual || data.preguntaActual.estado !== "activa") {
       show("screenEsperando"); limpiarTimer();
       preguntaActualId = null; respondioActual = false; return;
     }
