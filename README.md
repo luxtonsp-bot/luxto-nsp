@@ -248,6 +248,31 @@ Admin (admin.html) — solo coordinadores
 - **onerror fix:** `this.onerror=null` evita loops infinitos en imágenes
 - **Firebase config:** las claves están expuestas (normal en web apps cliente), la seguridad depende de las reglas de Firebase y Sheets
 
+### Reglas de Firebase Realtime Database
+\`\`\`json
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "asamblea": {
+      "activa": { ".read": true, ".write": "auth != null" },
+      "estado": { ".read": true, ".write": "auth != null" },
+      "preguntaActual": { ".read": true, ".write": "auth != null" },
+      "respuestas": { ".read": "auth != null", ".write": "auth != null" }
+    },
+    "borradores": { ".read": "auth != null", ".write": "auth != null" },
+    "rankingGlobal": { ".read": true, ".write": "auth != null" },
+    "users": { ".read": "auth != null", ".write": "auth != null" }
+  }
+}
+\`\`\`
+> ⚠️ Los paths `asamblea/activa`, `asamblea/estado`, `asamblea/preguntaActual` y `rankingGlobal` tienen `.read: true` para que la asamblea sea accesible sin auth (para el modo asamblea en tiempo real). Las escrituras requieren autenticación.
+
+### Bugs corregidos (2026-05-18)
+- **Podio no aparecía:** Al finalizar la asamblea, `preguntaActualId` se reseteaba a `null` cuando la pregunta se cerraba, haciendo que el código pensara que el usuario no había participado. Se añadió `participoEnAsamblea` como flag independiente.
+- **Ranking global no se reiniciaba:** Al finalizar la asamblea, las respuestas (`asamblea/respuestas`) no se borraban después de acumular en el ranking global, causando que los puntos viejos se sumaran nuevamente en la próxima finalización. Ahora se borran automáticamente.
+- **Número de pregunta inconsistente:** `preguntaNumActual` no persistía en Firebase, causando inconsistencia si el admin recargaba la página. Ahora se guarda en `asamblea/preguntaNum`.
+
 ## 📂 Estructura de Archivos
 
 ```

@@ -661,7 +661,12 @@ window.cerrarSesion = async () => {
   window.location.href = "index.html";
 };
 
-function inicializar() {
+async function inicializar() {
+  // FIX: Leer preguntaNum de Firebase para mantener consistencia entre recargas
+  try {
+    const snap = await get(ref(db, "asamblea/preguntaNum"));
+    preguntaNumActual = snap.val() || 0;
+  } catch(e) {}
   escucharAsamblea();
   escucharBorradores();
 }
@@ -740,7 +745,8 @@ window.toggleModoAsamblea = async function(activa) {
       await update(ref(db, "asamblea"), {
         activa: true,
         estado: "activa",
-        preguntaActual: {
+        preguntaNum: 0,
+                preguntaActual: {
           estado: "esperando", numero: 0,
           texto: "", opciones: [], correcta: -1, duracion: 20,
           id: "waiting_" + Date.now(), ts: Date.now()
@@ -803,6 +809,10 @@ window.finalizarAsamblea = async function() {
   await set(ref(db,"asamblea/preguntaActual/estado"), "cerrada");
   await set(ref(db,"asamblea/activa"), false);
   await set(ref(db,"asamblea/estado"), "finalizada");
+  // FIX: Borrar respuestas de esta asamblea después de acumular en el ranking global
+  // Para que la próxima asamblea no vuelva a sumar puntos viejos
+  await remove(ref(db, "asamblea/respuestas"));
+  preguntaNumActual = 0;
   document.getElementById("btnFinalizar").style.display = "none";
   toast("🏁 Asamblea finalizada — puntos acumulados al ranking global", "ok");
 };
@@ -826,7 +836,10 @@ window.reiniciarRankingGlobal = async function() {
     const ok2 = confirm("⚠️ Última confirmación: ¿De verdad quieres borrar TODO el ranking global?");
     if (!ok2) return;
     await remove(ref(db, "rankingGlobal"));
-    toast("♻️ Ranking global reiniciado", "ok");
+     // FIX: También limpiar respuestas residuales
+ await remove(ref(db, "asamblea/respuestas"));
+ preguntaNumActual = 0;
+ toast("♻️ Ranking global reiniciado", "ok");
 };
 // ── Lanzar pregunta ───────────────────────────────────
 window.lanzarPregunta = async function() {
@@ -846,6 +859,8 @@ window.lanzarPregunta = async function() {
   if (!snapActiva.val()) { toast("Activa la asamblea primero", "err"); return; }
 
   preguntaNumActual++;
+  // FIX: Persistir preguntaNum en Firebase para consistencia
+  await set(ref(db, "asamblea/preguntaNum"), preguntaNumActual);
   const opciones = [opA, opB];
   if (opC) opciones.push(opC);
   if (opD) opciones.push(opD);
