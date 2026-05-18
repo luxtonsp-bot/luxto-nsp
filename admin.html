@@ -599,7 +599,7 @@ body::before {
 import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut }
                           from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, onValue, set, remove, push, serverTimestamp, get }
+import { getDatabase, ref, onValue, set, update, remove, push, serverTimestamp, get }
                           from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -671,8 +671,10 @@ function escucharAsamblea() {
   onValue(ref(db, "asamblea"), (snap) => {
     const data = snap.val() || {};
 
-    // Toggle
-    document.getElementById("toggleAsamblea").checked = data.activa === true;
+    // Toggle (no tocar el checkbox si estamos a mitad de un toggle manual)
+    if (!toggleEnProceso) {
+      document.getElementById("toggleAsamblea").checked = data.activa === true;
+    }
     actualizarEstadoUI(data.activa === true);
 
     // Pregunta activa
@@ -695,6 +697,9 @@ function escucharAsamblea() {
       document.getElementById("statAciertos").textContent   = "0";
       document.getElementById("respLiveList").innerHTML =
         '<div class="resp-vacia">Esperando respuestas...</div>';
+      // Ocultar ranking cuando no hay respuestas en la asamblea actual
+      document.getElementById("rankingCard").classList.remove("visible");
+      document.getElementById("rankLista").innerHTML = "";
     }
 
     document.getElementById("statPreguntas").textContent = preguntaNumActual;
@@ -721,27 +726,45 @@ function actualizarEstadoUI(activa) {
   }
 }
 
-// ── Toggle asamblea ───────────────────────────────────
+// ── Toggle asamblea (escritura ATÓMICA para que el listener no lo "apague" en medio) ──
+let toggleEnProceso = false;
 window.toggleModoAsamblea = async function(activa) {
-  if (activa) {
-    // ── NUEVA ASAMBLEA: borrar respuestas anteriores y limpiar pregunta residual ──
-    // Esto garantiza ranking en blanco + que los participantes vean la pantalla de espera.
-    await remove(ref(db, "asamblea/respuestas"));
-    await set(ref(db, "asamblea/preguntaActual"), {
-      estado: "esperando", numero: 0,
-      texto: "", opciones: [], correcta: -1, duracion: 20,
-      id: "waiting_" + Date.now(), ts: Date.now()
-    });
-    await set(ref(db, "asamblea/activa"), true);
-    await set(ref(db, "asamblea/estado"), "activa");
-    preguntaNumActual = 0;
-  } else {
-    await set(ref(db, "asamblea/activa"), false);
-    await set(ref(db, "asamblea/estado"), "finalizada");
-    await set(ref(db, "asamblea/preguntaActual/estado"), "esperando");
-    document.getElementById("rankingCard").classList.remove("visible");
+  if (toggleEnProceso) return;
+  toggleEnProceso = true;
+  // Mantener el switch visualmente en la posición elegida hasta que termine
+  document.getElementById("toggleAsamblea").checked = activa;
+  try {
+    if (activa) {
+      // NUEVA ASAMBLEA: borrar respuestas previas y escribir TODO en una sola operación
+      await remove(ref(db, "asamblea/respuestas"));
+      await update(ref(db, "asamblea"), {
+        activa: true,
+        estado: "activa",
+        preguntaActual: {
+          estado: "esperando", numero: 0,
+          texto: "", opciones: [], correcta: -1, duracion: 20,
+          id: "waiting_" + Date.now(), ts: Date.now()
+        }
+      });
+      preguntaNumActual = 0;
+      // Limpiar ranking visualmente de inmediato
+      document.getElementById("rankingCard").classList.remove("visible");
+      document.getElementById("rankLista").innerHTML = "";
+    } else {
+      await update(ref(db, "asamblea"), {
+        activa: false,
+        estado: "finalizada",
+        "preguntaActual/estado": "esperando"
+      });
+      document.getElementById("rankingCard").classList.remove("visible");
+    }
+    toast(activa ? "✅ Asamblea activada (ranking en blanco)" : "Asamblea desactivada", activa ? "ok" : "");
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  } finally {
+    toggleEnProceso = false;
   }
-  toast(activa ? "✅ Asamblea activada (ranking en blanco)" : "Asamblea desactivada", activa ? "ok" : "");
 };
 
 // ── Acumular puntos de esta asamblea en el ranking GLOBAL ──
