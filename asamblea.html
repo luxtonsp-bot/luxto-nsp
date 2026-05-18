@@ -350,6 +350,7 @@ let tiempoRestante   = 0;
 let respondioActual  = false;
 let tiempoInicioResp = 0;
 let podioMostrado    = false;
+let participoEnAsamblea = false; // FIX: rastrea si el usuario respondió al menos una pregunta
 
 function toast(msg, tipo="") {
   const t = document.getElementById("toast");
@@ -421,7 +422,8 @@ function iniciarEscucha() {
       return;
     }
 
-    if (data.estado === "finalizada" && !data.activa && preguntaActualId !== null) {
+    // FIX: Usar participoEnAsamblea además de preguntaActualId
+        if (data.estado === "finalizada" && !data.activa && (preguntaActualId !== null || participoEnAsamblea)) {
       // El usuario participó en esta asamblea → mostrar podio
       if (podioMostrado !== "sesion") {
         podioMostrado = "sesion";
@@ -438,7 +440,7 @@ function iniciarEscucha() {
     }
 
     // Si está finalizada pero el usuario no había participado → pantalla no activa
-    if (data.estado === "finalizada" && preguntaActualId === null) {
+    if (data.estado === "finalizada" && preguntaActualId === null && !participoEnAsamblea) {
       podioMostrado = false;
       show("screenNoActiva"); limpiarTimer(); return;
     }
@@ -446,14 +448,17 @@ function iniciarEscucha() {
     // ── Asamblea activa ──
     // Resetear flag de podio cuando se inicia una nueva asamblea
     if (data.activa && podioMostrado) {
-      podioMostrado = false;
-    }
-
+ podioMostrado = false;
+ participoEnAsamblea = false;
+ preguntaActualId = null;
+ }
     // ── FIX: cualquier estado que NO sea "activa" → pantalla de espera ──
     // (cubre: sin preguntaActual, "esperando", "cerrada" residual de sesión previa)
     if (!data.preguntaActual || data.preguntaActual.estado !== "activa") {
       show("screenEsperando"); limpiarTimer();
-      preguntaActualId = null; respondioActual = false; return;
+        // FIX: NO resetear preguntaActualId — se necesita para saber si participó al finalizar
+        respondioActual = false;
+        return;
     }
 
     const p = data.preguntaActual;
@@ -520,6 +525,7 @@ function limpiarTimer() {
 function responderOpcion(idx, texto, pregunta) {
   if (respondioActual) return;
   respondioActual = true;
+  participoEnAsamblea = true; // FIX: marcar que participó en esta asamblea
   limpiarTimer();
   document.querySelectorAll(".opcion-btn").forEach(b => b.disabled = true);
   document.querySelectorAll(".opcion-btn")[idx].classList.add("selected");
