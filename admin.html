@@ -513,6 +513,15 @@ body::before {
     </div>
   </div>
 
+
+<!-- RANKING GLOBAL HISTORICO -->
+<div class="card" id="rankingGlobalCard" style="margin-bottom:28px;">
+  <div class="card-title">🏆 Ranking Global <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">Acumulado histórico</span></div>
+  <div id="rankingGlobalList" class="rank-lista" style="max-height:400px;overflow-y:auto;">
+    <div class="resp-vacia">Cargando ranking global...</div>
+  </div>
+</div>
+
   <!-- RANKING EN VIVO -->
   <div class="card ranking-card" id="rankingCard">
     <div class="card-title">🏆 Ranking actual</div>
@@ -669,9 +678,58 @@ async function inicializar() {
   } catch(e) {}
   escucharAsamblea();
   escucharBorradores();
+  escucharRankingGlobal();
 }
 
 // ── Escuchar asamblea ─────────────────────────────────
+// ── Escuchar ranking global ──────────────────────────────
+let rankingGlobalListener = null;
+function escucharRankingGlobal() {
+  if (rankingGlobalListener) return;
+  rankingGlobalListener = onValue(ref(db, "rankingGlobal"), (snap) => {
+    const data = snap.val() || {};
+    const lista = document.getElementById("rankingGlobalList");
+    if (!lista) return;
+    const entries = Object.entries(data).map(([key, v]) => ({
+      key,
+      nombre: v.nombre || v.email || "Anónimo",
+      pts: v.pts || 0,
+      fotoUrl: v.fotoUrl || "",
+      email: v.email || ""
+    }));
+    entries.sort((a, b) => b.pts - a.pts);
+    if (entries.length === 0) {
+      lista.innerHTML = '<div class="resp-vacia">Aún no hay puntos acumulados</div>';
+      return;
+    }
+    lista.innerHTML = entries.map((e, i) => {
+      const pos = i + 1;
+      const posClass = pos === 1 ? "g1" : pos === 2 ? "g2" : pos === 3 ? "g3" : "";
+      const itemClass = pos === 1 ? "top1" : pos === 2 ? "top2" : pos === 3 ? "top3" : "";
+      const fotoSrc = e.fotoUrl ? convertirUrlDrive(e.fotoUrl) : avatarFallbackAdmin(e.nombre);
+      const fallback = avatarFallbackAdmin(e.nombre);
+      return '<div class="rank-item ' + itemClass + '">' +
+        '<div class="rank-pos ' + posClass + '">' + pos + '</div>' +
+        '<img src="' + fotoSrc + '" class="rank-foto" alt="" onerror="this.onerror=null;this.src=\'' + fallback + '\'">' +
+        '<div class="rank-nombre">' + escaparHTML(e.nombre) + '</div>' +
+        '<div><div class="rank-pts">' + e.pts + '</div>' +
+        '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">pts</div></div>' +
+        '</div>';
+    }).join("");
+  });
+}
+
+// ── Utilidades para ranking global ──
+function escaparHTML(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+function avatarFallbackAdmin(nombre) {
+  const inicial = (nombre || "?").charAt(0).toUpperCase();
+  return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>" + inicial + "</text></svg>";
+}
+
 function escucharAsamblea() {
   onValue(ref(db, "asamblea"), (snap) => {
     const data = snap.val() || {};
