@@ -173,6 +173,10 @@ nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } 
 .hero-logo-float img { width: 78px; height: 78px; object-fit: contain; }
 @keyframes floatLogo { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-10px) rotate(3deg); } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
 .hero-photo { background: linear-gradient(135deg, rgba(245,197,24,.35), rgba(196,112,58,.45) 60%, rgba(196,134,154,.35)), var(--crema-warm); }
 #hero::after { content: ''; position: absolute; top: -10%; left: 60%; width: 60%; height: 120%; background: radial-gradient(ellipse at center, rgba(255,232,150,.25), transparent 60%); filter: blur(40px); pointer-events: none; animation: lightShift 14s ease-in-out infinite alternate; }
 @keyframes lightShift { 0% { transform: translate(0,0) rotate(0deg); opacity: .8; } 100% { transform: translate(-12%, 8%) rotate(8deg); opacity: 1; } }
@@ -271,8 +275,9 @@ nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } 
 .btn-whatsapp { display: inline-flex; align-items: center; gap: 10px; background: #25D366; color: white; padding: 14px 26px; border-radius: 100px; text-decoration: none; font-weight: 600; font-size: 15px; transition: all var(--t-base); box-shadow: 0 14px 30px -10px rgba(37,211,102,.5); }
 .btn-whatsapp:hover { transform: translateY(-2px); background: #1fbb59; }
 .coro-galeria { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.coro-galeria-item { background: var(--crema-warm); border-radius: var(--radio); min-height: 180px; display: flex; align-items: center; justify-content: center; color: var(--gris); font-size: 13px; font-style: italic; transition: transform var(--t-base); border: 1px dashed var(--gris-claro); position: relative; overflow: hidden; }
-.coro-galeria-item:hover { transform: scale(1.02); box-shadow: var(--sombra); border-style: solid; }
+.coro-galeria-item { background: var(--amarillo-soft); border-radius: var(--radio); min-height: 180px; display: flex; align-items: center; justify-content: center; color: var(--gris); font-size: 13px; font-style: italic; transition: transform var(--t-base); border: 1px dashed var(--gris-claro); position: relative; overflow: hidden; }
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+.coro-galeria-item:hover { transform: scale(1.02); box-shadow: var(--sombra); border-style: solid; animation: pulse 1.5s infinite; }
 .coro-galeria-item.full { grid-column: 1 / -1; min-height: 240px; }
 .coro-galeria-item::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C4703A' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'><path d='M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z'/><circle cx='12' cy='13' r='3'/></svg>") no-repeat center / 38px; opacity: .35; transition: all var(--t-base); }
 .coro-galeria-item:hover::before { opacity: .55; transform: scale(1.08); }
@@ -628,8 +633,8 @@ footer .container { position: relative; z-index: 2; }
       </div>
       <div class="coro-galeria fade-in fade-in-delay-2">
         <div class="coro-galeria-item full"><img src="coro_servicio.jpg" alt="Coro Parroquial Luz de Cristo en servicio"></div>
-        <div class="coro-galeria-item">Matrimonio</div>
-        <div class="coro-galeria-item">Misa parroquial</div>
+        <div class="coro-galeria-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;"><path d="M22 12a10 10 0 0 0-15.557 7.888M22 12a10 10 0 0 1-6.343 15.56m-4.314-5.343a10 10 0 0 0-11.287-4.012"/><path d="M12 8v4m0 4h4"/></svg><div>Matrimonio</div></div>
+        <div class="coro-galeria-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;"><path d="M22 12a10 10 0 0 0-15.557 7.888M22 12a10 10 0 0 1-6.343 15.56m-4.314-5.343a10 10 0 0 0-11.287-4.012"/><path d="M12 8v4m0 4h4"/></svg><div>Misa parroquial</div></div>
       </div>
     </div>
   </div>
