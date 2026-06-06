@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proyector — Luz de Cristo</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  --y:   #F5C518;
+  --o:   #C4703A;
+  --b:   #4A8FA8;
+  --r:   #C4869A;
+  --ok:  #2dba6f;
+  --err: #e03c3c;
+  --bg:      #16120d;
+  --bg2:     #1f1a12;
+  --bg3:     #2a2218;
+  --border:  rgba(255,255,255,.08);
+  --muted:   rgba(255,248,231,.45);
+  --cream:   rgba(255,248,231,.92);
+  --grad:    linear-gradient(135deg,#F5C518,#e09a2e,#C4703A);
+  --t: .35s cubic-bezier(.4,0,.2,1);
+  --spring: .6s cubic-bezier(.34,1.4,.64,1);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body {
+  font-family:'Outfit',sans-serif;
+  background: var(--bg);
+  color: var(--cream);
+  display:flex; flex-direction:column;
+  position:relative;
+}
+
+/* ── FONDO AMBIENTE ── */
+.bg-glow {
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(245,197,24,.1), transparent 50%),
+    radial-gradient(ellipse at 85% 80%, rgba(196,112,58,.1), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(74,143,168,.05), transparent 60%);
+  animation: bgPulse 12s ease-in-out infinite alternate;
+}
+@keyframes bgPulse{0%{opacity:.6}100%{opacity:1;filter:hue-rotate(8deg)}}
+
+/* ── BARRA ADMIN ── */
+.admin-bar {
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  background:rgba(22,18,13,.95);
+  backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  padding:0 32px;
+  display:flex; align-items:center; gap:16px;
+  height:64px;
+  transform:translateY(100%);
+  transition:transform .4s cubic-bezier(.4,0,.2,1);
+}
+.admin-bar.visible { transform:translateY(0); }
+.admin-bar-label {
+  font-size:11px; font-weight:700; letter-spacing:2px;
+  text-transform:uppercase; color:var(--muted); flex:1;
+}
+.bar-sep { width:1px; height:28px; background:var(--border); }
+.btn {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 20px; border-radius:100px;
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:700;
+  border:none; cursor:pointer; transition:all var(--t); white-space:nowrap;
+}
+.btn-primary { background:var(--grad); color:var(--bg); box-shadow:0 6px 20px -6px rgba(245,197,24,.4); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 10px 28px -6px rgba(245,197,24,.5); }
+.btn-primary:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.btn-ghost {
+  background:rgba(255,255,255,.06); color:var(--muted);
+  border:1px solid var(--border);
+}
+.btn-ghost:hover { background:rgba(255,255,255,.1); color:var(--cream); }
+.btn-danger {
+  background:rgba(224,60,60,.12); color:#f08080;
+  border:1px solid rgba(224,60,60,.25);
+}
+.btn-danger:hover { background:rgba(224,60,60,.22); }
+.admin-toggle {
+  position:fixed; bottom:16px; right:20px; z-index:201;
+  background:rgba(30,24,16,.85); border:1px solid var(--border);
+  border-radius:100px; padding:8px 14px;
+  font-size:11px; font-weight:700; letter-spacing:1px;
+  color:var(--muted); cursor:pointer;
+  backdrop-filter:blur(12px);
+  transition:all var(--t);
+}
+.admin-toggle:hover { color:var(--cream); border-color:rgba(255,255,255,.2); }
+
+/* ── PANTALLAS ── */
+.screen {
+  position:absolute; inset:0; z-index:1;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:40px;
+  opacity:0; pointer-events:none;
+  transition:opacity .5s ease, transform .5s cubic-bezier(.4,0,.2,1);
+  transform:scale(.97);
+}
+.screen.active {
+  opacity:1; pointer-events:all;
+  transform:scale(1);
+}
+.screen.exit {
+  opacity:0; transform:scale(1.02);
+  transition:opacity .4s ease, transform .4s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── ESPERA ── */
+#screenEspera .espera-icon { font-size:100px; margin-bottom:28px; animation:float 4s ease-in-out infinite; }
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+#screenEspera .espera-titulo {
+  font-family:'Lora',serif; font-size:clamp(40px,6vw,72px); font-weight:600;
+  color:var(--cream); text-align:center; line-height:1.1; margin-bottom:16px;
+}
+#screenEspera .espera-titulo em { color:var(--y); font-style:italic; }
+#screenEspera .espera-sub { font-size:clamp(16px,2vw,22px); color:var(--muted); text-align:center; }
+.dot-anim { display:inline-flex; gap:6px; align-items:center; }
+.dot-anim span { width:8px; height:8px; border-radius:50%; background:var(--y); animation:dotB 1.4s ease-in-out infinite; }
+.dot-anim span:nth-child(2){animation-delay:.2s;}
+.dot-anim span:nth-child(3){animation-delay:.4s;}
+@keyframes dotB{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+
+/* ── COUNTDOWN ENTRE PREGUNTAS ── */
+#screenCountdown { background:var(--bg); }
+.countdown-num {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(220px,30vw,340px);
+  line-height:1;
+  background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  animation:countPop .8s cubic-bezier(.34,1.6,.64,1) both;
+  filter:drop-shadow(0 0 60px rgba(245,197,24,.3));
+}
+@keyframes countPop{from{transform:scale(2.5);opacity:0}to{transform:scale(1);opacity:1}}
+.countdown-label { font-size:clamp(18px,2.5vw,28px); color:var(--muted); letter-spacing:4px; text-transform:uppercase; margin-top:16px; }
+
+/* ── PREGUNTA ── */
+#screenPregunta { justify-content:flex-start; padding:48px 60px 100px; }
+.preg-header {
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:28px;
+  animation:slideDown .5s .1s cubic-bezier(.34,1.4,.64,1) both;
+}
+@keyframes slideDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}
+.preg-num {
+  font-family:'Bebas Neue',sans-serif; font-size:clamp(14px,2vw,20px);
+  letter-spacing:4px; color:var(--muted);
+}
+.timer-wrap { position:relative; width:72px; height:72px; }
+.timer-svg { transform:rotate(-90deg); }
+.timer-track { fill:none; stroke:rgba(255,255,255,.08); stroke-width:5; }
+.timer-fill { fill:none; stroke:var(--y); stroke-width:5; stroke-linecap:round; stroke-dasharray:175.9; stroke-dashoffset:0; transition:stroke-dashoffset 1s linear, stroke .5s; }
+.timer-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:26px; color:white; }
+.preg-txt {
+  font-family:'Lora',serif;
+  font-size:clamp(32px,4.5vw,62px);
+  font-weight:600; line-height:1.15;
+  color:var(--cream); text-align:center;
+  width:100%; margin-bottom:clamp(24px,4vh,48px);
+  animation:fadeUp .6s .2s cubic-bezier(.34,1.4,.64,1) both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
+
+/* Grid de opciones para proyector — GRANDE y llamativo */
+.opciones-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:clamp(12px,2vw,24px); width:100%; flex:1;
+}
+.opcion-card {
+  border-radius:20px; border:2px solid transparent;
+  padding:clamp(20px,3vh,36px) clamp(16px,3vw,32px);
+  display:flex; align-items:center; gap:clamp(16px,2vw,28px);
+  animation:cardIn .5s cubic-bezier(.34,1.4,.64,1) both;
+  position:relative; overflow:hidden;
+  transition:border-color .3s, background .3s, transform .3s;
+}
+.opcion-card::before {
+  content:''; position:absolute; inset:0;
+  background:inherit; filter:blur(0px);
+  transition:filter .3s;
+}
+.opcion-card.op-a { background:rgba(196,112,58,.15); border-color:rgba(196,112,58,.35); animation-delay:.3s; }
+.opcion-card.op-b { background:rgba(74,143,168,.15);  border-color:rgba(74,143,168,.35);  animation-delay:.4s; }
+.opcion-card.op-c { background:rgba(245,197,24,.15);  border-color:rgba(245,197,24,.35);  animation-delay:.5s; }
+.opcion-card.op-d { background:rgba(196,134,154,.15); border-color:rgba(196,134,154,.35); animation-delay:.6s; }
+@keyframes cardIn{from{opacity:0;transform:translateY(40px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.opcion-letra {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(40px,6vw,80px);
+  line-height:1; flex-shrink:0;
+  width:clamp(50px,7vw,90px); text-align:center;
+}
+.opcion-card.op-a .opcion-letra { color:#e89a6a; }
+.opcion-card.op-b .opcion-letra { color:#7fc4dd; }
+.opcion-card.op-c .opcion-letra { color:#f5d055; }
+.opcion-card.op-d .opcion-letra { color:#e0a8be; }
+
+.opcion-sep { width:2px; height:100%; background:rgba(255,255,255,.08); border-radius:2px; flex-shrink:0; min-height:40px; }
+
+.opcion-txt {
+  font-family:'Outfit',sans-serif;
+  font-size:clamp(18px,2.2vw,32px);
+  font-weight:700; line-height:1.25;
+  flex:1;
+}
+.opcion-card.op-a .opcion-txt { color:#e89a6a; }
+.opcion-card.op-b .opcion-txt { color:#7fc4dd; }
+.opcion-card.op-c .opcion-txt { color:#f5d055; }
+.opcion-card.op-d .opcion-txt { color:#e0a8be; }
+
+/* Estados de respuesta */
+.opcion-card.correcto {
+  background:rgba(45,186,111,.25) !important;
+  border-color:var(--ok) !important;
+  transform:scale(1.02);
+  box-shadow:0 0 40px rgba(45,186,111,.2);
+}
+.opcion-card.correcto .opcion-letra,
+.opcion-card.correcto .opcion-txt { color:#7fe8aa !important; }
+
+.opcion-card.incorrecto {
+  opacity:.35;
+  filter:saturate(.3);
+}
+
+/* Respómetro en vivo */
+.resp-bar-wrap {
+  position:absolute; bottom:0; left:0; right:0; height:5px;
+  background:rgba(255,255,255,.05); border-radius:0 0 18px 18px; overflow:hidden;
+}
+.resp-bar { height:100%; border-radius:0 0 18px 18px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+.opcion-card.op-a .resp-bar { background:rgba(196,112,58,.8); }
+.opcion-card.op-b .resp-bar { background:rgba(74,143,168,.8); }
+.opcion-card.op-c .resp-bar { background:rgba(245,197,24,.8); }
+.opcion-card.op-d .resp-bar { background:rgba(196,134,154,.8); }
+
+.resp-count {
+  position:absolute; top:10px; right:14px;
+  font-family:'Bebas Neue',sans-serif; font-size:22px;
+  color:rgba(255,255,255,.3); line-height:1;
+  transition:color .3s;
+}
+
+/* Barra de progreso tiempo */
+.tiempo-bar-wrap { width:100%; height:6px; background:rgba(255,255,255,.06); border-radius:6px; overflow:hidden; margin-bottom:20px; animation:slideDown .5s .15s both; }
+.tiempo-bar { height:100%; background:var(--y); border-radius:6px; transition:width 1s linear, background .5s; }
+
+/* ── RANKING ── */
+#screenRanking { justify-content:flex-start; padding:48px 60px 100px; }
+.rank-header {
+  width:100%; margin-bottom:28px;
+  animation:slideDown .5s .1s both;
+}
+.rank-eyebrow { font-size:12px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--y); opacity:.7; margin-bottom:8px; }
+.rank-titulo { font-family:'Lora',serif; font-size:clamp(28px,4vw,52px); font-weight:600; color:var(--cream); }
+.rank-titulo em { font-style:italic; color:var(--y); }
+
+.rank-grid {
+  width:100%; display:flex; flex-direction:column; gap:10px; flex:1;
+  max-height:calc(100vh - 220px); overflow:hidden;
+}
+.rank-item {
+  display:flex; align-items:center; gap:clamp(12px,2vw,20px);
+  background:rgba(255,255,255,.04); border:1px solid var(--border);
+  border-radius:16px; padding:clamp(10px,1.5vh,18px) clamp(14px,2vw,24px);
+  animation:rankIn .5s cubic-bezier(.34,1.4,.64,1) both;
+  transition:background .3s;
+}
+.rank-item.pos-1 { background:rgba(245,197,24,.08); border-color:rgba(245,197,24,.25); }
+.rank-item.pos-2 { background:rgba(192,192,192,.05); border-color:rgba(192,192,192,.18); }
+.rank-item.pos-3 { background:rgba(205,127,50,.06); border-color:rgba(205,127,50,.2); }
+@keyframes rankIn{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+
+.rank-pos {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(22px,3vw,38px);
+  width:clamp(30px,4vw,50px); text-align:center; flex-shrink:0; color:var(--muted);
+}
+.rank-item.pos-1 .rank-pos { color:var(--y); }
+.rank-item.pos-2 .rank-pos { color:silver; }
+.rank-item.pos-3 .rank-pos { color:#cd7f32; }
+
+.rank-foto {
+  width:clamp(40px,5vw,64px); height:clamp(40px,5vw,64px);
+  border-radius:50%; object-fit:cover;
+  border:2px solid rgba(255,255,255,.1); background:var(--bg3); flex-shrink:0;
+}
+.rank-item.pos-1 .rank-foto { border-color:rgba(245,197,24,.5); box-shadow:0 0 16px rgba(245,197,24,.2); }
+
+.rank-nombre {
+  flex:1; font-size:clamp(16px,2vw,26px); font-weight:700; color:var(--cream);
+}
+.rank-pts {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(22px,3vw,40px); color:var(--y);
+}
+.rank-pts-label { font-size:10px; color:var(--muted); font-weight:700; letter-spacing:1px; text-align:right; }
+
+/* Delta animado */
+.rank-delta {
+  font-family:'Bebas Neue',sans-serif; font-size:clamp(14px,1.5vw,20px);
+  color:var(--ok); min-width:clamp(40px,4vw,60px); text-align:right;
+}
+
+/* ── RESPUESTAS BADGE ── */
+.resp-live-badge {
+  position:fixed; top:20px; right:28px; z-index:10;
+  background:rgba(22,18,13,.85); border:1px solid var(--border);
+  border-radius:100px; padding:8px 18px;
+  font-size:13px; font-weight:700; color:var(--muted);
+  backdrop-filter:blur(12px);
+  display:flex; align-items:center; gap:8px;
+  animation:fadeIn .4s ease both;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.resp-live-dot { width:8px; height:8px; border-radius:50%; background:var(--ok); animation:blink 1.5s infinite; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── TOAST ── */
+#toast {
+  position:fixed; top:24px; left:50%; transform:translateX(-50%) translateY(-20px);
+  background:var(--bg3); color:white; padding:12px 22px; border-radius:100px;
+  font-size:14px; font-weight:600; opacity:0; transition:all .3s;
+  pointer-events:none; z-index:300; border:1px solid var(--border);
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.ok   { border-color:var(--ok); color:#7fe8aa; }
+#toast.err  { border-color:var(--err); color:#f08080; }
+
+/* ── LOGO WATERMARK ── */
+.watermark {
+  position:fixed; bottom:72px; left:28px; z-index:2;
+  display:flex; align-items:center; gap:8px; opacity:.18;
+  pointer-events:none;
+}
+.watermark img { width:28px; height:28px; object-fit:contain; }
+.watermark-name { font-family:'Lora',serif; font-size:15px; font-weight:600; color:var(--cream); }
+
+/* ── RESPUESTAS IN PROGRESS ── */
+.preg-stats {
+  position:fixed; top:20px; left:28px; z-index:10;
+  display:flex; gap:10px; align-items:center;
+}
+.stat-pill {
+  background:rgba(22,18,13,.85); border:1px solid var(--border);
+  border-radius:100px; padding:7px 14px;
+  font-size:12px; font-weight:700; color:var(--muted);
+  backdrop-filter:blur(12px);
+}
+.stat-pill span { color:var(--y); }
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<!-- WATERMARK -->
+<div class="watermark">
+  <img src="logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
+  <span class="watermark-name">Luz de Cristo</span>
+</div>
+
+<!-- PANTALLA: ESPERANDO -->
+<div class="screen active" id="screenEspera">
+  <div class="espera-icon">🕊️</div>
+  <div class="espera-titulo">Asamblea<br><em>#SábadoDeLuxto</em></div>
+  <div class="espera-sub">
+    <span class="dot-anim"><span></span><span></span><span></span></span>
+    &nbsp;&nbsp;Esperando pregunta del coordinador...
+  </div>
+</div>
+
+<!-- PANTALLA: COUNTDOWN -->
+<div class="screen" id="screenCountdown">
+  <div class="countdown-num" id="countNum">3</div>
+  <div class="countdown-label">Próxima pregunta</div>
+</div>
+
+<!-- PANTALLA: PREGUNTA -->
+<div class="screen" id="screenPregunta">
+  <div class="preg-stats" id="pregStats" style="display:none;">
+    <div class="stat-pill">Respuestas: <span id="statRespCount">0</span></div>
+    <div class="stat-pill">Correctas: <span id="statCorrCount">0</span></div>
+  </div>
+  <div class="preg-header">
+    <div class="preg-num" id="pregNum">PREGUNTA 1</div>
+    <div class="timer-wrap">
+      <svg class="timer-svg" width="72" height="72" viewBox="0 0 72 72">
+        <circle class="timer-track" cx="36" cy="36" r="28"/>
+        <circle class="timer-fill" id="timerCircle" cx="36" cy="36" r="28"/>
+      </svg>
+      <div class="timer-num" id="timerNum">20</div>
+    </div>
+  </div>
+  <div class="tiempo-bar-wrap"><div class="tiempo-bar" id="tiempoBar"></div></div>
+  <div class="preg-txt" id="pregTxt">Cargando pregunta...</div>
+  <div class="opciones-grid" id="opcionesGrid"></div>
+</div>
+
+<!-- PANTALLA: RANKING -->
+<div class="screen" id="screenRanking">
+  <div class="rank-header">
+    <div class="rank-eyebrow">Clasificación en vivo</div>
+    <div class="rank-titulo">Ranking<br>de la <em>asamblea</em></div>
+  </div>
+  <div class="rank-grid" id="rankGrid"></div>
+</div>
+
+<!-- BADGE RESPUESTAS EN VIVO -->
+<div class="resp-live-badge" id="respBadge" style="display:none;">
+  <div class="resp-live-dot"></div>
+  <span id="respBadgeTxt">0 respuestas</span>
+</div>
+
+<!-- BARRA ADMIN (solo visible para admin) -->
+<div class="admin-bar" id="adminBar">
+  <span class="admin-bar-label" id="adminBarLabel">⚙️ Control del coordinador</span>
+  <div class="bar-sep"></div>
+  <button class="btn btn-ghost" id="btnMostrarRanking" onclick="mostrarRankingManual()">📊 Ver ranking</button>
+  <div class="bar-sep"></div>
+  <button class="btn btn-primary" id="btnSiguiente" onclick="lanzarSiguiente()">Siguiente pregunta →</button>
+  <button class="btn btn-danger"  id="btnCerrar" onclick="cerrarPreguntaManual()" style="display:none;">⏹ Cerrar pregunta</button>
+</div>
+
+<button class="admin-toggle" id="adminToggle" onclick="toggleAdminBar()" style="display:none;">⚙️ Admin</button>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged }
+                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, onValue, set, get }
+                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+  authDomain:        "luxto-nsp.firebaseapp.com",
+  projectId:         "luxto-nsp",
+  storageBucket:     "luxto-nsp.firebasestorage.app",
+  messagingSenderId: "3542836325",
+  appId:             "1:3542836325:web:cf65cd50edcc431500d28c",
+  databaseURL:       "https://luxto-nsp-default-rtdb.firebaseio.com"
+};
+
+const ADMINS = [
+  "henry.alfaro1@unmsm.edu.pe",
+  "paolosotil97@gmail.com",
+  "jorgediego.123.2002@gmail.com",
+  "gianfracamones@gmail.com",
+  "alvarorodrigosalazar.2001@gmail.com"
+];
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+let esAdmin          = false;
+let preguntaActualId = null;
+let timerInterval    = null;
+let tiempoRestante   = 0;
+let duracionActual   = 20;
+let pantallaActual   = "screenEspera";
+let countdownActive  = false;
+let respuestasActuales = {};
+let rankingPrevio    = {};
+
+// ── Utils ──────────────────────────────────────────────────
+function toast(msg, tipo="") {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "show " + tipo;
+  setTimeout(() => t.className="", 3000);
+}
+
+function convertirUrlDrive(url) {
+  if (!url) return "";
+  if (url.includes("drive.google.com/thumbnail")) return url;
+  let m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+       || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
+       || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w160";
+  return url;
+}
+
+function avatarFallback(nombre) {
+  const i = (nombre || "?").charAt(0).toUpperCase();
+  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>${i}</text></svg>`;
+}
+
+function showScreen(id) {
+  const prev = document.querySelector(".screen.active");
+  if (prev) {
+    prev.classList.add("exit");
+    setTimeout(() => prev.classList.remove("active","exit"), 500);
+  }
+  setTimeout(() => {
+    const next = document.getElementById(id);
+    if (next) next.classList.add("active");
+  }, prev ? 200 : 0);
+  pantallaActual = id;
+}
+
+function limpiarTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+// ── Auth ──────────────────────────────────────────────────
+onAuthStateChanged(auth, (user) => {
+  if (!user) { window.location.href = "login.html"; return; }
+  esAdmin = ADMINS.includes(user.email);
+  if (esAdmin) {
+    document.getElementById("adminToggle").style.display = "block";
+  }
+  iniciarEscucha();
+});
+
+// ── Barra admin ──────────────────────────────────────────
+window.toggleAdminBar = function() {
+  document.getElementById("adminBar").classList.toggle("visible");
+};
+
+// ── Escucha Firebase ──────────────────────────────────────
+function iniciarEscucha() {
+  onValue(ref(db, "asamblea"), (snap) => {
+    const data = snap.val();
+    if (!data || (!data.activa && data.estado !== "finalizada")) {
+      showScreen("screenEspera"); limpiarTimer(); return;
+    }
+    if (data.estado === "finalizada") {
+      limpiarTimer();
+      construirRanking(data.respuestas || {});
+      showScreen("screenRanking");
+      return;
+    }
+    const p = data.preguntaActual;
+    if (!p || p.estado !== "activa") {
+      // Actualizar ranking mientras espera
+      if (data.respuestas) actualizarRankingBg(data.respuestas);
+      if (pantallaActual === "screenPregunta") {
+        // Se cerró la pregunta → mostrar respuesta correcta brevemente
+        revelarCorrectaYRanking(data);
+      } else if (pantallaActual !== "screenRanking") {
+        showScreen("screenEspera");
+      }
+      limpiarTimer(); return;
+    }
+    // Actualizar conteos en vivo
+    if (data.respuestas && data.respuestas[p.id]) {
+      respuestasActuales = data.respuestas[p.id];
+      actualizarContadores(respuestasActuales, p);
+    } else {
+      respuestasActuales = {};
+    }
+    if (p.id !== preguntaActualId) {
+      preguntaActualId = p.id;
+      mostrarPregunta(p);
+    }
+    // Admin bar label
+    if (esAdmin) {
+      document.getElementById("adminBarLabel").textContent =
+        `⚙️ Pregunta ${p.numero || "?"} — ${Object.keys(respuestasActuales).length} respuestas`;
+    }
+  });
+}
+
+// ── Mostrar pregunta ──────────────────────────────────────
+function mostrarPregunta(p) {
+  limpiarTimer();
+  const letras = ["A","B","C","D"];
+  const clases = ["op-a","op-b","op-c","op-d"];
+  document.getElementById("pregNum").textContent = "PREGUNTA " + (p.numero || "?");
+  document.getElementById("pregTxt").textContent = p.texto;
+
+  const grid = document.getElementById("opcionesGrid");
+  grid.innerHTML = "";
+  (p.opciones || []).forEach((op, i) => {
+    const card = document.createElement("div");
+    card.className = "opcion-card " + clases[i];
+    card.dataset.idx = i;
+    card.innerHTML = `
+      <div class="opcion-letra">${letras[i]}</div>
+      <div class="opcion-sep"></div>
+      <div class="opcion-txt">${op}</div>
+      <div class="resp-bar-wrap"><div class="resp-bar" id="bar${i}" style="width:0%"></div></div>
+      <div class="resp-count" id="cnt${i}">0</div>`;
+    grid.appendChild(card);
+  });
+
+  const dur = p.duracion || 20;
+  duracionActual = dur;
+  tiempoRestante = dur;
+  iniciarTimer(dur);
+
+  // Stats pill
+  document.getElementById("pregStats").style.display = "flex";
+  document.getElementById("respBadge").style.display = "flex";
+
+  // Admin bar
+  if (esAdmin) {
+    document.getElementById("btnSiguiente").style.display = "none";
+    document.getElementById("btnCerrar").style.display = "inline-flex";
+    document.getElementById("adminBar").classList.add("visible");
+  }
+
+  showScreen("screenPregunta");
+}
+
+function iniciarTimer(duracion) {
+  limpiarTimer();
+  const circum   = 175.9;
+  const barEl    = document.getElementById("tiempoBar");
+  const circleEl = document.getElementById("timerCircle");
+  const numEl    = document.getElementById("timerNum");
+  barEl.style.width               = "100%";
+  circleEl.style.strokeDashoffset = "0";
+  numEl.textContent               = duracion;
+
+  timerInterval = setInterval(() => {
+    tiempoRestante--;
+    const pct = tiempoRestante / duracion;
+    barEl.style.width               = (pct * 100) + "%";
+    barEl.style.background          = pct > .4 ? "var(--y)" : pct > .2 ? "var(--o)" : "var(--err)";
+    circleEl.style.strokeDashoffset = circum * (1 - pct);
+    circleEl.style.stroke           = pct > .4 ? "#F5C518" : pct > .2 ? "#C4703A" : "#e03c3c";
+    numEl.textContent               = tiempoRestante;
+    if (tiempoRestante <= 0) limpiarTimer();
+  }, 1000);
+}
+
+// ── Contadores en vivo ────────────────────────────────────
+function actualizarContadores(resps, p) {
+  const total  = Object.keys(resps).length;
+  const counts = [0,0,0,0];
+  let correctas = 0;
+  Object.values(resps).forEach(r => {
+    if (r.idx >= 0 && r.idx < 4) counts[r.idx]++;
+    if (r.correcta) correctas++;
+  });
+  document.getElementById("statRespCount").textContent  = total;
+  document.getElementById("statCorrCount").textContent  = correctas;
+  document.getElementById("respBadgeTxt").textContent   = total + (total===1?" respuesta":" respuestas");
+  counts.forEach((c, i) => {
+    const barEl = document.getElementById("bar" + i);
+    const cntEl = document.getElementById("cnt" + i);
+    if (barEl) barEl.style.width = total > 0 ? (c / total * 100) + "%" : "0%";
+    if (cntEl) { cntEl.textContent = c; if(c>0) cntEl.style.color="rgba(255,255,255,.6)"; }
+  });
+}
+
+// ── Revelar correcta luego de cerrarse la pregunta ────────
+function revelarCorrectaYRanking(data) {
+  const p = data.preguntaActual;
+  if (!p) return;
+  const cards = document.querySelectorAll(".opcion-card");
+  cards.forEach((card, i) => {
+    if (i === p.correcta) card.classList.add("correcto");
+    else                  card.classList.add("incorrecto");
+  });
+  limpiarTimer();
+  // Parar timer visual en 0
+  const numEl = document.getElementById("timerNum");
+  if (numEl) numEl.textContent = "0";
+  document.getElementById("btnSiguiente").style.display = "inline-flex";
+  document.getElementById("btnCerrar").style.display    = "none";
+  // Actualizar ranking en bg
+  if (data.respuestas) actualizarRankingBg(data.respuestas);
+}
+
+// ── Ranking ───────────────────────────────────────────────
+function actualizarRankingBg(todasRespuestas) {
+  const acum = {};
+  Object.values(todasRespuestas).forEach(pregResp => {
+    Object.values(pregResp).forEach(r => {
+      if (!acum[r.email]) acum[r.email] = {
+        nombre:r.nombre, fotoUrl:r.fotoUrl||"", fotoMostrar:r.fotoMostrar||"", pts:0
+      };
+      acum[r.email].pts += (r.puntos || 0);
+    });
+  });
+  rankingPrevio = acum;
+}
+
+function construirRanking(todasRespuestas) {
+  actualizarRankingBg(todasRespuestas);
+  renderRanking();
+}
+
+function renderRanking() {
+  const ranking = Object.values(rankingPrevio).sort((a,b)=>b.pts-a.pts).slice(0,10);
+  const grid    = document.getElementById("rankGrid");
+  if (!ranking.length) {
+    grid.innerHTML = '<div style="color:var(--muted);text-align:center;font-size:20px;padding:40px;">Sin participantes aún</div>';
+    return;
+  }
+  const medallas = ["🥇","🥈","🥉"];
+  const posClase = ["pos-1","pos-2","pos-3"];
+  grid.innerHTML = ranking.map((r, i) => {
+    const fotoSrc  = r.fotoMostrar || (r.fotoUrl ? convertirUrlDrive(r.fotoUrl) : "");
+    const fallback = avatarFallback(r.nombre);
+    const label    = i < 3 ? medallas[i] : (i + 1);
+    const pClass   = i < 3 ? posClase[i] : "";
+    return `
+      <div class="rank-item ${pClass}" style="animation-delay:${i * 0.07}s">
+        <div class="rank-pos">${label}</div>
+        <img class="rank-foto" src="${fotoSrc || fallback}" alt="${r.nombre}"
+             onerror="this.onerror=null;this.src='${fallback}'">
+        <div class="rank-nombre">${r.nombre}</div>
+        <div style="text-align:right">
+          <div class="rank-pts">${r.pts}</div>
+          <div class="rank-pts-label">PTS</div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+// ── Controles admin ───────────────────────────────────────
+window.mostrarRankingManual = function() {
+  renderRanking();
+  showScreen("screenRanking");
+  document.getElementById("btnSiguiente").style.display = "inline-flex";
+  document.getElementById("btnCerrar").style.display    = "none";
+};
+
+window.lanzarSiguiente = async function() {
+  if (countdownActive) return;
+  // Si estamos en ranking, volver a espera primero
+  showScreen("screenEspera");
+  document.getElementById("adminBarLabel").textContent = "⚙️ Preparando siguiente pregunta...";
+  document.getElementById("btnSiguiente").style.display = "none";
+  // Señalizar a Firebase que puede pasar a la siguiente
+  await set(ref(db,"asamblea/preguntaActual"), {
+    estado:"esperando", numero:0, texto:"", opciones:[], correcta:-1, duracion:20,
+    id:"waiting_" + Date.now(), ts:Date.now()
+  });
+  toast("Esperando que el admin lance la siguiente pregunta", "");
+};
+
+window.cerrarPreguntaManual = async function() {
+  await set(ref(db,"asamblea/preguntaActual/estado"), "cerrada");
+  toast("Pregunta cerrada", "");
+};
+
+// ── Countdown helper (llamado desde afuera si se quiere) ──
+window.iniciarCountdown = function(n, cb) {
+  if (countdownActive) return;
+  countdownActive = true;
+  showScreen("screenCountdown");
+  let num = n;
+  document.getElementById("countNum").textContent = num;
+  const iv = setInterval(() => {
+    num--;
+    if (num <= 0) {
+      clearInterval(iv);
+      countdownActive = false;
+      if (cb) cb();
+    } else {
+      const el = document.getElementById("countNum");
+      el.style.animation = "none";
+      el.offsetHeight; // reflow
+      el.style.animation = "countPop .8s cubic-bezier(.34,1.6,.64,1) both";
+      el.textContent = num;
+    }
+  }, 1000);
+};
+</script>
+</body>
+</html>
