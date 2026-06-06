@@ -74,7 +74,23 @@ body {
 }
 .btn-volver:hover { border-color:rgba(255,255,255,.3); color:var(--cream); }
 
+  display:none; /* se muestra via JS solo si es admin */
+  align-items:center; gap:6px;
+  background:rgba(245,197,24,.1); border:1.5px solid rgba(245,197,24,.3);
+  color:var(--y); padding:7px 14px; border-radius:100px;
+  font-size:12px; font-weight:700; cursor:pointer;
+  font-family:'Outfit',sans-serif; transition: all var(--t);
+  text-decoration:none; white-space:nowrap;
+}
 
+.screen {
+  position: relative; z-index:1;
+  width:100%; max-width:680px;
+  padding: 80px 24px 40px;
+  display: none; flex-direction:column;
+  align-items:center; text-align:center;
+  min-height:100vh; justify-content:center;
+}
 .screen.active { display:flex; }
 #screenNoActiva .lock-icon { font-size:72px; margin-bottom:24px; opacity:.5; animation: float 4s ease-in-out infinite; }
 @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
@@ -115,7 +131,12 @@ body {
 .tiempo-bar { height:100%; background:var(--y); border-radius:5px; transition:width 1s linear, background .5s; }
 .pregunta-txt { font-family:'Lora',serif; font-size:clamp(18px,3.5vw,28px); font-weight:600; line-height:1.3; color:var(--cream); margin-bottom:10px; text-align:center; width:100%; }
 
-
+  display:flex; align-items:center; gap:8px;
+  background:rgba(245,197,24,.07); border:1px solid rgba(245,197,24,.2);
+  border-radius:100px; padding:8px 18px;
+  font-size:12px; font-weight:700; color:rgba(245,197,24,.7);
+  margin-bottom:22px; letter-spacing:.5px;
+}
 
 /* ── OPCIONES SOLO LETRAS (celular) ── */
 .opciones-grid {
@@ -268,6 +289,41 @@ body {
       <span id="topbarNombre">...</span>
       <img src="" id="topbarFoto" class="topbar-avatar" onerror="this.onerror=null;this.style.display='none'">
     </div>
+    <button class="btn-volver" onclick="window.location.href='dashboard.html'">← Salir</button>
+  </div>
+</div>
+
+<div class="screen active" id="screenNoActiva">
+  <div class="lock-icon">🔒</div>
+  <div class="screen-title">Modo asamblea<br>no <em>activo</em></div>
+  <div class="screen-sub">El coordinador aún no ha activado la asamblea. Vuelve cuando el #SábadoDeLuxto esté en curso.</div>
+  <a href="dashboard.html" class="btn-back">← Volver al dashboard</a>
+</div>
+
+<div class="screen" id="screenEsperando">
+  <div class="waiting-icon">🕊️</div>
+  <div class="screen-title">¡Estás <em>dentro</em>!</div>
+  <div class="screen-sub">Espera a que el coordinador active la siguiente pregunta. Estate atento/a.</div>
+  <div class="waiting-pill">
+    <div class="dot-anim"><span></span><span></span><span></span></div>
+    Esperando pregunta...
+  </div>
+</div>
+
+<div class="screen" id="screenPregunta">
+  <div class="pregunta-header">
+    <div class="pregunta-num" id="preguntaNum">PREGUNTA 1</div>
+    <div class="timer-wrap">
+      <svg class="timer-svg" width="56" height="56" viewBox="0 0 56 56">
+        <circle class="timer-track" cx="28" cy="28" r="22"/>
+        <circle class="timer-fill" id="timerCircle" cx="28" cy="28" r="22"/>
+      </svg>
+      <div class="timer-num" id="timerNum">20</div>
+    </div>
+  </div>
+  <div class="tiempo-bar-wrap"><div class="tiempo-bar" id="tiempoBar"></div></div>
+  <div class="pregunta-txt" id="preguntaTxt">Cargando pregunta...</div>
+  </div>
   <!-- Opciones: solo letras grandes -->
   <div class="opciones-grid" id="opcionesGrid"></div>
 </div>
