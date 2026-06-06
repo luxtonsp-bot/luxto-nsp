@@ -73,6 +73,19 @@ body {
   font-family:'Outfit',sans-serif; transition: all var(--t);
 }
 .btn-volver:hover { border-color:rgba(255,255,255,.3); color:var(--cream); }
+
+/* ── BOTÓN PROYECTOR (solo admin) ── */
+.btn-proyector {
+  display:none; /* se muestra via JS solo si es admin */
+  align-items:center; gap:6px;
+  background:rgba(245,197,24,.1); border:1.5px solid rgba(245,197,24,.3);
+  color:var(--y); padding:7px 14px; border-radius:100px;
+  font-size:12px; font-weight:700; cursor:pointer;
+  font-family:'Outfit',sans-serif; transition: all var(--t);
+  text-decoration:none; white-space:nowrap;
+}
+.btn-proyector:hover { background:rgba(245,197,24,.2); border-color:rgba(245,197,24,.5); }
+
 .screen {
   position: relative; z-index:1;
   width:100%; max-width:680px;
@@ -107,6 +120,8 @@ body {
 .dot-anim span:nth-child(2){animation-delay:.2s;}
 .dot-anim span:nth-child(3){animation-delay:.4s;}
 @keyframes dotBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+
+/* ── PANTALLA PREGUNTA ── */
 #screenPregunta { justify-content:flex-start; padding-top:72px; }
 .pregunta-header { width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
 .pregunta-num { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:3px; color:var(--muted); }
@@ -117,29 +132,64 @@ body {
 .timer-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:22px; color:white; letter-spacing:1px; }
 .tiempo-bar-wrap { width:100%; height:5px; background:rgba(255,255,255,.07); border-radius:5px; overflow:hidden; margin-bottom:20px; }
 .tiempo-bar { height:100%; background:var(--y); border-radius:5px; transition:width 1s linear, background .5s; }
-.pregunta-txt { font-family:'Lora',serif; font-size:clamp(22px,4.5vw,36px); font-weight:600; line-height:1.2; color:var(--cream); margin-bottom:28px; text-align:center; width:100%; }
-.opciones-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
+.pregunta-txt { font-family:'Lora',serif; font-size:clamp(18px,3.5vw,28px); font-weight:600; line-height:1.3; color:var(--cream); margin-bottom:10px; text-align:center; width:100%; }
+
+/* ── HINT "Mira el proyector" ── */
+.proyector-hint {
+  display:flex; align-items:center; gap:8px;
+  background:rgba(245,197,24,.07); border:1px solid rgba(245,197,24,.2);
+  border-radius:100px; padding:8px 18px;
+  font-size:12px; font-weight:700; color:rgba(245,197,24,.7);
+  margin-bottom:22px; letter-spacing:.5px;
+}
+
+/* ── OPCIONES SOLO LETRAS (celular) ── */
+.opciones-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:12px; width:100%;
+}
 .opcion-btn {
-  padding:20px 16px; border-radius:16px; border:2px solid transparent;
-  font-family:'Outfit',sans-serif; font-size:15px; font-weight:700;
+  padding:0; border-radius:20px; border:2px solid transparent;
   cursor:pointer; text-align:center;
   transition:all .2s cubic-bezier(.34,1.4,.64,1);
-  position:relative; overflow:hidden; line-height:1.3;
+  position:relative; overflow:hidden;
+  aspect-ratio:1;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4px;
 }
-.opcion-btn::before { content:attr(data-letra); position:absolute; top:8px; left:10px; font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:1px; opacity:.5; }
-.opcion-btn:hover:not(:disabled) { transform:scale(1.03); }
+.opcion-btn:hover:not(:disabled) { transform:scale(1.04); }
 .opcion-btn:disabled { cursor:default; }
-.opcion-btn.op-a { background:rgba(196,112,58,.18); border-color:rgba(196,112,58,.4); color:#e89a6a; }
-.opcion-btn.op-b { background:rgba(74,143,168,.18);  border-color:rgba(74,143,168,.4);  color:#7fc4dd; }
-.opcion-btn.op-c { background:rgba(245,197,24,.18);  border-color:rgba(245,197,24,.4);  color:#f5d055; }
-.opcion-btn.op-d { background:rgba(196,134,154,.18); border-color:rgba(196,134,154,.4); color:#e0a8be; }
-.opcion-btn.selected { transform:scale(1.04); }
-.opcion-btn.op-a.selected { background:rgba(196,112,58,.5);  border-color:var(--o); color:white; }
-.opcion-btn.op-b.selected { background:rgba(74,143,168,.5);  border-color:var(--b); color:white; }
-.opcion-btn.op-c.selected { background:rgba(245,197,24,.5);  border-color:var(--y); color:var(--bg); }
-.opcion-btn.op-d.selected { background:rgba(196,134,154,.5); border-color:var(--r); color:white; }
-.opcion-btn.correcto   { background:rgba(45,186,111,.3)!important; border-color:var(--ok)!important;  color:#7fe8aa!important; }
-.opcion-btn.incorrecto { background:rgba(224,60,60,.25)!important; border-color:var(--err)!important; color:#f08080!important; }
+.opcion-btn.op-a { background:rgba(196,112,58,.18); border-color:rgba(196,112,58,.4); }
+.opcion-btn.op-b { background:rgba(74,143,168,.18);  border-color:rgba(74,143,168,.4);  }
+.opcion-btn.op-c { background:rgba(245,197,24,.18);  border-color:rgba(245,197,24,.4);  }
+.opcion-btn.op-d { background:rgba(196,134,154,.18); border-color:rgba(196,134,154,.4); }
+
+.opcion-letra-big {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,12vw,72px);
+  line-height:1;
+}
+.opcion-btn.op-a .opcion-letra-big { color:#e89a6a; }
+.opcion-btn.op-b .opcion-letra-big { color:#7fc4dd; }
+.opcion-btn.op-c .opcion-letra-big { color:#f5d055; }
+.opcion-btn.op-d .opcion-letra-big { color:#e0a8be; }
+
+.opcion-btn.selected { transform:scale(1.06); }
+.opcion-btn.op-a.selected { background:rgba(196,112,58,.5);  border-color:var(--o); }
+.opcion-btn.op-b.selected { background:rgba(74,143,168,.5);  border-color:var(--b); }
+.opcion-btn.op-c.selected { background:rgba(245,197,24,.5);  border-color:var(--y); }
+.opcion-btn.op-d.selected { background:rgba(196,134,154,.5); border-color:var(--r); }
+.opcion-btn.correcto   { background:rgba(45,186,111,.3)!important; border-color:var(--ok)!important; }
+.opcion-btn.incorrecto { background:rgba(224,60,60,.25)!important; border-color:var(--err)!important; opacity:.5; }
+
+.opcion-btn.op-a.selected .opcion-letra-big { color:white; }
+.opcion-btn.op-b.selected .opcion-letra-big { color:white; }
+.opcion-btn.op-c.selected .opcion-letra-big { color:var(--bg); }
+.opcion-btn.op-d.selected .opcion-letra-big { color:white; }
+.opcion-btn.correcto   .opcion-letra-big { color:#7fe8aa!important; }
+.opcion-btn.incorrecto .opcion-letra-big { color:rgba(255,255,255,.3)!important; }
+
+/* ── RESULTADO ── */
 .resultado-emoji { font-size:64px; margin-bottom:14px; animation:popIn .5s cubic-bezier(.34,1.4,.64,1) both; }
 @keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 .resultado-titulo { font-family:'Lora',serif; font-size:clamp(28px,6vw,46px); font-weight:600; letter-spacing:-.01em; margin-bottom:8px; }
@@ -220,7 +270,7 @@ body {
 #toast.ok    { border-color:var(--ok);  color:#7fe8aa; }
 #toast.err   { border-color:var(--err); color:#f08080; }
 @media(max-width:500px) {
-  .opciones-grid { grid-template-columns:1fr; }
+  .opciones-grid { grid-template-columns:1fr 1fr; gap:10px; }
   .screen { padding-top:68px; }
   .podio-lugar.pos-1 .podio-foto { width:76px; height:76px; }
   .podio-lugar.pos-2 .podio-foto { width:62px; height:62px; }
@@ -244,6 +294,8 @@ body {
       <span id="topbarNombre">...</span>
       <img src="" id="topbarFoto" class="topbar-avatar" onerror="this.onerror=null;this.style.display='none'">
     </div>
+    <!-- Botón proyector solo visible para admins (JS lo muestra) -->
+    <a href="proyector.html" target="_blank" class="btn-proyector" id="btnProyector">🖥️ Proyector</a>
     <button class="btn-volver" onclick="window.location.href='dashboard.html'">← Salir</button>
   </div>
 </div>
@@ -278,6 +330,11 @@ body {
   </div>
   <div class="tiempo-bar-wrap"><div class="tiempo-bar" id="tiempoBar"></div></div>
   <div class="pregunta-txt" id="preguntaTxt">Cargando pregunta...</div>
+  <!-- Hint para el proyector -->
+  <div class="proyector-hint">
+    📺&nbsp; Lee las opciones en el proyector
+  </div>
+  <!-- Opciones: solo letras grandes -->
   <div class="opciones-grid" id="opcionesGrid"></div>
 </div>
 
@@ -339,10 +396,18 @@ const auth = getAuth(app);
 const db   = getDatabase(app);
 const API  = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
 
+const ADMINS = [
+  "henry.alfaro1@unmsm.edu.pe",
+  "paolosotil97@gmail.com",
+  "jorgediego.123.2002@gmail.com",
+  "gianfracamones@gmail.com",
+  "alvarorodrigosalazar.2001@gmail.com"
+];
+
 let usuarioActual    = null;
 let nombreActual     = "";
-let fotoActual       = "";   // URL thumbnail para mostrar
-let fotoOriginal     = "";   // URL original de Drive (para guardar en Firebase)
+let fotoActual       = "";
+let fotoOriginal     = "";
 let puntosTotal      = 0;
 let preguntaActualId = null;
 let timerInterval    = null;
@@ -350,7 +415,7 @@ let tiempoRestante   = 0;
 let respondioActual  = false;
 let tiempoInicioResp = 0;
 let podioMostrado    = false;
-let participoEnAsamblea = false; // FIX: rastrea si el usuario respondió al menos una pregunta
+let participoEnAsamblea = false;
 
 function toast(msg, tipo="") {
   const t = document.getElementById("toast");
@@ -363,9 +428,7 @@ function show(id) {
 }
 function convertirUrlDrive(url) {
   if (!url) return "";
-  // Si ya es un thumbnail de Drive, devolverla tal cual
   if (url.includes("drive.google.com/thumbnail")) return url;
-  // Patrones conocidos: id=FILEID  |  /d/FILEID/  |  /file/d/FILEID  |  uc?id=FILEID  |  open?id=FILEID
   let m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
        || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
        || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
@@ -380,21 +443,24 @@ function avatarFallback(nombre) {
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   usuarioActual = user;
+
+  // Mostrar botón proyector solo para admins
+  if (ADMINS.includes(user.email)) {
+    document.getElementById("btnProyector").style.display = "inline-flex";
+  }
+
   try {
     const res  = await fetch(API, { method:"POST", body: JSON.stringify({ accion:"getDashboard", email:user.email }) });
     const data = await res.json();
     if (data.ok) {
       nombreActual = data.nombre;
-      // ── FIX FOTO: guardar siempre la URL original Y generar thumbnail ──
       fotoOriginal = data.fotoUrl || "";
       fotoActual   = fotoOriginal ? convertirUrlDrive(fotoOriginal) : "";
-
       document.getElementById("topbarNombre").textContent = nombreActual.split(" ")[0];
       const avatarEl = document.getElementById("topbarFoto");
       if (fotoActual) {
         avatarEl.src = fotoActual;
       } else {
-        // Mostrar inicial si no hay foto
         avatarEl.src = avatarFallback(nombreActual);
         avatarEl.style.display = "block";
       }
@@ -407,24 +473,16 @@ function iniciarEscucha() {
   onValue(ref(db, "asamblea"), (snap) => {
     const data = snap.val();
 
-    // ── FIX ORDEN: primero verificar si está ACTIVA ──
-    // Si activa:false Y estado:"finalizada" → mostrar podio SOLO si ya habíamos entrado
-    // Si activa:false pero nunca entró → mostrar pantalla no activa
-
     if (!data) {
       podioMostrado = false;
       show("screenNoActiva"); limpiarTimer(); return;
     }
 
-    // Si la asamblea está finalizada Y ya habíamos entrado en esta sesión → podio
     if (data.estado === "finalizada" && podioMostrado === "sesion") {
-      // Ya se mostró el podio, no hacer nada
       return;
     }
 
-    // FIX: Usar participoEnAsamblea además de preguntaActualId
-        if (data.estado === "finalizada" && !data.activa && (preguntaActualId !== null || participoEnAsamblea)) {
-      // El usuario participó en esta asamblea → mostrar podio
+    if (data.estado === "finalizada" && !data.activa && (preguntaActualId !== null || participoEnAsamblea)) {
       if (podioMostrado !== "sesion") {
         podioMostrado = "sesion";
         construirPodio(data.respuestas || {});
@@ -433,32 +491,26 @@ function iniciarEscucha() {
       return;
     }
 
-    // Si la asamblea NO está activa (y el usuario no participó aún), mostrar pantalla bloqueada
     if (!data.activa && data.estado !== "finalizada") {
       podioMostrado = false;
       show("screenNoActiva"); limpiarTimer(); return;
     }
 
-    // Si está finalizada pero el usuario no había participado → pantalla no activa
     if (data.estado === "finalizada" && preguntaActualId === null && !participoEnAsamblea) {
       podioMostrado = false;
       show("screenNoActiva"); limpiarTimer(); return;
     }
 
-    // ── Asamblea activa ──
-    // Resetear flag de podio cuando se inicia una nueva asamblea
     if (data.activa && podioMostrado) {
- podioMostrado = false;
- participoEnAsamblea = false;
- preguntaActualId = null;
- }
-    // ── FIX: cualquier estado que NO sea "activa" → pantalla de espera ──
-    // (cubre: sin preguntaActual, "esperando", "cerrada" residual de sesión previa)
+      podioMostrado = false;
+      participoEnAsamblea = false;
+      preguntaActualId = null;
+    }
+
     if (!data.preguntaActual || data.preguntaActual.estado !== "activa") {
       show("screenEsperando"); limpiarTimer();
-        // FIX: NO resetear preguntaActualId — se necesita para saber si participó al finalizar
-        respondioActual = false;
-        return;
+      respondioActual = false;
+      return;
     }
 
     const p = data.preguntaActual;
@@ -475,18 +527,20 @@ function iniciarEscucha() {
 
 function mostrarPregunta(p) {
   document.getElementById("preguntaNum").textContent = "PREGUNTA " + (p.numero || "?");
+  // Mostrar el texto de la pregunta también en el celular
   document.getElementById("preguntaTxt").textContent = p.texto;
+
   const grid   = document.getElementById("opcionesGrid");
   const letras = ["A","B","C","D"];
   const clases = ["op-a","op-b","op-c","op-d"];
   grid.innerHTML = "";
   (p.opciones || []).forEach((op, i) => {
     const btn = document.createElement("button");
-    btn.className     = "opcion-btn " + clases[i];
-    btn.dataset.letra = letras[i];
-    btn.dataset.idx   = i;
-    btn.textContent   = op;
-    btn.onclick       = () => responderOpcion(i, op, p);
+    btn.className = "opcion-btn " + clases[i];
+    btn.dataset.idx = i;
+    // Solo letra grande — el texto se lee en el proyector
+    btn.innerHTML = `<div class="opcion-letra-big">${letras[i]}</div>`;
+    btn.onclick = () => responderOpcion(i, op, p);
     grid.appendChild(btn);
   });
   const dur = p.duracion || 20;
@@ -525,7 +579,7 @@ function limpiarTimer() {
 function responderOpcion(idx, texto, pregunta) {
   if (respondioActual) return;
   respondioActual = true;
-  participoEnAsamblea = true; // FIX: marcar que participó en esta asamblea
+  participoEnAsamblea = true;
   limpiarTimer();
   document.querySelectorAll(".opcion-btn").forEach(b => b.disabled = true);
   document.querySelectorAll(".opcion-btn")[idx].classList.add("selected");
@@ -539,12 +593,11 @@ function responderOpcion(idx, texto, pregunta) {
     puntosTotal += pts;
   }
 
-  // ── FIX FOTO: guardar SIEMPRE fotoOriginal y fotoMostrar ──
   set(ref(db, "asamblea/respuestas/" + pregunta.id + "/" + usuarioActual.uid), {
     nombre:      nombreActual,
     email:       usuarioActual.email,
-    fotoUrl:     fotoOriginal,   // URL original de Drive (puede estar vacía si no tiene foto)
-    fotoMostrar: fotoActual,     // URL thumbnail ya procesada
+    fotoUrl:     fotoOriginal,
+    fotoMostrar: fotoActual,
     respuesta:   texto,
     idx,
     correcta:    esCorrecta,
@@ -615,7 +668,6 @@ function construirPodio(todasRespuestas) {
     show("screenFin"); return;
   }
 
-  // TOP 3
   const top3El     = document.getElementById("podioTop3");
   top3El.innerHTML = "";
   const ordenVisual = [ ranking[1]||null, ranking[0]||null, ranking[2]||null ];
@@ -628,11 +680,9 @@ function construirPodio(todasRespuestas) {
     const wrap = document.createElement("div");
     wrap.className = "podio-lugar " + posClases[vi];
 
-    // ── FIX FOTO PODIO: usar fotoMostrar primero, luego convertir fotoUrl, luego fallback ──
     const fotoSrc = r.fotoMostrar
       || (r.fotoUrl ? convertirUrlDrive(r.fotoUrl) : "")
       || avatarFallback(r.nombre);
-
     const fallback = avatarFallback(r.nombre);
     wrap.innerHTML = `
       <div class="podio-foto-wrap">
@@ -646,7 +696,6 @@ function construirPodio(todasRespuestas) {
     top3El.appendChild(wrap);
   });
 
-  // Ranking completo
   const listaEl     = document.getElementById("rankingCompleto");
   listaEl.innerHTML = "";
   const medallas    = ["🥇","🥈","🥉"];
