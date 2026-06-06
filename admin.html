@@ -452,7 +452,7 @@ body::before {
       <div class="toggle-row">
         <div class="toggle-info">
           <div class="estado-label off" id="estadoLabel">⚫ Inactivo</div>
-          <div class="estado-sub" id="estadoSub">Activa el modo para que los miembros participen</div>
+          <div class="estado-sub" id="estadoSub">Activa el modo, sube preguntas, y controla todo desde el proyector</div>
         </div>
         <!-- ── CAMBIO: botón finalizar + toggle envueltos juntos ── -->
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
@@ -531,7 +531,7 @@ body::before {
 
   <!-- NUEVA PREGUNTA -->
   <div class="card nueva-pregunta">
-    <div class="card-title">➕ Nueva pregunta</div>
+    <div class="card-title">➕ Crear pregunta <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">(guárdala, el proyector la lanzará)</span></div>
     <div class="np-grid">
 
       <div class="np-field">
@@ -585,7 +585,7 @@ body::before {
           <div class="np-label">Acciones</div>
           <div class="np-actions">
             <button class="btn btn-ghost" onclick="guardarBorrador()">💾 Guardar</button>
-            <button class="btn btn-primary" id="btnLanzar" onclick="lanzarPregunta()">🚀 Lanzar</button>
+            
           </div>
         </div>
       </div>
@@ -774,7 +774,7 @@ function escucharAsamblea() {
 function actualizarEstadoUI(activa) {
   const label  = document.getElementById("estadoLabel");
   const sub    = document.getElementById("estadoSub");
-  const btnFin = document.getElementById("btnFinalizar");
+ 
   if (activa) {
     label.textContent        = "🟢 Activo";
     label.className          = "estado-label on";
@@ -784,7 +784,7 @@ function actualizarEstadoUI(activa) {
   } else {
     label.textContent        = "⚫ Inactivo";
     label.className          = "estado-label off";
-    sub.textContent          = "Activa el modo para que los miembros participen";
+    sub.textContent          = "Activa el modo, sube preguntas, y controla todo desde el proyector";
     btnFin.style.display     = "none";
  document.getElementById("btnResetRanking").style.display = "none";
   }
@@ -833,48 +833,10 @@ window.toggleModoAsamblea = async function(activa) {
 };
 
 // ── Acumular puntos de esta asamblea en el ranking GLOBAL ──
-async function acumularEnRankingGlobal() {
-  const snap = await get(ref(db, "asamblea/respuestas"));
-  const respuestas = snap.val();
-  if (!respuestas) return;
-  const acum = {};
-  Object.values(respuestas).forEach(pregResp => {
-    Object.values(pregResp).forEach(r => {
-      if (!r || !r.email) return;
-      const key = r.email.replace(/[.#$\[\]]/g, "_");
-      if (!acum[key]) acum[key] = { nombre: r.nombre || "?", email: r.email, fotoUrl: r.fotoUrl || "", pts: 0 };
-      acum[key].pts += (r.puntos || 0);
-    });
-  });
-  // Sumar a lo ya guardado
-  for (const key of Object.keys(acum)) {
-    const prevSnap = await get(ref(db, "rankingGlobal/" + key));
-    const prev = prevSnap.val() || { pts: 0 };
-    await set(ref(db, "rankingGlobal/" + key), {
-      nombre: acum[key].nombre,
-      email:  acum[key].email,
-      fotoUrl: acum[key].fotoUrl || prev.fotoUrl || "",
-      pts: (prev.pts || 0) + acum[key].pts,
-      ultimaAsamblea: Date.now()
-    });
-  }
-}
+
 
 // ── NUEVO: finalizar asamblea, acumular en global y disparar podio ────────
-window.finalizarAsamblea = async function() {
-  const ok = confirm("¿Finalizar la asamblea? Los puntos se sumarán al ranking global y se mostrará el podio.");
-  if (!ok) return;
-  await acumularEnRankingGlobal();
-  await set(ref(db,"asamblea/preguntaActual/estado"), "cerrada");
-  await set(ref(db,"asamblea/activa"), false);
-  await set(ref(db,"asamblea/estado"), "finalizada");
-  // FIX: Borrar respuestas de esta asamblea después de acumular en el ranking global
-  // Para que la próxima asamblea no vuelva a sumar puntos viejos
-  await remove(ref(db, "asamblea/respuestas"));
-  preguntaNumActual = 0;
-  document.getElementById("btnFinalizar").style.display = "none";
-  toast("🏁 Asamblea finalizada — puntos acumulados al ranking global", "ok");
-};
+
 
 // ── Reiniciar ranking (borrar respuestas acumuladas) ──
 window.reiniciarRanking = async function() {
@@ -901,133 +863,20 @@ window.reiniciarRankingGlobal = async function() {
  toast("♻️ Ranking global reiniciado", "ok");
 };
 // ── Lanzar pregunta ───────────────────────────────────
-window.lanzarPregunta = async function() {
-  const texto    = document.getElementById("npTexto").value.trim();
-  const opA      = document.getElementById("opA").value.trim();
-  const opB      = document.getElementById("opB").value.trim();
-  const opC      = document.getElementById("opC").value.trim();
-  const opD      = document.getElementById("opD").value.trim();
-  const duracion = parseInt(document.getElementById("npDuracion").value);
-  const radio    = document.querySelector('input[name="correcta"]:checked');
 
-  if (!texto)       { toast("Escribe la pregunta", "err"); return; }
-  if (!opA || !opB) { toast("Necesitas al menos A y B", "err"); return; }
-  if (!radio)       { toast("Selecciona la respuesta correcta", "err"); return; }
 
-  const snapActiva = await get(ref(db,"asamblea/activa"));
-  if (!snapActiva.val()) { toast("Activa la asamblea primero", "err"); return; }
 
-  preguntaNumActual++;
-  // FIX: Persistir preguntaNum en Firebase para consistencia
-  await set(ref(db, "asamblea/preguntaNum"), preguntaNumActual);
-  const opciones = [opA, opB];
-  if (opC) opciones.push(opC);
-  if (opD) opciones.push(opD);
 
-  const pregunta = {
-    id:      "p_" + Date.now(),
-    numero:  preguntaNumActual,
-    texto, opciones,
-    correcta: parseInt(radio.value),
-    duracion, estado:"activa", ts:Date.now()
-  };
 
-  await set(ref(db,"asamblea/preguntaActual"), pregunta);
-  toast("🚀 Pregunta lanzada", "ok");
-
-  setTimeout(async () => {
-    const snap = await get(ref(db,"asamblea/preguntaActual"));
-    if (snap.val()?.id === pregunta.id && snap.val()?.estado === "activa") {
-      await set(ref(db,"asamblea/preguntaActual/estado"), "cerrada");
-    }
-  }, (duracion + 2) * 1000);
-};
-
-window.cerrarPregunta = async function() {
-  await set(ref(db,"asamblea/preguntaActual/estado"), "cerrada");
-  toast("Pregunta cerrada", "");
-};
-
-window.siguientePregunta = async function() {
-  await set(ref(db,"asamblea/preguntaActual"), {
-    estado:"esperando", numero:preguntaNumActual,
-    texto:"", opciones:[], correcta:-1, duracion:20,
-    id:"waiting_" + Date.now(), ts:Date.now()
-  });
-  ["npTexto","opA","opB","opC","opD"].forEach(id => document.getElementById(id).value="");
-  document.querySelectorAll('input[name="correcta"]').forEach(r => r.checked=false);
-  toast("Esperando nueva pregunta...", "");
-};
 
 // ── Pregunta activa visual ────────────────────────────
-function mostrarPreguntaActiva(p, data) {
-  document.getElementById("preguntaActivaCard").classList.add("visible");
-  document.getElementById("paTexto").textContent = p.texto;
 
-  const letras = ["A","B","C","D"];
-  document.getElementById("paOpciones").innerHTML =
-    (p.opciones || []).map((op, i) =>
-      `<div class="pa-opcion ${i===p.correcta?'correcta':''}">${letras[i]}. ${op}${i===p.correcta?' ✓':''}</div>`
-    ).join("");
-}
 
 // ── Respuestas en vivo ────────────────────────────────
-function mostrarRespuestasLive(resps, p) {
-  const list = document.getElementById("respLiveList");
-  document.getElementById("respCount").textContent = resps.length;
 
-  if (!resps.length) {
-    list.innerHTML = '<div class="resp-vacia">Esperando respuestas...</div>'; return;
-  }
-  const letras = ["A","B","C","D"];
-  list.innerHTML = resps
-    .sort((a,b) => a.tiempo - b.tiempo)
-    .map(r => {
-      const fotoSrc = r.fotoUrl ? convertirUrlDrive(r.fotoUrl) : avatarFallback(r.nombre);
-      return `
-        <div class="resp-item">
-          <img class="resp-item-foto" src="${fotoSrc}" alt="${r.nombre}"
-               onerror="this.onerror=null;this.src='${avatarFallback(r.nombre)}'">
-          <span class="resp-item-nombre">${r.nombre||"?"}</span>
-          <span class="resp-item-resp">${letras[r.idx]||"?"}: ${(p.opciones||[])[r.idx]||""}</span>
-          <span class="resp-item-pts">${r.correcta ? "+"+r.puntos : "✗"}</span>
-        </div>`;
-    }).join("");
-}
 
 // ── Ranking con fotos ─────────────────────────────────
-function actualizarRanking(todasRespuestas) {
-  if (!todasRespuestas) return;
-  const acum = {};
-  Object.values(todasRespuestas).forEach(pregResp => {
-    Object.values(pregResp).forEach(r => {
-      if (!acum[r.email]) acum[r.email] = { nombre:r.nombre, fotoUrl:r.fotoUrl||"", pts:0 };
-      acum[r.email].pts += (r.puntos||0);
-    });
-  });
 
-  const ranking = Object.values(acum).sort((a,b) => b.pts - a.pts).slice(0,10);
-  const card    = document.getElementById("rankingCard");
-  const lista   = document.getElementById("rankLista");
-
-  if (!ranking.length) { card.classList.remove("visible"); return; }
-  card.classList.add("visible");
-
-  const medals = ["🥇","🥈","🥉"];
-  const gClase = ["g1","g2","g3"];
-  const tClase = ["top1","top2","top3"];
-  lista.innerHTML = ranking.map((r,i) => {
-    const fotoSrc = r.fotoUrl ? convertirUrlDrive(r.fotoUrl) : avatarFallback(r.nombre);
-    return `
-      <div class="rank-item ${tClase[i]||''}">
-        <div class="rank-pos ${gClase[i]||''}">${i<3 ? medals[i] : i+1}</div>
-        <img class="rank-foto" src="${fotoSrc}" alt="${r.nombre}"
-             onerror="this.onerror=null;this.src='${avatarFallback(r.nombre)}'">
-        <div class="rank-nombre">${r.nombre}</div>
-        <div class="rank-pts">${r.pts} pts</div>
-      </div>`;
-  }).join("");
-}
 
 // ── Borradores ────────────────────────────────────────
 window.guardarBorrador = function() {
