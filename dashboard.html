@@ -373,7 +373,7 @@ textarea:focus{border-color:var(--o);background:white;}
     </div>
     <div class="topbar-nombre">
       <span id="topbarNombre">Cargando...</span>
-      <img id="topbarFoto" class="topbar-avatar" src="https://drive.google.com/thumbnail?id=0" alt="" onerror="this.onerror=null;this.src='logo_luxto.png'">
+      <img id="topbarFoto" class="topbar-avatar" src="" alt="" onerror="this.onerror=null;this.style.display='none'">
     </div>
     <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
   </div>
@@ -508,18 +508,20 @@ textarea:focus{border-color:var(--o);background:white;}
 <canvas id="confetti"></canvas>
 
 <script type="module">
-/* ╔══════════════════════════════════════════════════════════════╗
-   ║  ⚠️  PEGA AQUÍ TU CONFIG REAL (cópiala de tu dashboard.html)  ║
-   ║  Reemplaza el firebaseConfig y la const API por los tuyos.    ║
-   ╚══════════════════════════════════════════════════════════════╝ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
-  // 👉 PEGA TU firebaseConfig AQUÍ (apiKey, authDomain, databaseURL, projectId, etc.)
+  apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+  authDomain:        "luxto-nsp.firebaseapp.com",
+  projectId:         "luxto-nsp",
+  storageBucket:     "luxto-nsp.firebasestorage.app",
+  messagingSenderId: "3542836325",
+  appId:             "1:3542836325:web:cf65cd50edcc431500d28c",
+  databaseURL:       "https://luxto-nsp-default-rtdb.firebaseio.com"
 };
-const API = "https://script.google.com/macros/s/AKfycb.../exec"; // 👉 PEGA TU URL DE APPS SCRIPT AQUÍ
+const API = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -685,8 +687,7 @@ async function cargarDashboard(email) {
         document.getElementById("fidelBarFill").style.width = Math.min(pct, 100) + "%";
       }, 300);
 
-      // ⭐ NUEVO — Nota de rendimiento (columna G de "Estadistica")
-      // El backend debe enviar e.notaRendimiento (ver nota al final del archivo).
+      // ⭐ Nota de rendimiento (columna G de "Estadistica")
       renderNota(e.notaRendimiento);
 
       document.getElementById("rTotal").textContent     = e.totalAsambleas;
