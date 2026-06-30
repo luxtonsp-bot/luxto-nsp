@@ -6,48 +6,756 @@
 <title>Modo Asamblea — Luz de Cristo</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
-:root {--y:#F5C518;--o:#C4703A;--b:#4A8FA8;--r:#C4869A;--ok:#2dba6f;--err:#e03c3c;--bg:#16120d;--bg2:#1f1a12;--bg3:#2a2218;--border:rgba(255,255,255,.08);--muted:rgba(255,248,231,.45);--cream:rgba(255,248,231,.9);--grad:linear-gradient(135deg,#F5C518,#e09a2e,#C4703A);--grad-dark:linear-gradient(160deg,#2a2218,#3a2e1f,#553e22);--shadow:0 8px 32px -8px rgba(0,0,0,.4);--shadow-lg:0 24px 64px -16px rgba(0,0,0,.6);--t:.3s cubic-bezier(.4,0,.2,1);--spring:.55s cubic-bezier(.34,1.4,.64,1)}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}html,body{height:100%}body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--cream);display:flex;flex-direction:column;align-items:center;min-height:100vh;position:relative;overflow-x:hidden}.bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 15% 15%,rgba(245,197,24,.12),transparent 50%),radial-gradient(ellipse at 85% 85%,rgba(196,112,58,.12),transparent 50%),radial-gradient(ellipse at 50% 50%,rgba(74,143,168,.06),transparent 60%);animation:bgPulse 10s ease-in-out infinite alternate}@keyframes bgPulse{0%{opacity:.7}100%{opacity:1;filter:hue-rotate(10deg)}}.topbar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(22,18,13,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 28px}.topbar-inner{max-width:780px;margin:0 auto;display:flex;align-items:center;height:60px;gap:14px}.topbar-logo{display:flex;align-items:center;gap:9px;text-decoration:none}.topbar-logo img{width:32px;height:32px;object-fit:contain}.topbar-logo-name{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--cream)}.topbar-sep{flex:1}.topbar-user{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}.topbar-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--y);background:var(--bg3)}.btn-volver{background:none;border:1.5px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all var(--t)}.btn-volver:hover{border-color:rgba(255,255,255,.3);color:var(--cream)}.btn-proyector{display:none;align-items:center;gap:6px;background:rgba(245,197,24,.1);border:1.5px solid rgba(245,197,24,.3);color:var(--y);padding:7px 14px;border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all var(--t);text-decoration:none;white-space:nowrap}.btn-proyector:hover{background:rgba(245,197,24,.2);border-color:rgba(245,197,24,.5)}.screen{position:relative;z-index:1;width:100%;max-width:680px;padding:80px 24px 40px;display:none;flex-direction:column;align-items:center;text-align:center;min-height:100vh;justify-content:center}.screen.active{display:flex}#screenNoActiva .lock-icon{font-size:72px;margin-bottom:24px;opacity:.5;animation:float 4s ease-in-out infinite}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}.screen-title{font-family:'Lora',serif;font-size:clamp(32px,7vw,52px);font-weight:600;line-height:1.1;color:var(--cream);margin-bottom:12px}.screen-title em{font-style:italic;color:var(--y)}.screen-sub{font-size:16px;color:var(--muted);line-height:1.65;max-width:380px;margin-bottom:32px}.btn-back{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:100px;background:rgba(255,255,255,.07);border:1.5px solid var(--border);color:var(--cream);font-size:15px;font-weight:700;text-decoration:none;transition:all var(--t)}.btn-back:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2)}.waiting-icon{font-size:72px;margin-bottom:24px;animation:float 3s ease-in-out infinite}.waiting-pill{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:100px;padding:13px 24px;font-size:14px;font-weight:600;color:var(--muted)}.dot-anim{display:flex;gap:5px;align-items:center}.dot-anim span{width:6px;height:6px;border-radius:50%;background:var(--y);animation:dotBounce 1.4s ease-in-out infinite}.dot-anim span:nth-child(2){animation-delay:.2s}.dot-anim span:nth-child(3){animation-delay:.4s}@keyframes dotBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}#screenPregunta{justify-content:flex-start;padding-top:72px}.pregunta-header{width:100%;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.pregunta-num{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:var(--muted)}.timer-wrap{position:relative;width:56px;height:56px}.timer-svg{transform:rotate(-90deg)}.timer-track{fill:none;stroke:rgba(255,255,255,.1);stroke-width:4}.timer-fill{fill:none;stroke:var(--y);stroke-width:4;stroke-linecap:round;stroke-dasharray:138.2;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear,stroke .5s}.timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:22px;color:white;letter-spacing:1px}.tiempo-bar-wrap{width:100%;height:5px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden;margin-bottom:20px}.tiempo-bar{height:100%;background:var(--y);border-radius:5px;transition:width 1s linear,background .5s}.pregunta-txt{font-family:'Lora',serif;font-size:clamp(18px,3.5vw,28px);font-weight:600;line-height:1.3;color:var(--cream);margin-bottom:10px;text-align:center;width:100%}.proyector-hint{display:flex;align-items:center;gap:8px;background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.2);border-radius:100px;padding:8px 18px;font-size:12px;font-weight:700;color:rgba(245,197,24,.7);margin-bottom:22px;letter-spacing:.5px}.opciones-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%}.opcion-btn{padding:0;border-radius:20px;border:2px solid transparent;cursor:pointer;text-align:center;transition:all .2s cubic-bezier(.34,1.4,.64,1);position:relative;overflow:hidden;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.opcion-btn:hover:not(:disabled){transform:scale(1.04)}.opcion-btn:disabled{cursor:default}.opcion-btn.op-a{background:rgba(196,112,58,.18);border-color:rgba(196,112,58,.4)}.opcion-btn.op-b{background:rgba(74,143,168,.18);border-color:rgba(74,143,168,.4)}.opcion-btn.op-c{background:rgba(245,197,24,.18);border-color:rgba(245,197,24,.4)}.opcion-btn.op-d{background:rgba(196,134,154,.18);border-color:rgba(196,134,154,.4)}.opcion-letra-big{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,12vw,72px);line-height:1}.opcion-btn.op-a .opcion-letra-big{color:#e89a6a}.opcion-btn.op-b .opcion-letra-big{color:#7fc4dd}.opcion-btn.op-c .opcion-letra-big{color:#f5d055}.opcion-btn.op-d .opcion-letra-big{color:#e0a8be}.opcion-btn.selected{transform:scale(1.06)}.opcion-btn.op-a.selected{background:rgba(196,112,58,.5);border-color:var(--o)}.opcion-btn.op-b.selected{background:rgba(74,143,168,.5);border-color:var(--b)}.opcion-btn.op-c.selected{background:rgba(245,197,24,.5);border-color:var(--y)}.opcion-btn.op-d.selected{background:rgba(196,134,154,.5);border-color:var(--r)}.opcion-btn.op-a.selected .opcion-letra-big{color:white}.opcion-btn.op-b.selected .opcion-letra-big{color:white}.opcion-btn.op-c.selected .opcion-letra-big{color:var(--bg)}.opcion-btn.op-d.selected .opcion-letra-big{color:white}.opcion-btn.correcto{background:rgba(45,186,111,.3)!important;border-color:var(--ok)!important}.opcion-btn.incorrecto{background:rgba(224,60,60,.25)!important;border-color:var(--err)!important;opacity:.5}.opcion-btn.correcto .opcion-letra-big{color:#7fe8aa!important}.opcion-btn.incorrecto .opcion-letra-big{color:rgba(255,255,255,.3)!important}.resultado-emoji{font-size:64px;margin-bottom:14px;animation:popIn .5s cubic-bezier(.34,1.4,.64,1) both}@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}.resultado-titulo{font-family:'Lora',serif;font-size:clamp(28px,6vw,46px);font-weight:600;letter-spacing:-.01em;margin-bottom:8px}.resultado-sub{font-size:15px;color:var(--muted);margin-bottom:20px}.resultado-respuesta{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:14px;padding:14px 22px;font-size:15px;font-weight:600;color:rgba(255,248,231,.75);margin-bottom:24px;max-width:400px}.resultado-respuesta span{color:var(--ok);font-weight:800}.resultado-pts{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--y);letter-spacing:2px}.siguiente-btn{margin-top:24px;background:var(--grad);color:var(--bg);padding:14px 32px;border-radius:100px;font-size:16px;font-weight:800;border:none;cursor:pointer;transition:all var(--t);box-shadow:0 10px 28px -8px rgba(245,197,24,.4);font-family:'Outfit',sans-serif}.siguiente-btn:hover{transform:translateY(-2px);box-shadow:0 16px 36px -8px rgba(245,197,24,.5)}#screenPodio{justify-content:flex-start;padding-top:80px;padding-bottom:48px;overflow-y:auto}.podio-header{margin-bottom:8px;animation:fadeUp .6s ease both}.podio-label{font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--y);opacity:.8;margin-bottom:8px}.podio-titulo{font-family:'Lora',serif;font-size:clamp(28px,6vw,44px);font-weight:600;line-height:1.1;color:var(--cream)}.podio-titulo em{font-style:italic;color:var(--y)}.podio-top3{display:flex;align-items:flex-end;justify-content:center;gap:12px;width:100%;margin:32px 0 28px}.podio-lugar{display:flex;flex-direction:column;align-items:center;gap:0;animation:riseUp .8s var(--spring) both}.podio-lugar:nth-child(1){animation-delay:.3s}.podio-lugar:nth-child(2){animation-delay:.1s}.podio-lugar:nth-child(3){animation-delay:.5s}@keyframes riseUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.podio-foto-wrap{position:relative;margin-bottom:10px}.podio-foto{border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.2);background:var(--bg3);display:block}.podio-lugar.pos-1 .podio-foto{width:88px;height:88px;border-color:var(--y);box-shadow:0 0 0 4px rgba(245,197,24,.25),0 12px 32px rgba(0,0,0,.4)}.podio-lugar.pos-2 .podio-foto{width:72px;height:72px;border-color:silver;box-shadow:0 0 0 3px rgba(192,192,192,.2)}.podio-lugar.pos-3 .podio-foto{width:64px;height:64px;border-color:#cd7f32;box-shadow:0 0 0 3px rgba(205,127,50,.2)}.podio-corona{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:22px;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}.podio-lugar.pos-2 .podio-corona{font-size:18px;top:-12px}.podio-lugar.pos-3 .podio-corona{font-size:16px;top:-10px}.podio-nombre{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--cream);text-align:center;max-width:90px;line-height:1.2;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.podio-puntos{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px}.podio-lugar.pos-1 .podio-puntos{color:var(--y);font-size:22px}.podio-lugar.pos-2 .podio-puntos{color:silver}.podio-lugar.pos-3 .podio-puntos{color:#cd7f32}.podio-pedestal{width:100%;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;padding-top:10px}.podio-lugar.pos-1 .podio-pedestal{height:90px;background:linear-gradient(180deg,rgba(245,197,24,.35),rgba(245,197,24,.15));border:1px solid rgba(245,197,24,.3);border-bottom:none}.podio-lugar.pos-2 .podio-pedestal{height:65px;background:linear-gradient(180deg,rgba(192,192,192,.2),rgba(192,192,192,.08));border:1px solid rgba(192,192,192,.2);border-bottom:none}.podio-lugar.pos-3 .podio-pedestal{height:50px;background:linear-gradient(180deg,rgba(205,127,50,.2),rgba(205,127,50,.08));border:1px solid rgba(205,127,50,.2);border-bottom:none}.podio-num{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;opacity:.6}.podio-lugar.pos-1 .podio-num{color:var(--y);opacity:.8}.ranking-completo{width:100%;margin-top:8px;animation:fadeUp .7s .4s ease both}.ranking-titulo{font-family:'Lora',serif;font-size:18px;font-weight:600;color:var(--cream);margin-bottom:14px;text-align:left;opacity:.8}.ranking-lista{display:flex;flex-direction:column;gap:8px}.rank-item{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:12px 16px;transition:background var(--t);animation:fadeUp .5s ease both}.rank-item:hover{background:rgba(255,255,255,.07)}.rank-pos{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--muted);width:26px;text-align:center;flex-shrink:0}.rank-pos.top1{color:var(--y)}.rank-pos.top2{color:silver}.rank-pos.top3{color:#cd7f32}.rank-foto{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.1);background:var(--bg3);flex-shrink:0}.rank-nombre{flex:1;font-size:14px;font-weight:600;color:var(--cream)}.rank-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--y)}.rank-pts-label{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase}.podio-actions{margin-top:28px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}.btn-dashboard-back{display:inline-flex;align-items:center;gap:8px;background:var(--grad);color:var(--bg);padding:14px 28px;border-radius:100px;font-size:15px;font-weight:800;text-decoration:none;transition:all var(--t);box-shadow:0 10px 28px -8px rgba(245,197,24,.4);font-family:'Outfit',sans-serif}.btn-dashboard-back:hover{transform:translateY(-2px)}#confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:50}.fin-stars{font-size:48px;margin-bottom:14px;letter-spacing:6px}.fin-score{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.3);border-radius:18px;padding:24px 36px;margin-bottom:28px}.fin-score-num{font-family:'Bebas Neue',sans-serif;font-size:64px;color:var(--y);line-height:1}.fin-score-label{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-top:4px}#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);color:white;padding:13px 22px;border-radius:100px;font-size:14px;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;max-width:90vw;text-align:center;z-index:999;border:1px solid var(--border)}#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}#toast.ok{border-color:var(--ok);color:#7fe8aa}#toast.err{border-color:var(--err);color:#f08080}@media(max-width:500px){.opciones-grid{grid-template-columns:1fr 1fr;gap:10px}.screen{padding-top:68px}.podio-lugar.pos-1 .podio-foto{width:76px;height:76px}.podio-lugar.pos-2 .podio-foto{width:62px;height:62px}.podio-lugar.pos-3 .podio-foto{width:56px;height:56px}}
+:root {
+  --y:   #F5C518;
+  --o:   #C4703A;
+  --b:   #4A8FA8;
+  --r:   #C4869A;
+  --ok:  #2dba6f;
+  --err: #e03c3c;
+  --bg:      #16120d;
+  --bg2:     #1f1a12;
+  --bg3:     #2a2218;
+  --border:  rgba(255,255,255,.08);
+  --muted:   rgba(255,248,231,.45);
+  --cream:   rgba(255,248,231,.9);
+  --grad:      linear-gradient(135deg,#F5C518,#e09a2e,#C4703A);
+  --grad-dark: linear-gradient(160deg,#2a2218,#3a2e1f,#553e22);
+  --shadow:    0 8px 32px -8px rgba(0,0,0,.4);
+  --shadow-lg: 0 24px 64px -16px rgba(0,0,0,.6);
+  --t: .3s cubic-bezier(.4,0,.2,1);
+  --spring: .55s cubic-bezier(.34,1.4,.64,1);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--cream);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+.bg-glow {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse at 15% 15%, rgba(245,197,24,.12), transparent 50%),
+    radial-gradient(ellipse at 85% 85%, rgba(196,112,58,.12), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(74,143,168,.06), transparent 60%);
+  animation: bgPulse 10s ease-in-out infinite alternate;
+}
+@keyframes bgPulse { 0%{opacity:.7} 100%{opacity:1;filter:hue-rotate(10deg)} }
+.topbar {
+  position: fixed; top:0; left:0; right:0; z-index:100;
+  background: rgba(22,18,13,.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+}
+.topbar-inner {
+  max-width: 780px; margin: 0 auto;
+  display: flex; align-items: center;
+  height: 60px; gap: 14px;
+}
+.topbar-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+.topbar-logo img { width:32px; height:32px; object-fit:contain; }
+.topbar-logo-name { font-family: 'Lora', serif; font-size:16px; font-weight:600; color: var(--cream); }
+.topbar-sep { flex:1; }
+.topbar-user { display: flex; align-items: center; gap:8px; font-size:13px; font-weight:600; color: var(--muted); }
+.topbar-avatar { width:32px; height:32px; border-radius:50%; object-fit:cover; border:2px solid var(--y); background: var(--bg3); }
+.btn-volver {
+  background: none; border:1.5px solid var(--border);
+  color: var(--muted); padding:7px 14px; border-radius:100px;
+  font-size:12px; font-weight:700; cursor:pointer;
+  font-family:'Outfit',sans-serif; transition: all var(--t);
+}
+.btn-volver:hover { border-color:rgba(255,255,255,.3); color:var(--cream); }
+
+/* ── BOTÓN PROYECTOR (solo admin) ── */
+.btn-proyector {
+  display:none; /* se muestra via JS solo si es admin */
+  align-items:center; gap:6px;
+  background:rgba(245,197,24,.1); border:1.5px solid rgba(245,197,24,.3);
+  color:var(--y); padding:7px 14px; border-radius:100px;
+  font-size:12px; font-weight:700; cursor:pointer;
+  font-family:'Outfit',sans-serif; transition: all var(--t);
+  text-decoration:none; white-space:nowrap;
+}
+.btn-proyector:hover { background:rgba(245,197,24,.2); border-color:rgba(245,197,24,.5); }
+
+.screen {
+  position: relative; z-index:1;
+  width:100%; max-width:680px;
+  padding: 80px 24px 40px;
+  display: none; flex-direction:column;
+  align-items:center; text-align:center;
+  min-height:100vh; justify-content:center;
+}
+.screen.active { display:flex; }
+#screenNoActiva .lock-icon { font-size:72px; margin-bottom:24px; opacity:.5; animation: float 4s ease-in-out infinite; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+.screen-title { font-family:'Lora',serif; font-size: clamp(32px,7vw,52px); font-weight:600; line-height:1.1; color:var(--cream); margin-bottom:12px; }
+.screen-title em { font-style:italic; color:var(--y); }
+.screen-sub { font-size:16px; color:var(--muted); line-height:1.65; max-width:380px; margin-bottom:32px; }
+.btn-back {
+  display: inline-flex; align-items:center; gap:8px;
+  padding:14px 28px; border-radius:100px;
+  background: rgba(255,255,255,.07); border:1.5px solid var(--border);
+  color:var(--cream); font-size:15px; font-weight:700;
+  text-decoration:none; transition:all var(--t);
+}
+.btn-back:hover { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.2); }
+.waiting-icon { font-size:72px; margin-bottom:24px; animation: float 3s ease-in-out infinite; }
+.waiting-pill {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,.05); border:1px solid var(--border);
+  border-radius:100px; padding:13px 24px;
+  font-size:14px; font-weight:600; color:var(--muted);
+}
+.dot-anim { display:flex; gap:5px; align-items:center; }
+.dot-anim span { width:6px; height:6px; border-radius:50%; background:var(--y); animation: dotBounce 1.4s ease-in-out infinite; }
+.dot-anim span:nth-child(2){animation-delay:.2s;}
+.dot-anim span:nth-child(3){animation-delay:.4s;}
+@keyframes dotBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+
+/* ── PANTALLA PREGUNTA ── */
+#screenPregunta { justify-content:flex-start; padding-top:72px; }
+.pregunta-header { width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.pregunta-num { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:3px; color:var(--muted); }
+.timer-wrap { position:relative; width:56px; height:56px; }
+.timer-svg { transform:rotate(-90deg); }
+.timer-track { fill:none; stroke:rgba(255,255,255,.1); stroke-width:4; }
+.timer-fill { fill:none; stroke:var(--y); stroke-width:4; stroke-linecap:round; stroke-dasharray:138.2; stroke-dashoffset:0; transition:stroke-dashoffset 1s linear, stroke .5s; }
+.timer-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:22px; color:white; letter-spacing:1px; }
+.tiempo-bar-wrap { width:100%; height:5px; background:rgba(255,255,255,.07); border-radius:5px; overflow:hidden; margin-bottom:20px; }
+.tiempo-bar { height:100%; background:var(--y); border-radius:5px; transition:width 1s linear, background .5s; }
+.pregunta-txt { font-family:'Lora',serif; font-size:clamp(18px,3.5vw,28px); font-weight:600; line-height:1.3; color:var(--cream); margin-bottom:10px; text-align:center; width:100%; }
+
+/* ── HINT "Mira el proyector" ── */
+.proyector-hint {
+  display:flex; align-items:center; gap:8px;
+  background:rgba(245,197,24,.07); border:1px solid rgba(245,197,24,.2);
+  border-radius:100px; padding:8px 18px;
+  font-size:12px; font-weight:700; color:rgba(245,197,24,.7);
+  margin-bottom:22px; letter-spacing:.5px;
+}
+
+/* ── OPCIONES SOLO LETRAS (celular) ── */
+.opciones-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:12px; width:100%;
+}
+.opcion-btn {
+  padding:0; border-radius:20px; border:2px solid transparent;
+  cursor:pointer; text-align:center;
+  transition:all .2s cubic-bezier(.34,1.4,.64,1);
+  position:relative; overflow:hidden;
+  aspect-ratio:1;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4px;
+}
+.opcion-btn:hover:not(:disabled) { transform:scale(1.04); }
+.opcion-btn:disabled { cursor:default; }
+.opcion-btn.op-a { background:rgba(196,112,58,.18); border-color:rgba(196,112,58,.4); }
+.opcion-btn.op-b { background:rgba(74,143,168,.18);  border-color:rgba(74,143,168,.4);  }
+.opcion-btn.op-c { background:rgba(245,197,24,.18);  border-color:rgba(245,197,24,.4);  }
+.opcion-btn.op-d { background:rgba(196,134,154,.18); border-color:rgba(196,134,154,.4); }
+
+.opcion-letra-big {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,12vw,72px);
+  line-height:1;
+}
+.opcion-btn.op-a .opcion-letra-big { color:#e89a6a; }
+.opcion-btn.op-b .opcion-letra-big { color:#7fc4dd; }
+.opcion-btn.op-c .opcion-letra-big { color:#f5d055; }
+.opcion-btn.op-d .opcion-letra-big { color:#e0a8be; }
+
+.opcion-btn.selected { transform:scale(1.06); }
+.opcion-btn.op-a.selected { background:rgba(196,112,58,.5);  border-color:var(--o); }
+.opcion-btn.op-b.selected { background:rgba(74,143,168,.5);  border-color:var(--b); }
+.opcion-btn.op-c.selected { background:rgba(245,197,24,.5);  border-color:var(--y); }
+.opcion-btn.op-d.selected { background:rgba(196,134,154,.5); border-color:var(--r); }
+.opcion-btn.correcto   { background:rgba(45,186,111,.3)!important; border-color:var(--ok)!important; }
+.opcion-btn.incorrecto { background:rgba(224,60,60,.25)!important; border-color:var(--err)!important; opacity:.5; }
+
+.opcion-btn.op-a.selected .opcion-letra-big { color:white; }
+.opcion-btn.op-b.selected .opcion-letra-big { color:white; }
+.opcion-btn.op-c.selected .opcion-letra-big { color:var(--bg); }
+.opcion-btn.op-d.selected .opcion-letra-big { color:white; }
+.opcion-btn.correcto   .opcion-letra-big { color:#7fe8aa!important; }
+.opcion-btn.incorrecto .opcion-letra-big { color:rgba(255,255,255,.3)!important; }
+
+/* ── RESULTADO ── */
+.resultado-emoji { font-size:64px; margin-bottom:14px; animation:popIn .5s cubic-bezier(.34,1.4,.64,1) both; }
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.resultado-titulo { font-family:'Lora',serif; font-size:clamp(28px,6vw,46px); font-weight:600; letter-spacing:-.01em; margin-bottom:8px; }
+.resultado-sub { font-size:15px; color:var(--muted); margin-bottom:20px; }
+.resultado-respuesta { background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:14px; padding:14px 22px; font-size:15px; font-weight:600; color:rgba(255,248,231,.75); margin-bottom:24px; max-width:400px; }
+.resultado-respuesta span { color:var(--ok); font-weight:800; }
+.resultado-pts { font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--y); letter-spacing:2px; }
+.siguiente-btn {
+  margin-top:24px; background:var(--grad); color:var(--bg);
+  padding:14px 32px; border-radius:100px; font-size:16px; font-weight:800; border:none;
+  cursor:pointer; transition:all var(--t);
+  box-shadow:0 10px 28px -8px rgba(245,197,24,.4); font-family:'Outfit',sans-serif;
+}
+.siguiente-btn:hover { transform:translateY(-2px); box-shadow:0 16px 36px -8px rgba(245,197,24,.5); }
+
+/* ═══ PODIO ═══ */
+#screenPodio { justify-content: flex-start; padding-top:80px; padding-bottom:48px; overflow-y:auto; }
+.podio-header { margin-bottom: 8px; animation: fadeUp .6s ease both; }
+.podio-label { font-size:12px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--y); opacity:.8; margin-bottom:8px; }
+.podio-titulo { font-family:'Lora',serif; font-size:clamp(28px,6vw,44px); font-weight:600; line-height:1.1; color:var(--cream); }
+.podio-titulo em { font-style:italic; color:var(--y); }
+.podio-top3 { display:flex; align-items:flex-end; justify-content:center; gap:12px; width:100%; margin:32px 0 28px; }
+.podio-lugar { display:flex; flex-direction:column; align-items:center; gap:0; animation: riseUp .8s var(--spring) both; }
+.podio-lugar:nth-child(1) { animation-delay:.3s; }
+.podio-lugar:nth-child(2) { animation-delay:.1s; }
+.podio-lugar:nth-child(3) { animation-delay:.5s; }
+@keyframes riseUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.podio-foto-wrap { position:relative; margin-bottom:10px; }
+.podio-foto { border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,.2); background:var(--bg3); display:block; }
+.podio-lugar.pos-1 .podio-foto { width:88px; height:88px; border-color:var(--y); box-shadow:0 0 0 4px rgba(245,197,24,.25),0 12px 32px rgba(0,0,0,.4); }
+.podio-lugar.pos-2 .podio-foto { width:72px; height:72px; border-color:silver; box-shadow:0 0 0 3px rgba(192,192,192,.2); }
+.podio-lugar.pos-3 .podio-foto { width:64px; height:64px; border-color:#cd7f32; box-shadow:0 0 0 3px rgba(205,127,50,.2); }
+.podio-corona { position:absolute; top:-14px; left:50%; transform:translateX(-50%); font-size:22px; line-height:1; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+.podio-lugar.pos-2 .podio-corona { font-size:18px; top:-12px; }
+.podio-lugar.pos-3 .podio-corona { font-size:16px; top:-10px; }
+.podio-nombre { font-family:'Outfit',sans-serif; font-size:13px; font-weight:700; color:var(--cream); text-align:center; max-width:90px; line-height:1.2; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.podio-puntos { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1px; }
+.podio-lugar.pos-1 .podio-puntos { color:var(--y); font-size:22px; }
+.podio-lugar.pos-2 .podio-puntos { color:silver; }
+.podio-lugar.pos-3 .podio-puntos { color:#cd7f32; }
+.podio-pedestal { width:100%; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; padding-top:10px; }
+.podio-lugar.pos-1 .podio-pedestal { height:90px; background:linear-gradient(180deg,rgba(245,197,24,.35),rgba(245,197,24,.15)); border:1px solid rgba(245,197,24,.3); border-bottom:none; }
+.podio-lugar.pos-2 .podio-pedestal { height:65px; background:linear-gradient(180deg,rgba(192,192,192,.2),rgba(192,192,192,.08)); border:1px solid rgba(192,192,192,.2); border-bottom:none; }
+.podio-lugar.pos-3 .podio-pedestal { height:50px; background:linear-gradient(180deg,rgba(205,127,50,.2),rgba(205,127,50,.08)); border:1px solid rgba(205,127,50,.2); border-bottom:none; }
+.podio-num { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; opacity:.6; }
+.podio-lugar.pos-1 .podio-num { color:var(--y); opacity:.8; }
+.ranking-completo { width:100%; margin-top:8px; animation:fadeUp .7s .4s ease both; }
+.ranking-titulo { font-family:'Lora',serif; font-size:18px; font-weight:600; color:var(--cream); margin-bottom:14px; text-align:left; opacity:.8; }
+.ranking-lista { display:flex; flex-direction:column; gap:8px; }
+.rank-item { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:14px; padding:12px 16px; transition:background var(--t); animation:fadeUp .5s ease both; }
+.rank-item:hover { background:rgba(255,255,255,.07); }
+.rank-pos { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--muted); width:26px; text-align:center; flex-shrink:0; }
+.rank-pos.top1 { color:var(--y); }
+.rank-pos.top2 { color:silver; }
+.rank-pos.top3 { color:#cd7f32; }
+.rank-foto { width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.1); background:var(--bg3); flex-shrink:0; }
+.rank-nombre { flex:1; font-size:14px; font-weight:600; color:var(--cream); }
+.rank-pts { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--y); }
+.rank-pts-label { font-size:10px; color:var(--muted); font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+.podio-actions { margin-top:28px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+.btn-dashboard-back {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--grad); color:var(--bg);
+  padding:14px 28px; border-radius:100px;
+  font-size:15px; font-weight:800; text-decoration:none;
+  transition:all var(--t); box-shadow:0 10px 28px -8px rgba(245,197,24,.4);
+  font-family:'Outfit',sans-serif;
+}
+.btn-dashboard-back:hover { transform:translateY(-2px); }
+#confettiCanvas { position:fixed; inset:0; pointer-events:none; z-index:50; }
+.fin-stars { font-size:48px; margin-bottom:14px; letter-spacing:6px; }
+.fin-score { background:rgba(245,197,24,.1); border:1px solid rgba(245,197,24,.3); border-radius:18px; padding:24px 36px; margin-bottom:28px; }
+.fin-score-num { font-family:'Bebas Neue',sans-serif; font-size:64px; color:var(--y); line-height:1; }
+.fin-score-label { font-size:11px; color:var(--muted); font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-top:4px; }
+#toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--bg3); color:white; padding:13px 22px; border-radius:100px; font-size:14px; font-weight:600; opacity:0; transition:all .3s; pointer-events:none; max-width:90vw; text-align:center; z-index:999; border:1px solid var(--border); }
+#toast.show  { opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.ok    { border-color:var(--ok);  color:#7fe8aa; }
+#toast.err   { border-color:var(--err); color:#f08080; }
+@media(max-width:500px) {
+  .opciones-grid { grid-template-columns:1fr 1fr; gap:10px; }
+  .screen { padding-top:68px; }
+  .podio-lugar.pos-1 .podio-foto { width:76px; height:76px; }
+  .podio-lugar.pos-2 .podio-foto { width:62px; height:62px; }
+  .podio-lugar.pos-3 .podio-foto { width:56px; height:56px; }
+}
 </style>
 </head>
 <body>
+
 <div class="bg-glow"></div>
 <canvas id="confettiCanvas"></canvas>
-<div class="topbar"><div class="topbar-inner"><a href="index.html" class="topbar-logo"><img src="logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'"><span class="topbar-logo-name">Luz de Cristo</span></a><div class="topbar-sep"></div><div class="topbar-user"><span id="topbarNombre">...</span><img src="" id="topbarFoto" class="topbar-avatar" onerror="this.onerror=null;this.style.display='none'"></div><a href="proyector.html" target="_blank" class="btn-proyector" id="btnProyector">🖥️ Proyector</a><button class="btn-volver" onclick="window.location.href='dashboard.html'">← Salir</button></div></div>
-<div class="screen active" id="screenNoActiva"><div class="lock-icon">🔒</div><div class="screen-title">Modo asamblea<br>no <em>activo</em></div><div class="screen-sub">El coordinador aún no ha activado la asamblea. Vuelve cuando el #SábadoDeLuxto esté en curso.</div><a href="dashboard.html" class="btn-back">← Volver al dashboard</a></div>
-<div class="screen" id="screenEsperando"><div class="waiting-icon">🕊️</div><div class="screen-title">¡Estás <em>dentro</em>!</div><div class="screen-sub">Espera a que el coordinador active la siguiente pregunta. Estate atento/a.</div><div class="waiting-pill"><div class="dot-anim"><span></span><span></span><span></span></div>Esperando pregunta...</div></div>
-<div class="screen" id="screenPregunta"><div class="pregunta-header"><div class="pregunta-num" id="preguntaNum">PREGUNTA 1</div><div class="timer-wrap"><svg class="timer-svg" width="56" height="56" viewBox="0 0 56 56"><circle class="timer-track" cx="28" cy="28" r="22"/><circle class="timer-fill" id="timerCircle" cx="28" cy="28" r="22"/></svg><div class="timer-num" id="timerNum">20</div></div></div><div class="tiempo-bar-wrap"><div class="tiempo-bar" id="tiempoBar"></div></div><div class="pregunta-txt" id="preguntaTxt">Cargando pregunta...</div><div class="proyector-hint">📺&nbsp; Lee las opciones en el proyector</div><div class="opciones-grid" id="opcionesGrid"></div></div>
-<div class="screen" id="screenResultado"><div class="resultado-emoji" id="resultEmoji">✅</div><div class="resultado-titulo" id="resultTitulo">¡Correcto!</div><div class="resultado-sub" id="resultSub">Muy bien</div><div class="resultado-respuesta">La respuesta correcta era: <span id="resultRespuesta">—</span></div><div class="resultado-pts" id="resultPts">+100 PTS</div><button class="siguiente-btn" onclick="volverAEsperar()">Siguiente →</button></div>
-<div class="screen" id="screenPodio"><div class="podio-header"><div class="podio-label">Asamblea completada</div><div class="podio-titulo">¡El <em>podio</em><br>de esta asamblea!</div></div><div class="podio-top3" id="podioTop3"></div><div class="ranking-completo"><div class="ranking-titulo">Clasificación completa</div><div class="ranking-lista" id="rankingCompleto"></div></div><div class="podio-actions"><a href="dashboard.html" class="btn-dashboard-back">← Volver al dashboard</a></div></div>
-<div class="screen" id="screenFin"><div class="fin-stars">⭐⭐⭐</div><div class="screen-title">¡Asamblea<br><em>completada</em>!</div><div class="screen-sub">Gracias por participar. Que la luz siga brillando. 🕊️</div><div class="fin-score"><div class="fin-score-num" id="finScore">0</div><div class="fin-score-label">Puntos obtenidos</div></div><a href="dashboard.html" class="btn-dashboard-back">← Volver al dashboard</a></div>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="topbar-logo">
+      <img src="logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
+      <span class="topbar-logo-name">Luz de Cristo</span>
+    </a>
+    <div class="topbar-sep"></div>
+    <div class="topbar-user">
+      <span id="topbarNombre">...</span>
+      <img src="" id="topbarFoto" class="topbar-avatar" onerror="this.onerror=null;this.style.display='none'">
+    </div>
+    <!-- Botón proyector solo visible para admins (JS lo muestra) -->
+    <a href="proyector.html" target="_blank" class="btn-proyector" id="btnProyector">🖥️ Proyector</a>
+    <button class="btn-volver" onclick="window.location.href='dashboard.html'">← Salir</button>
+  </div>
+</div>
+
+<div class="screen active" id="screenNoActiva">
+  <div class="lock-icon">🔒</div>
+  <div class="screen-title">Modo asamblea<br>no <em>activo</em></div>
+  <div class="screen-sub">El coordinador aún no ha activado la asamblea. Vuelve cuando el #SábadoDeLuxto esté en curso.</div>
+  <a href="dashboard.html" class="btn-back">← Volver al dashboard</a>
+</div>
+
+<div class="screen" id="screenEsperando">
+  <div class="waiting-icon">🕊️</div>
+  <div class="screen-title">¡Estás <em>dentro</em>!</div>
+  <div class="screen-sub">Espera a que el coordinador active la siguiente pregunta. Estate atento/a.</div>
+  <div class="waiting-pill">
+    <div class="dot-anim"><span></span><span></span><span></span></div>
+    Esperando pregunta...
+  </div>
+</div>
+
+<div class="screen" id="screenPregunta">
+  <div class="pregunta-header">
+    <div class="pregunta-num" id="preguntaNum">PREGUNTA 1</div>
+    <div class="timer-wrap">
+      <svg class="timer-svg" width="56" height="56" viewBox="0 0 56 56">
+        <circle class="timer-track" cx="28" cy="28" r="22"/>
+        <circle class="timer-fill" id="timerCircle" cx="28" cy="28" r="22"/>
+      </svg>
+      <div class="timer-num" id="timerNum">20</div>
+    </div>
+  </div>
+  <div class="tiempo-bar-wrap"><div class="tiempo-bar" id="tiempoBar"></div></div>
+  <div class="pregunta-txt" id="preguntaTxt">Cargando pregunta...</div>
+  <!-- Hint para el proyector -->
+  <div class="proyector-hint">
+    📺&nbsp; Lee las opciones en el proyector
+  </div>
+  <!-- Opciones: solo letras grandes -->
+  <div class="opciones-grid" id="opcionesGrid"></div>
+</div>
+
+<div class="screen" id="screenResultado">
+  <div class="resultado-emoji" id="resultEmoji">✅</div>
+  <div class="resultado-titulo" id="resultTitulo">¡Correcto!</div>
+  <div class="resultado-sub" id="resultSub">Muy bien</div>
+  <div class="resultado-respuesta">La respuesta correcta era: <span id="resultRespuesta">—</span></div>
+  <div class="resultado-pts" id="resultPts">+100 PTS</div>
+  <button class="siguiente-btn" onclick="volverAEsperar()">Siguiente →</button>
+</div>
+
+<div class="screen" id="screenPodio">
+  <div class="podio-header">
+    <div class="podio-label">Asamblea completada</div>
+    <div class="podio-titulo">¡El <em>podio</em><br>de esta asamblea!</div>
+  </div>
+  <div class="podio-top3" id="podioTop3"></div>
+  <div class="ranking-completo">
+    <div class="ranking-titulo">Clasificación completa</div>
+    <div class="ranking-lista" id="rankingCompleto"></div>
+  </div>
+  <div class="podio-actions">
+    <a href="dashboard.html" class="btn-dashboard-back">← Volver al dashboard</a>
+  </div>
+</div>
+
+<div class="screen" id="screenFin">
+  <div class="fin-stars">⭐⭐⭐</div>
+  <div class="screen-title">¡Asamblea<br><em>completada</em>!</div>
+  <div class="screen-sub">Gracias por participar. Que la luz siga brillando. 🕊️</div>
+  <div class="fin-score">
+    <div class="fin-score-num" id="finScore">0</div>
+    <div class="fin-score-label">Puntos obtenidos</div>
+  </div>
+  <a href="dashboard.html" class="btn-dashboard-back">← Volver al dashboard</a>
+</div>
+
 <div id="toast"></div>
-<script src="config.js"></script>
+
 <script type="module">
-await new Promise(r => { if (window.LUXTO_CONFIG) r(); else window.addEventListener('luxto-config-ready', r); });
-const { firebase, appsScriptUrl, adminEmails } = window.LUXTO_CONFIG;
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, onValue, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-const app = initializeApp(firebase);
+import { initializeApp }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged }
+                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, onValue, set, serverTimestamp }
+                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+  authDomain:        "luxto-nsp.firebaseapp.com",
+  projectId:         "luxto-nsp",
+  storageBucket:     "luxto-nsp.firebasestorage.app",
+  messagingSenderId: "3542836325",
+  appId:             "1:3542836325:web:cf65cd50edcc431500d28c",
+  databaseURL:       "https://luxto-nsp-default-rtdb.firebaseio.com"
+};
+const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getDatabase(app);
-const API = appsScriptUrl;
-const ADMINS = adminEmails;
-let usuarioActual = null, nombreActual = "", fotoActual = "", fotoOriginal = "", puntosTotal = 0, preguntaActualId = null, timerInterval = null, tiempoRestante = 0, respondioActual = false, tiempoInicioResp = 0, podioMostrado = false, participoEnAsamblea = false;
-function toast(msg, tipo=""){const t=document.getElementById("toast");t.textContent=msg;t.className="show "+tipo;setTimeout(()=>t.className="",2800)}
-function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active")}
-function convertirUrlDrive(url){if(!url)return"";if(url.includes("drive.google.com/thumbnail"))return url;let m=url.match(/[?&]id=([a-zA-Z0-9_-]+)/)||url.match(/\/d\/([a-zA-Z0-9_-]+)/)||url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);if(m)return"https://drive.google.com/thumbnail?id="+m[1]+"&sz=w160";return url}
-function avatarFallback(nombre){const inicial=(nombre||"?").charAt(0).toUpperCase();return`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>${inicial}</text></svg>`}
-onAuthStateChanged(auth,async(user)=>{if(!user){window.location.href="login.html";return}usuarioActual=user;if(ADMINS.includes(user.email)){document.getElementById("btnProyector").style.display="inline-flex"}try{const res=await fetch(API,{method:"POST",body:JSON.stringify({accion:"getDashboard",email:user.email})});const data=await res.json();if(data.ok){nombreActual=data.nombre;fotoOriginal=data.fotoUrl||"";fotoActual=fotoOriginal?convertirUrlDrive(fotoOriginal):"";document.getElementById("topbarNombre").textContent=nombreActual.split(" ")[0];const avatarEl=document.getElementById("topbarFoto");if(fotoActual){avatarEl.src=fotoActual}else{avatarEl.src=avatarFallback(nombreActual);avatarEl.style.display="block"}}}catch(e){}iniciarEscucha()})
-function iniciarEscucha(){onValue(ref(db,"asamblea"),(snap)=>{const data=snap.val();if(!data){podioMostrado=false;show("screenNoActiva");limpiarTimer();return}if(data.estado==="finalizada"&&podioMostrado==="sesion")return;if(data.estado==="finalizada"&&!data.activa&&(preguntaActualId!==null||participoEnAsamblea)){if(podioMostrado!=="sesion"){podioMostrado="sesion";construirPodio(data.respuestas||{})}limpiarTimer();return}if(!data.activa&&data.estado!=="finalizada"){podioMostrado=false;show("screenNoActiva");limpiarTimer();return}if(data.estado==="finalizada"&&preguntaActualId===null&&!participoEnAsamblea){podioMostrado=false;show("screenNoActiva");limpiarTimer();return}if(data.activa&&podioMostrado){podioMostrado=false;participoEnAsamblea=false;preguntaActualId=null}if(!data.preguntaActual||data.preguntaActual.estado!=="activa"){show("screenEsperando");limpiarTimer();respondioActual=false;return}const p=data.preguntaActual;if(p.estado==="activa"&&p.id!==preguntaActualId){preguntaActualId=p.id;respondioActual=false;tiempoInicioResp=Date.now();mostrarPregunta(p);return}})})
-function mostrarPregunta(p){document.getElementById("preguntaNum").textContent="PREGUNTA "+(p.numero||"?");document.getElementById("preguntaTxt").textContent=p.texto;const grid=document.getElementById("opcionesGrid");const letras=["A","B","C","D"];const clases=["op-a","op-b","op-c","op-d"];grid.innerHTML="";(p.opciones||[]).forEach((op,i)=>{const btn=document.createElement("button");btn.className="opcion-btn "+clases[i];btn.dataset.idx=i;btn.innerHTML=`<div class="opcion-letra-big">${letras[i]}</div>`;btn.onclick=()=>responderOpcion(i,op,p);grid.appendChild(btn)})const dur=p.duracion||20;tiempoRestante=dur;iniciarTimer(dur);show("screenPregunta")}
-function iniciarTimer(duracion){limpiarTimer();const circum=138.2;const barEl=document.getElementById("tiempoBar");const circleEl=document.getElementById("timerCircle");const numEl=document.getElementById("timerNum");barEl.style.width="100%";circleEl.style.strokeDashoffset="0";numEl.textContent=duracion;timerInterval=setInterval(()=>{tiempoRestante--;const pct=tiempoRestante/duracion;barEl.style.width=(pct*100)+"%";barEl.style.background=pct>.4?"var(--y)":pct>.2?"var(--o)":"var(--err)";circleEl.style.strokeDashoffset=circum*(1-pct);circleEl.style.stroke=pct>.4?"#F5C518":pct>.2?"#C4703A":"#e03c3c";numEl.textContent=tiempoRestante;if(tiempoRestante<=0){limpiarTimer();if(!respondioActual)mostrarResultado(false,null,"","",true)}},1000)}
-function limpiarTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null}}
-function responderOpcion(idx,texto,pregunta){if(respondioActual)return;respondioActual=true;participoEnAsamblea=true;limpiarTimer();document.querySelectorAll(".opcion-btn").forEach(b=>b.disabled=true);document.querySelectorAll(".opcion-btn")[idx].classList.add("selected");const tiempoResp=Math.max(0,(Date.now()-tiempoInicioResp)/1000);const esCorrecta=idx===(pregunta.correcta??-1);let pts=0;if(esCorrecta){const dur=pregunta.duracion||20;pts=Math.round(1000*(1-tiempoResp/dur/2));pts=Math.max(pts,200);puntosTotal+=pts}set(ref(db,"asamblea/respuestas/"+pregunta.id+"/"+usuarioActual.uid),{nombre:nombreActual,email:usuarioActual.email,fotoUrl:fotoOriginal,fotoMostrar:fotoActual,respuesta:texto,idx,correcta:esCorrecta,puntos:pts,tiempo:tiempoResp,ts:serverTimestamp()});const btns=document.querySelectorAll(".opcion-btn");btns[idx].classList.add(esCorrecta?"correcto":"incorrecto");if(!esCorrecta&&pregunta.correcta!=null&&btns[pregunta.correcta]){btns[pregunta.correcta].classList.add("correcto")}setTimeout(()=>{const opTexto=(pregunta.opciones||[])[pregunta.correcta]||"—";mostrarResultado(esCorrecta,pts,texto,opTexto,false)},1000)}
-function mostrarResultado(esCorrecta,pts,respUser,respCorrecta,timeout){if(timeout){document.getElementById("resultEmoji").textContent="⏰";document.getElementById("resultTitulo").textContent="¡Tiempo!";document.getElementById("resultSub").textContent="Se te acabó el tiempo";document.getElementById("resultPts").textContent="+0 PTS"}else if(esCorrecta){document.getElementById("resultEmoji").textContent="🎉";document.getElementById("resultTitulo").textContent="¡Correcto!";document.getElementById("resultSub").textContent="Excelente respuesta";document.getElementById("resultPts").textContent="+"+pts+" PTS"}else{document.getElementById("resultEmoji").textContent="❌";document.getElementById("resultTitulo").textContent="Incorrecto";document.getElementById("resultSub").textContent="Sigue intentando";document.getElementById("resultPts").textContent="+0 PTS"}document.getElementById("resultRespuesta").textContent=respCorrecta||"—";show("screenResultado")}
-window.volverAEsperar=function(){show("screenEsperando");respondioActual=false;preguntaActualId=null}
-function construirPodio(todasRespuestas){const acum={};Object.values(todasRespuestas).forEach(pregResp=>{Object.values(pregResp).forEach(r=>{if(!acum[r.email]){acum[r.email]={nombre:r.nombre||"?",email:r.email,fotoUrl:r.fotoUrl||"",fotoMostrar:r.fotoMostrar||"",pts:0}}acum[r.email].pts+=(r.puntos||0)})});const ranking=Object.values(acum).sort((a,b)=>b.pts-a.pts);if(ranking.length===0){document.getElementById("finScore").textContent=puntosTotal;show("screenFin");return}const top3El=document.getElementById("podioTop3");top3El.innerHTML="";const ordenVisual=[ranking[1]||null,ranking[0]||null,ranking[2]||null];const posClases=["pos-2","pos-1","pos-3"];const coronas=["🥈","👑","🥉"];const pedestalNums=["2","1","3"];ordenVisual.forEach((r,vi)=>{if(!r)return;const wrap=document.createElement("div");wrap.className="podio-lugar "+posClases[vi];const fotoSrc=r.fotoMostrar||(r.fotoUrl?convertirUrlDrive(r.fotoUrl):"")||avatarFallback(r.nombre);const fallback=avatarFallback(r.nombre);wrap.innerHTML=`<div class="podio-foto-wrap"><img class="podio-foto" src="${fotoSrc}" alt="${r.nombre}" onerror="this.onerror=null;this.src='${fallback}'"><div class="podio-corona">${coronas[vi]}</div></div><div class="podio-nombre">${r.nombre.split(" ")[0]}</div><div class="podio-puntos">${r.pts} pts</div><div class="podio-pedestal"><div class="podio-num">${pedestalNums[vi]}</div></div>`;top3El.appendChild(wrap)})const listaEl=document.getElementById("rankingCompleto");listaEl.innerHTML="";const medallas=["🥇","🥈","🥉"];ranking.forEach((r,i)=>{const item=document.createElement("div");item.className="rank-item";item.style.animationDelay=(i*0.06)+"s";const fotoSrc=r.fotoMostrar||(r.fotoUrl?convertirUrlDrive(r.fotoUrl):"")||avatarFallback(r.nombre);const fallback=avatarFallback(r.nombre);const posClass=i<3?["top1","top2","top3"][i]:"";const posLabel=i<3?medallas[i]:(i+1);item.innerHTML=`<div class="rank-pos ${posClass}">${posLabel}</div><img class="rank-foto" src="${fotoSrc}" alt="${r.nombre}" onerror="this.onerror=null;this.src='${fallback}'"><div class="rank-nombre">${r.nombre}</div><div style="text-align:right"><div class="rank-pts">${r.pts}</div><div class="rank-pts-label">pts</div></div>`;listaEl.appendChild(item)})show("screenPodio");lanzarConfetti()}
-function lanzarConfetti(){const canvas=document.getElementById("confettiCanvas");const ctx=canvas.getContext("2d");canvas.width=window.innerWidth;canvas.height=window.innerHeight;const colors=["#F5C518","#C4703A","#4A8FA8","#C4869A","#2dba6f","#ffffff"];const pieces=Array.from({length:120},()=>({x:Math.random()*canvas.width,y:Math.random()*-canvas.height,w:Math.random()*10+5,h:Math.random()*5+3,color:colors[Math.floor(Math.random()*colors.length)],rot:Math.random()*Math.PI*2,vx:(Math.random()-.5)*3,vy:Math.random()*3+2,vr:(Math.random()-.5)*.15}));let frame=0;const MAX_FRAMES=220;function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);pieces.forEach(p=>{ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.color;ctx.globalAlpha=Math.max(0,1-frame/MAX_FRAMES);ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr});frame++;if(frame<MAX_FRAMES)requestAnimationFrame(draw);else ctx.clearRect(0,0,canvas.width,canvas.height)}draw()}
+const db   = getDatabase(app);
+const API  = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
+
+const ADMINS = [
+  "henry.alfaro1@unmsm.edu.pe",
+  "paolosotil97@gmail.com",
+  "jorgediego.123.2002@gmail.com",
+  "gianfracamones@gmail.com",
+  "alvarorodrigosalazar.2001@gmail.com"
+];
+
+let usuarioActual    = null;
+let nombreActual     = "";
+let fotoActual       = "";
+let fotoOriginal     = "";
+let puntosTotal      = 0;
+let preguntaActualId = null;
+let timerInterval    = null;
+let tiempoRestante   = 0;
+let respondioActual  = false;
+let tiempoInicioResp = 0;
+let podioMostrado    = false;
+let participoEnAsamblea = false;
+
+function toast(msg, tipo="") {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "show " + tipo;
+  setTimeout(() => t.className="", 2800);
+}
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function convertirUrlDrive(url) {
+  if (!url) return "";
+  if (url.includes("drive.google.com/thumbnail")) return url;
+  let m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+       || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
+       || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w160";
+  return url;
+}
+function avatarFallback(nombre) {
+  const inicial = (nombre || "?").charAt(0).toUpperCase();
+  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>${inicial}</text></svg>`;
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { window.location.href = "login.html"; return; }
+  usuarioActual = user;
+
+  // Mostrar botón proyector solo para admins
+  if (ADMINS.includes(user.email)) {
+    document.getElementById("btnProyector").style.display = "inline-flex";
+  }
+
+  try {
+    const res  = await fetch(API, { method:"POST", body: JSON.stringify({ accion:"getDashboard", email:user.email }) });
+    const data = await res.json();
+    if (data.ok) {
+      nombreActual = data.nombre;
+      fotoOriginal = data.fotoUrl || "";
+      fotoActual   = fotoOriginal ? convertirUrlDrive(fotoOriginal) : "";
+      document.getElementById("topbarNombre").textContent = nombreActual.split(" ")[0];
+      const avatarEl = document.getElementById("topbarFoto");
+      if (fotoActual) {
+        avatarEl.src = fotoActual;
+      } else {
+        avatarEl.src = avatarFallback(nombreActual);
+        avatarEl.style.display = "block";
+      }
+    }
+  } catch(e) {}
+  iniciarEscucha();
+});
+
+function iniciarEscucha() {
+  onValue(ref(db, "asamblea"), (snap) => {
+    const data = snap.val();
+
+    if (!data) {
+      podioMostrado = false;
+      show("screenNoActiva"); limpiarTimer(); return;
+    }
+
+    if (data.estado === "finalizada" && podioMostrado === "sesion") {
+      return;
+    }
+
+    if (data.estado === "finalizada" && !data.activa && (preguntaActualId !== null || participoEnAsamblea)) {
+      if (podioMostrado !== "sesion") {
+        podioMostrado = "sesion";
+        construirPodio(data.respuestas || {});
+      }
+      limpiarTimer();
+      return;
+    }
+
+    if (!data.activa && data.estado !== "finalizada") {
+      podioMostrado = false;
+      show("screenNoActiva"); limpiarTimer(); return;
+    }
+
+    if (data.estado === "finalizada" && preguntaActualId === null && !participoEnAsamblea) {
+      podioMostrado = false;
+      show("screenNoActiva"); limpiarTimer(); return;
+    }
+
+    if (data.activa && podioMostrado) {
+      podioMostrado = false;
+      participoEnAsamblea = false;
+      preguntaActualId = null;
+    }
+
+    if (!data.preguntaActual || data.preguntaActual.estado !== "activa") {
+      show("screenEsperando"); limpiarTimer();
+      respondioActual = false;
+      return;
+    }
+
+    const p = data.preguntaActual;
+
+    if (p.estado === "activa" && p.id !== preguntaActualId) {
+      preguntaActualId = p.id;
+      respondioActual  = false;
+      tiempoInicioResp = Date.now();
+      mostrarPregunta(p);
+      return;
+    }
+  });
+}
+
+function mostrarPregunta(p) {
+  document.getElementById("preguntaNum").textContent = "PREGUNTA " + (p.numero || "?");
+  // Mostrar el texto de la pregunta también en el celular
+  document.getElementById("preguntaTxt").textContent = p.texto;
+
+  const grid   = document.getElementById("opcionesGrid");
+  const letras = ["A","B","C","D"];
+  const clases = ["op-a","op-b","op-c","op-d"];
+  grid.innerHTML = "";
+  (p.opciones || []).forEach((op, i) => {
+    const btn = document.createElement("button");
+    btn.className = "opcion-btn " + clases[i];
+    btn.dataset.idx = i;
+    // Solo letra grande — el texto se lee en el proyector
+    btn.innerHTML = `<div class="opcion-letra-big">${letras[i]}</div>`;
+    btn.onclick = () => responderOpcion(i, op, p);
+    grid.appendChild(btn);
+  });
+  const dur = p.duracion || 20;
+  tiempoRestante = dur;
+  iniciarTimer(dur);
+  show("screenPregunta");
+}
+
+function iniciarTimer(duracion) {
+  limpiarTimer();
+  const circum   = 138.2;
+  const barEl    = document.getElementById("tiempoBar");
+  const circleEl = document.getElementById("timerCircle");
+  const numEl    = document.getElementById("timerNum");
+  barEl.style.width               = "100%";
+  circleEl.style.strokeDashoffset = "0";
+  numEl.textContent               = duracion;
+  timerInterval = setInterval(() => {
+    tiempoRestante--;
+    const pct = tiempoRestante / duracion;
+    barEl.style.width               = (pct * 100) + "%";
+    barEl.style.background          = pct > .4 ? "var(--y)" : pct > .2 ? "var(--o)" : "var(--err)";
+    circleEl.style.strokeDashoffset = circum * (1 - pct);
+    circleEl.style.stroke           = pct > .4 ? "#F5C518" : pct > .2 ? "#C4703A" : "#e03c3c";
+    numEl.textContent               = tiempoRestante;
+    if (tiempoRestante <= 0) {
+      limpiarTimer();
+      if (!respondioActual) mostrarResultado(false, null, "", "", true);
+    }
+  }, 1000);
+}
+function limpiarTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+function responderOpcion(idx, texto, pregunta) {
+  if (respondioActual) return;
+  respondioActual = true;
+  participoEnAsamblea = true;
+  limpiarTimer();
+  document.querySelectorAll(".opcion-btn").forEach(b => b.disabled = true);
+  document.querySelectorAll(".opcion-btn")[idx].classList.add("selected");
+  const tiempoResp = Math.max(0, (Date.now() - tiempoInicioResp) / 1000);
+  const esCorrecta = idx === (pregunta.correcta ?? -1);
+  let pts = 0;
+  if (esCorrecta) {
+    const dur = pregunta.duracion || 20;
+    pts = Math.round(1000 * (1 - tiempoResp / dur / 2));
+    pts = Math.max(pts, 200);
+    puntosTotal += pts;
+  }
+
+  set(ref(db, "asamblea/respuestas/" + pregunta.id + "/" + usuarioActual.uid), {
+    nombre:      nombreActual,
+    email:       usuarioActual.email,
+    fotoUrl:     fotoOriginal,
+    fotoMostrar: fotoActual,
+    respuesta:   texto,
+    idx,
+    correcta:    esCorrecta,
+    puntos:      pts,
+    tiempo:      tiempoResp,
+    ts:          serverTimestamp()
+  });
+
+  const btns = document.querySelectorAll(".opcion-btn");
+  btns[idx].classList.add(esCorrecta ? "correcto" : "incorrecto");
+  if (!esCorrecta && pregunta.correcta != null && btns[pregunta.correcta]) {
+    btns[pregunta.correcta].classList.add("correcto");
+  }
+  setTimeout(() => {
+    const opTexto = (pregunta.opciones || [])[pregunta.correcta] || "—";
+    mostrarResultado(esCorrecta, pts, texto, opTexto, false);
+  }, 1000);
+}
+
+function mostrarResultado(esCorrecta, pts, respUser, respCorrecta, timeout) {
+  if (timeout) {
+    document.getElementById("resultEmoji").textContent  = "⏰";
+    document.getElementById("resultTitulo").textContent = "¡Tiempo!";
+    document.getElementById("resultSub").textContent    = "Se te acabó el tiempo";
+    document.getElementById("resultPts").textContent    = "+0 PTS";
+  } else if (esCorrecta) {
+    document.getElementById("resultEmoji").textContent  = "🎉";
+    document.getElementById("resultTitulo").textContent = "¡Correcto!";
+    document.getElementById("resultSub").textContent    = "Excelente respuesta";
+    document.getElementById("resultPts").textContent    = "+" + pts + " PTS";
+  } else {
+    document.getElementById("resultEmoji").textContent  = "❌";
+    document.getElementById("resultTitulo").textContent = "Incorrecto";
+    document.getElementById("resultSub").textContent    = "Sigue intentando";
+    document.getElementById("resultPts").textContent    = "+0 PTS";
+  }
+  document.getElementById("resultRespuesta").textContent = respCorrecta || "—";
+  show("screenResultado");
+}
+
+window.volverAEsperar = function() {
+  show("screenEsperando");
+  respondioActual  = false;
+  preguntaActualId = null;
+};
+
+function construirPodio(todasRespuestas) {
+  const acum = {};
+  Object.values(todasRespuestas).forEach(pregResp => {
+    Object.values(pregResp).forEach(r => {
+      if (!acum[r.email]) {
+        acum[r.email] = {
+          nombre:      r.nombre || "?",
+          email:       r.email,
+          fotoUrl:     r.fotoUrl     || "",
+          fotoMostrar: r.fotoMostrar || "",
+          pts: 0
+        };
+      }
+      acum[r.email].pts += (r.puntos || 0);
+    });
+  });
+
+  const ranking = Object.values(acum).sort((a,b) => b.pts - a.pts);
+
+  if (ranking.length === 0) {
+    document.getElementById("finScore").textContent = puntosTotal;
+    show("screenFin"); return;
+  }
+
+  const top3El     = document.getElementById("podioTop3");
+  top3El.innerHTML = "";
+  const ordenVisual = [ ranking[1]||null, ranking[0]||null, ranking[2]||null ];
+  const posClases   = ["pos-2","pos-1","pos-3"];
+  const coronas     = ["🥈","👑","🥉"];
+  const pedestalNums= ["2","1","3"];
+
+  ordenVisual.forEach((r, vi) => {
+    if (!r) return;
+    const wrap = document.createElement("div");
+    wrap.className = "podio-lugar " + posClases[vi];
+
+    const fotoSrc = r.fotoMostrar
+      || (r.fotoUrl ? convertirUrlDrive(r.fotoUrl) : "")
+      || avatarFallback(r.nombre);
+    const fallback = avatarFallback(r.nombre);
+    wrap.innerHTML = `
+      <div class="podio-foto-wrap">
+        <img class="podio-foto" src="${fotoSrc}" alt="${r.nombre}"
+             onerror="this.onerror=null;this.src='${fallback}'">
+        <div class="podio-corona">${coronas[vi]}</div>
+      </div>
+      <div class="podio-nombre">${r.nombre.split(" ")[0]}</div>
+      <div class="podio-puntos">${r.pts} pts</div>
+      <div class="podio-pedestal"><div class="podio-num">${pedestalNums[vi]}</div></div>`;
+    top3El.appendChild(wrap);
+  });
+
+  const listaEl     = document.getElementById("rankingCompleto");
+  listaEl.innerHTML = "";
+  const medallas    = ["🥇","🥈","🥉"];
+  ranking.forEach((r, i) => {
+    const item = document.createElement("div");
+    item.className = "rank-item";
+    item.style.animationDelay = (i * 0.06) + "s";
+
+    const fotoSrc  = r.fotoMostrar
+      || (r.fotoUrl ? convertirUrlDrive(r.fotoUrl) : "")
+      || avatarFallback(r.nombre);
+    const fallback = avatarFallback(r.nombre);
+    const posClass = i < 3 ? ["top1","top2","top3"][i] : "";
+    const posLabel = i < 3 ? medallas[i] : (i + 1);
+
+    item.innerHTML = `
+      <div class="rank-pos ${posClass}">${posLabel}</div>
+      <img class="rank-foto" src="${fotoSrc}" alt="${r.nombre}"
+           onerror="this.onerror=null;this.src='${fallback}'">
+      <div class="rank-nombre">${r.nombre}</div>
+      <div style="text-align:right">
+        <div class="rank-pts">${r.pts}</div>
+        <div class="rank-pts-label">pts</div>
+      </div>`;
+    listaEl.appendChild(item);
+  });
+
+  show("screenPodio");
+  lanzarConfetti();
+}
+
+function lanzarConfetti() {
+  const canvas = document.getElementById("confettiCanvas");
+  const ctx    = canvas.getContext("2d");
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const colors = ["#F5C518","#C4703A","#4A8FA8","#C4869A","#2dba6f","#ffffff"];
+  const pieces = Array.from({length:120}, () => ({
+    x: Math.random() * canvas.width, y: Math.random() * -canvas.height,
+    w: Math.random() * 10 + 5, h: Math.random() * 5 + 3,
+    color: colors[Math.floor(Math.random()*colors.length)],
+    rot: Math.random() * Math.PI * 2,
+    vx: (Math.random() - .5) * 3, vy: Math.random() * 3 + 2,
+    vr: (Math.random() - .5) * .15
+  }));
+  let frame = 0; const MAX_FRAMES = 220;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, 1 - frame / MAX_FRAMES);
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore();
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+    });
+    frame++;
+    if (frame < MAX_FRAMES) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
 </script>
 </body>
 </html>
