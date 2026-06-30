@@ -1,323 +1,297 @@
-# 🕊️ Luxto-NSP — Portal de Miembros
+# 🕊️ Luxto-NSP — Portal del Grupo Juvenil Luz de Cristo
 
-**Grupo Juvenil Luz de Cristo**  
-Parroquia Nuestra Señora de la Piedad — #SábadoDeLuxto
+> **Parroquia Nuestra Señora de la Piedad** · Villa Jardín · San Luis · Lima · Perú  
+> *Desde 2010 — "Así brille la luz de ustedes delante de los hombres..." (Mt 5:16)*
+
+[![Deploy](https://img.shields.io/badge/Deploy-GitHub%20Pages-181717?logo=github)](https://luxtonsp-bot.github.io/luxto-nsp/)
+[![Firebase](https://img.shields.io/badge/Firebase-v10-FFCA28?logo=firebase&logoColor=white)](https://firebase.google.com/)
+[![Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-Backend-4285F4?logo=google&logoColor=white)](https://script.google.com/)
+[![Vanilla JS](https://img.shields.io/badge/Vanilla-JS%20ESM-F7DF1E?logo=javascript&logoColor=black)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
 
 ---
 
-## 📋 Descripción
+## 🎯 ¿Qué es Luxto-NSP?
 
-Portal web para la gestión del grupo juvenil **Luz de Cristo**. Permite a los miembros ver su perfil, estadísticas de asistencia, participar en asambleas interactivas en tiempo real, y enviar sugerencias/feedback. Los coordinadores pueden activar asambleas, lanzar preguntas con temporizador, ver respuestas en vivo y rankings.
+Portal web completo para el **Grupo Juvenil Luz de Cristo** que integra:
 
-## 🏗️ Arquitectura
+| Capa | Tecnología | Qué hace |
+|------|------------|----------|
+| **Frontend** | HTML5 + CSS3 + Vanilla JS (ES Modules) | 8 páginas responsive, glassmorphism dark/light theme, animaciones fluidas |
+| 
+| **Auth & Real-time** | **Firebase Auth + Realtime Database** | Login Google, asambleas en vivo con timer, podio, ranking en tiempo real |
+| **Backend & Data** | **Google Apps Script + Sheets + Drive** | Registro de miembros, asistencia, fotos, sugerencias, feedback, estadísticas |
+| **Hosting** | **GitHub Pages** | Despliegue automático desde `main` |
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    FRONTEND (HTML)                       │
-│  index.html · login.html · registro.html                │
-│  dashboard.html · asamblea.html · admin.html             │
-└──────────────┬──────────────────┬───────────────────────┘
-               │                  │
-               ▼                  ▼
-┌──────────────────────┐ ┌────────────────────────┐
-│   Firebase Auth      │ │  Firebase Realtime DB   │
-│   (Autenticación)    │ │  (Asambleas en vivo)    │
-│                      │ │                          │
-│  • signInWithEmail   │ │  /asamblea/activa       │
-│  • createUser        │ │  /asamblea/estado       │
-│  • resetPassword     │ │  /asamblea/preguntaActual│
-│                      │ │  /asamblea/respuestas/* │
-│                      │ │  /borradores/*           │
-└──────────────────────┘ └────────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────┐
-│   Google Apps Script (Backend)       │
-│   • Registro de miembros (Sheets)    │
-│   • Asistencia / Stats              │
-│   • Subida de fotos → Drive         │
-│   • Sugerencias / Feedback          │
-└──────────────────────────────────────┘
-```
+---
 
-## 📦 Stack Tecnológico
-
-| Componente | Tecnología |
-|---|---|
-| **Frontend** | HTML5 + CSS3 + JavaScript ES Modules (vanilla) |
-| **Auth** | Firebase Auth v10.12 (email/password) |
-| **DB en tiempo real** | Firebase Realtime Database |
-| **Backend** | Google Apps Script (Web App) |
-| **Base de datos** | Google Sheets (registro, asistencia) |
-| **Almacenamiento** | Google Drive (fotos de perfil) |
-| **Hosting** | GitHub Pages |
-| **Fuentes** | Lora, Inter, Bebas Neue, Fraunces |
-
-## 📄 Páginas
-
-### `index.html` — Landing
-- Página principal del grupo juvenil
-- Galería de fotos, sección "Sobre nosotros", versículo bíblico
-- Links a registro y login
-
-### `login.html` — Inicio de Sesión
-- Login con Firebase Auth (`signInWithEmailAndPassword`)
-- Modal de reset de contraseña (`sendPasswordResetEmail`)
-- Diseño glassmorphism dark
-
-### `registro.html` — Registro (2 pasos)
-1. **Verificar nombre** contra Google Sheets vía Apps Script (`validarMiembro`)
-2. **Crear cuenta** en Firebase Auth + guardar email/UID en Sheets (`guardarEmail`)
-- Solo miembros activos del grupo pueden registrarse
-
-### `dashboard.html` — Panel del Miembro
-- **Perfil:** nombre, foto de perfil (subida a Drive), estado (🟢 Activo / 🟡 En riesgo / 🔴 Inactivo)
-- **Stats:** asistencias, tardanzas, faltas, fidelidad (%)
-- **Banner de cumpleaños** automático
-- **Modo asamblea:** banner en tiempo real (escucha Firebase RTDB `asamblea/activa`)
-- **Sugerencias:** textarea → Apps Script
-- **Feedback:** estrellas ⭐ + comentario → Apps Script
-- **Foto de perfil:** comprime → base64 → Apps Script → Google Drive thumbnail
-
-### `asamblea.html` — Modo Asamblea (Tiempo Real)
-- **5 pantallas:** No activa → Esperando → Pregunta → Resultado → Podio
-- **Escucha Firebase RTDB** en tiempo real para:
-  - Estado de la asamblea (activa/inactiva/finalizada)
-  - Pregunta actual con opciones y timer
-  - Respuestas de otros participantes
-- **Timer circular SVG** con animación de cuenta regresiva
-- **Opciones de respuesta** con colores diferenciados (A=naranja, B=azul, C=dorado, D=rosa)
-- **Sistema de puntos:** velocidad = más puntos (máx 1000, mín 200)
-- **Podio final:** TOP 3 con fotos, coronas y pedestales animados
-- **Ranking completo** con fotos de perfil de cada participante
-- **Confetti** 🎊 animado en Canvas al finalizar
-- **Bug fix:** `podioMostrado` flag evita re-renderizar el podio en cada tick de RTDB
-
-### `admin.html` — Panel del Coordinador
-- **Acceso restringido** a lista de emails admin
-- **Toggle asamblea** ON/OFF (escribe en RTDB `asamblea/activa`)
-- **Botón "Finalizar asamblea"** → dispara podio para todos los participantes
-- **Botón "Reiniciar ranking"** → borra `/asamblea/respuestas` del RTDB
-- **Nueva pregunta:** texto, 4 opciones (A-D), marca correcta, tiempo límite (10-60s)
-- **Pregunta activa en vivo:** muestra la pregunta lanzada con respuestas en tiempo real
-- **Respuestas en vivo:** cada respuesta muestra avatar + nombre + opción + puntos
-- **Ranking en vivo:** con fotos de perfil, medallas 🥇🥈🥉
-- **Borradores:** guardar/cargar/eliminar preguntas para reutilizar (RTDB `/borradores`)
-
-## 🔐 Autenticación y Autorización
-
-### Firebase Auth
-- Proveedor: email/password (solo Gmail)
-- Registro 2 pasos: verificación de nombre → creación de cuenta
-- Reset de contraseña por email
-
-### Lista de Admins (hardcodeada)
-```javascript
-const ADMINS = [
-    "henry.alfaro1@unmsm.edu.pe",
-    "paolosotil97@gmail.com",
-    "jorgediego.123.2002@gmail.com",
-    "gianfracamones@gmail.com",
-    "alvarorodrigosalazar.2001@gmail.com"
-];
-```
-
-## 🔥 Firebase Realtime Database — Estructura
-
-```
-luxto-nsp-default-rtdb/
-├── asamblea/
-│   ├── activa: boolean              // Toggle ON/OFF
-│   ├── estado: "activa"|"finalizada" // Estado general
-│   ├── preguntaActual/
-│   │   ├── id: "p_1713..."          // ID único
-│   │   ├── numero: 1                // Número de pregunta
-│   │   ├── texto: "¿...?"           // Texto de la pregunta
-│   │   ├── opciones: [...]           // Array de opciones
-│   │   ├── correcta: 0              // Índice de la respuesta correcta
-│   │   ├── duracion: 20             // Segundos
-│   │   ├── estado: "activa"|"cerrada"|"esperando"
-│   │   └── ts: 1713...              // Timestamp
-│   └── respuestas/
-│       └── {preguntaId}/
-│           └── {uid}/
-│               ├── nombre, email, fotoUrl
-│               ├── respuesta, idx
-│               ├── correcta, puntos, tiempo
-│               └── ts
-└── borradores/
-    └── {key}/
-        ├── texto, opciones, correcta
-        ├── duracion, ts
-```
-
-## 📊 Google Apps Script — API
-
-**URL:** `https://script.google.com/macros/s/AKfycb.../exec`
-
-### Acciones (POST con JSON body):
-
-| Acción | Descripción | Parámetros |
-|---|---|---|
-| `validarMiembro` | Verifica nombre contra Sheets | `nombre` |
-| `guardarEmail` | Guarda email y UID en fila del Sheet | `fila`, `email`, `uid` |
-| `getDashboard` | Obtiene stats del miembro | `email` |
-| `guardarFotoUrl` | Sube foto base64 a Drive y guarda URL | `email`, `base64` |
-| `guardarSugerencia` | Guarda sugerencia en Sheet | `nombre`, `email`, `sugerencia` |
-| `guardarFeedback` | Guarda calificación + comentario | `nombre`, `email`, `calificacion`, `comentario` |
-
-### `getDashboard` retorna:
-```json
-{
-    "ok": true,
-    "nombre": "María García",
-    "fotoUrl": "https://drive.google.com/...",
-    "esCumple": true,
-    "msgCumple": "¡Feliz cumpleaños!",
-    "estadisticas": {
-        "asistencias": 8,
-        "tardanzas": 2,
-        "faltas": 1,
-        "porcentaje": "80",
-        "totalAsambleas": 11,
-        "promedioRetraso": "3.5",
-        "ultimaAsistencia": "2026-05-10",
-        "estado": "🟢 Activo"
-    }
-}
-```
-
-## 🎨 Paleta de Colores
-
-| Token | Color | Uso |
-|---|---|---|
-| `--y` | `#F5C518` | Dorado — títulos, puntos, acentos |
-| `--o` | `#C4703A` | Naranja warm — gradientes, opción A |
-| `--b` | `#4A8FA8` | Azul — opción B, links |
-| `--r` | `#C4869A` | Rosa — opción D, detalles |
-| `--ok` | `#2dba6f` | Verde — correcto, éxito |
-| `--err` | `#e03c3c` | Rojo — incorrecto, error |
-| `--bg` | `#16120d` | Fondo dark warm |
-| `--bg2` | `#1f1a12` | Cards dark |
-| `--cream` | `rgba(255,248,231,.9)` | Texto principal |
-
-## 📱 Flujo de Usuario
-
-```
-Landing (index.html)
-    ├── Registro (registro.html)
-    │       1. Verificar nombre contra Sheets
-    │       2. Crear cuenta Firebase Auth
-    │       3. Guardar email en Sheets
-    │       └── → Dashboard
-    └── Login (login.html)
-            ├── Ingresar con email/password
-            ├── Reset contraseña
-            └── → Dashboard
-
-Dashboard (dashboard.html)
-    ├── Peril + Stats de asistencia
-    ├── Banner cumpleaños
-    ├── Banner "¡Asamblea activa!" (si RTDB activa=true)
-    ├── Subir foto de perfil → Drive
-    ├── Enviar sugerencia → Sheets
-    └── Enviar feedback ⭐ → Sheets
-
-Asamblea (asamblea.html) — solo si activa
-    ├── Esperar pregunta
-    ├── Responder con timer
-    ├── Ver resultado (correcto/incorrecto)
-    ├── Repetir por cada pregunta
-    └── Podio final 🏆 + confetti
-
-Admin (admin.html) — solo coordinadores
-    ├── Activar/desactivar asamblea
-    ├── Lanzar preguntas (texto + opciones + timer)
-    ├── Ver respuestas en vivo con fotos
-    ├── Ver ranking en vivo
-    ├── Finalizar asamblea → podio para todos
-    ├── Reiniciar ranking (borrar respuestas)
-    └── Guardar/cargar borradores de preguntas
-```
-
-## 🔒 Seguridad
-
-- **Auth guard:** `onAuthStateChanged` redirige a login si no hay sesión
-- **Admin guard:** lista de emails verificados en cada página protegida
-- **Anti-XSS:** `textContent` en vez de `innerHTML` para datos dinámicos
-- **onerror fix:** `this.onerror=null` evita loops infinitos en imágenes
-- **Firebase config:** las claves están expuestas (normal en web apps cliente), la seguridad depende de las reglas de Firebase y Sheets
-
-### Reglas de Firebase Realtime Database
-\`\`\`json
-{
-  "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null",
-    "asamblea": {
-      "activa": { ".read": true, ".write": "auth != null" },
-      "estado": { ".read": true, ".write": "auth != null" },
-      "preguntaActual": { ".read": true, ".write": "auth != null" },
-      "respuestas": { ".read": "auth != null", ".write": "auth != null" }
-    },
-    "borradores": { ".read": "auth != null", ".write": "auth != null" },
-    "rankingGlobal": { ".read": true, ".write": "auth != null" },
-    "users": { ".read": "auth != null", ".write": "auth != null" }
-  }
-}
-\`\`\`
-> ⚠️ Los paths `asamblea/activa`, `asamblea/estado`, `asamblea/preguntaActual` y `rankingGlobal` tienen `.read: true` para que la asamblea sea accesible sin auth (para el modo asamblea en tiempo real). Las escrituras requieren autenticación.
-
-### Bugs corregidos (2026-05-18)
-- **Podio no aparecía:** Al finalizar la asamblea, `preguntaActualId` se reseteaba a `null` cuando la pregunta se cerraba, haciendo que el código pensara que el usuario no había participado. Se añadió `participoEnAsamblea` como flag independiente.
-- **Ranking global no se reiniciaba:** Al finalizar la asamblea, las respuestas (`asamblea/respuestas`) no se borraban después de acumular en el ranking global, causando que los puntos viejos se sumaran nuevamente en la próxima finalización. Ahora se borran automáticamente.
-- **Número de pregunta inconsistente:** `preguntaNumActual` no persistía en Firebase, causando inconsistencia si el admin recargaba la página. Ahora se guarda en `asamblea/preguntaNum`.
-
-## 📂 Estructura de Archivos
+## 📁 Estructura del Repositorio
 
 ```
 luxto-nsp/
-├── index.html          # Landing page
-├── login.html          # Inicio de sesión
-├── registro.html       # Registro de miembros (2 pasos)
-├── dashboard.html      # Panel del miembro
-├── asamblea.html       # Modo asamblea interactivo
-├── admin.html          # Panel del coordinador
-├── logo_luxto.png      # Logo del grupo
-├── foto_grupo.jpg      # Foto grupal
-└── README.md           # Este archivo
+├── index.html           # Landing page pública (hero, quiénes somos, historia, coro, donaciones, CTA)
+├── historia.html        # Cronología completa 2010-2025: directivas, asesores, coro, equipo, memoria
+├── login.html           # Inicio de sesión con Firebase Auth (Google) + reset password
+├── registro.html        # Registro 2 pasos: validar nombre en Sheet → crear cuenta Firebase
+├── dashboard.html       # Panel del miembro: stats, nota rendimiento, sugerencias, feedback, cumpleaños
+├── asamblea.html        # Vista móvil del miembro: solo letras A/B/C/D grandes + timer circular
+├── proyector.html       # Vista proyector (pantalla grande): pregunta completa, ranking en vivo, admin bar
+├── admin.html           # Panel coordinador: crear preguntas, activar asamblea, ranking global, finalizar
+├── proyector_logic.js   # Lógica compartida proyector (Firebase listeners, timer, ranking, countdown)
+├── logo_luxto.png       # Logo del grupo
+├── foto_grupo.jpg       # Foto grupal (hero)
+├── *.jpg / *.png        # Fotos de directivos, coro, historia (referenciadas en historia.html)
+├── remove_watermark.py  # Script utilidad para limpiar marcas de agua de imágenes
+└── README.md            # Este archivo
 ```
 
-## 🚀 Deploy
+---
 
-El sitio está alojado en **GitHub Pages** desde el repositorio `luxtonsp-bot/luxto-nsp`.
+## 🌐 Páginas y Funcionalidades
+
+### 1. `index.html` — Landing Pública
+- **Hero** con foto grupal animada, stats (2010, 9 periodos, +50 servidores)
+- **Quiénes somos**: valores (Fe, Fraternidad, Servicio, Misión) + timeline 2010-2025
+- **Historia** (resumen con link a `historia.html`)
+- **Coro Parroquial**: servicios (animación litúrgica, ensayos, formaciones, eventos) + contacto WhatsApp
+- **Donaciones**: 3 métodos (Yape, Plin, Transferencia) + QR placeholders + transparencia de uso de fondos
+- **CTA** de ingreso al portal miembros
+- **Versículos bíblicos** (Sal y Luz) + Footer con redes sociales
+
+### 2. `historia.html` — Cronología Épica Completa
+> **Nueva (2025)** — Rediseño total con estilo histórico/inmersivo
+- **Fundación**: 15 nov 2010 (creación) · 30 abr 2011 (nombre oficial "Luz de Cristo")
+- **9 Períodos directivos** (2011-2025) con tarjetas de persona: foto, cargo, rol
+- **Estados especiales**: 
+  - `memoria` → 🕯️ vela animada para fallecidos (Omar Naveda † 2025)
+  - `asesor-card` → badge azul para asesores espirituales
+- **Sección Coro**: historia + timeline servicios + cards de servicio + contacto
+- **Equipo por período**: chips con avatar + nombre
+- **Footer** con versículo, links, redes sociales (IG, FB, TT, YT)
+
+### 3. `login.html` / `registro.html` — Auth Firebase
+| Flujo | Detalle |
+|-------|---------|
+| **Login** | Email/contraseña + "¿Olvidaste contraseña?" (Firebase `sendPasswordResetEmail`) |
+| **Registro** | **Paso 1**: Valida nombre completo contra Google Sheet (Apps Script `validarMiembro`)<br>**Paso 2**: Si existe → crea usuario Firebase Auth + guarda `email` + `uid` en Sheet (`guardarEmail`) |
+| **Seguridad** | Solo miembros registrados en el Sheet oficial pueden crear cuenta |
+
+### 4. `dashboard.html` — Panel del Miembro
+- **Banner cumpleaños** 🎂 con confetti automático
+- **Hero "Nota de Rendimiento"**: gauge SVG animado (0-20) + mensaje contextual + chip estado
+- **Stats Grid** (animados 0→valor): Asistencias ✅ · Tardanzas ⏰ · Faltas ❌ · Fidelidad 🔥 (% + barra)
+- **Resumen asistencia**: total, asistencias, tardanzas, promedio retraso, última, estado (activo/riesgo/inactivo)
+- **Sugerir tema**: textarea → Apps Script `guardarSugerencia`
+- **Feedback estrellas** (1-5) + comentario → Apps Script `guardarFeedback`
+- **Modo Asamblea banner** (se muestra solo si `asamblea/activa=true` en Firebase)
+- **Reveal on scroll** (IntersectionObserver) + confetti en logros
+
+### 5. Sistema de Asambleas en Tiempo Real (3 vistas sincronizadas)
+
+> **Arquitectura:** Firebase Realtime Database como bus de eventos + Apps Script como persistencia histórica
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│   admin.html    │────▶│  Firebase RTDB   │◀───│  proyector.html  │
+│ (Coordinador)   │     │  /asamblea       │     │ (Pantalla grande)│
+└─────────────────┘     └────────┬─────────┘     └──────────────────┘
+                                 │
+                                 ▼
+                        ┌──────────────────┐
+                        │  asamblea.html   │
+                        │ (Móvil miembro)  │
+                        └──────────────────┘
+```
+
+#### `admin.html` — Panel Coordinador ⚙️
+- **Toggle Asamblea ON/OFF** (escritura atómica: limpia respuestas, resetea `preguntaNum=0`)
+- **Crear preguntas** (guardadas en `/borradores`): texto, 2-4 opciones, correcta (radio), duración (10-60s)
+- **Historial preguntas** guardadas (cargar/eliminar)
+- **Pregunta activa en vivo**: texto, opciones, respuestas recibidas en tiempo real (foto, nombre, respuesta, ✓/✗, pts, tiempo)
+- **Ranking en vivo** (top 10 con fotos)
+- **Ranking Global Histórico** (acumulado de todas las asambleas en `/rankingGlobal`)
+- **Botones de control**:
+  - `🚀 Lanzar pregunta 1` / `Siguiente →` (con countdown 3-2-1 en proyector)
+  - `⏹ Cerrar pregunta` (revela correcta + ranking)
+  - `🏁 Finalizar asamblea` (acumula en ranking global + borra respuestas + podio)
+  - `🔄 Reiniciar ranking` (solo esta asamblea) / `♻️ Reiniciar ranking global` (todo histórico)
+
+#### `proyector.html` — Vista Pantalla Grande 🖥️
+- **Pantallas**: Espera → Countdown 3-2-1 → Pregunta completa (texto + 4 opciones con barras % en vivo) → Ranking → Podio final
+- **Admin Bar** (solo admins, toggleable): botones Lanzar/Siguiente/Cerrar/Finalizar/Ver Ranking
+- **Respuestas en vivo**: barras de porcentaje por opción + contadores
+- **Timer** circular SVG + barra horizontal (cambio color: amarillo → naranja → rojo)
+- **Animaciones**: entrada de tarjetas, pop-in correcta, confetti en podio
+- **Watermark** "Luz de Cristo" esquina inferior
+
+#### `asamblea.html` — Vista Móvil Miembro 📱
+- **Solo letras grandes A/B/C/D** (el texto completo se lee en proyector)
+- **Timer** circular + barra + hint "📺 Lee las opciones en el proyector"
+- **Selección visual** (escala + color) → envío a Firebase
+- **Resultado**: ✅/❌/⏰ + puntos ganados (fórmula: `1000 * (1 - tiempoRespuesta / duracion / 2)`, mínimo 200)
+- **Podio final** (top 3 con pedestales animados) + ranking completo + confetti
+- **Botón "Volver al dashboard"**
+
+#### Estructura Firebase `/asamblea`
+```json
+{
+  "activa": true,
+  "estado": "activa",                    // "activa" | "finalizada"
+  "preguntaNum": 5,
+  "preguntaActual": {
+    "id": "p_1700000000000",
+    "numero": 5,
+    "texto": "¿...?",
+    "opciones": ["A", "B", "C", "D"],
+    "correcta": 2,
+    "duracion": 20,
+    "estado": "activa",                  // "activa" | "cerrada" | "esperando"
+    "ts": 1700000000000
+  },
+  "respuestas": {
+    "p_1700000000000": {
+      "uid1": { "nombre":"Juan","email":"...","fotoUrl":"...","fotoMostrar":"...","respuesta":"C","idx":2,"correcta":true,"puntos":850,"tiempo":3.2,"ts":{".sv":"timestamp"} }
+    }
+  }
+}
+```
+
+#### Ranking Global (`/rankingGlobal`)
+```json
+{
+  "uid_key": { "nombre":"Juan","email":"...","fotoUrl":"...","pts":3420,"ultimaAsamblea":1700000000000 }
+}
+```
+
+---
+
+## ⚙️ Google Apps Script Backend
+
+**URL Base:** `https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec`
+
+| Acción | Parámetros | Qué hace |
+|--------|------------|----------|
+| `getDashboard` | `email` | Stats miembro (asistencias, tardanzas, faltas, %, nota, estado, última, esCumple, msgCumple, fotoUrl, nombre) |
+| `validarMiembro` | `nombre` | Busca en Sheet "Miembros" (col A), retorna `ok`, `fila`, `nombreReal` |
+| `guardarEmail` | `fila`, `email`, `uid` | Escribe email (col B) y UID (col C) en fila del miembro |
+| `guardarFotoUrl` | `email`, `base64` | Sube a Drive, retorna `fotoUrl` (thumbnail público) |
+| `guardarSugerencia` | `nombre`, `email`, `sugerencia` | Añade fila a Sheet "Sugerencias" (timestamp, nombre, email, texto) |
+| `guardarFeedback` | `nombre`, `email`, `calificacion`, `comentario` | Añade fila a Sheet "Feedback" (timestamp, nombre, email, 1-5, texto) |
+
+**Sheets esperadas:**
+- `Miembros` → A: Nombre, B: Email, C: UID, D: FotoUrl, E: Generación, F: Cumpleaños, G: NotaRendimiento
+- `Asistencia` → log por fecha (para calcular stats)
+- `Sugerencias` / `Feedback` → logs
+
+---
+
+## 🔐 Firebase Config
+
+```js
+const firebaseConfig = {
+  apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+  authDomain: "luxto-nsp.firebaseapp.com",
+  projectId: "luxto-nsp",
+  storageBucket: "luxto-nsp.firebasestorage.app",
+  messagingSenderId: "3542836325",
+  appId: "1:3542836325:web:cf65cd50edcc431500d28c",
+  databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+};
+```
+
+**Auth Providers:** Email/Password (Google no configurado en código actual)  
+**Database Rules:** (recomendado para producción)
+```json
+{
+  "rules": {
+    "asamblea": { ".read": true, ".write": "auth != null && root.child('admins').hasChild(auth.uid)" },
+    "borradores": { ".read": "auth != null", ".write": "auth != null && root.child('admins').hasChild(auth.uid)" },
+    "rankingGlobal": { ".read": true, ".write": "auth != null && root.child('admins').hasChild(auth.uid)" },
+    "admins": { ".read": "auth != null", ".write": "auth != null && root.child('admins').hasChild(auth.uid)" }
+  }
+}
+```
+*Lista de admins hardcodeada en JS (`ADMINS` array) en `admin.html`, `proyector_logic.js`, `asamblea.html`, `dashboard.html`.*
+
+---
+
+## 🎨 Diseño & UX
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Paleta** | Amarillo `#F5C518` · Naranja `#C4703A` · Azul `#4A8FA8` · Rosa `#C4869A` · Negro cálido `#2a2218` · Crema `#FBF7EE` |
+| **Tipografía** | `Lora` (serif, títulos) · `Inter`/`Outfit` (sans, UI) · `Cinzel` (display, historia) · `Bebas Neue` (números grandes) · `Fraunces` (acento) |
+| **Tema** | Light (index, historia, login/registro) · Dark (dashboard, asamblea, proyector, admin) |
+| **Efectos** | Glassmorphism, gradientes radiales animados, float/spin keyframes, reveal-on-scroll, confetti canvas |
+| **Responsive** | Mobile-first, breakpoints 980px / 640px / 560px, hamburger menu, grids auto-fit |
+| **Accesibilidad** | `prefers-reduced-motion`, focus-visible, alt en imágenes, semántica HTML5 |
+
+---
+
+## 🚀 Despliegue
+
+### GitHub Pages (Automático)
+1. Push a `main` → GitHub Actions / Pages sirve desde root
+2. URL: `https://luxtonsp-bot.github.io/luxto-nsp/`
+
+### Configuración previa
+1. **Firebase Console** → Authentication → Sign-in method → Email/Password ✅
+2. **Firebase Console** → Realtime Database → Create database → Reglas (ver arriba)
+3. **Google Cloud** → Apps Script → Desplegar como "Web App" (Execute as: Me, Access: Anyone) → Copiar URL a `API` constante en todos los HTML
+4. **Google Sheet** → Columnas según tabla backend
+5. **Drive** → Carpeta para fotos de perfil (Apps Script sube ahí)
+
+---
+
+## 📝 Changelog Reciente (desde `2f80ba2` → `575607f`)
+
+| Commit | Fecha | Cambio |
+|--------|-------|--------|
+| `575607f` | 2025 | Fotos Pilar Arana y Cecilia Salazar periodo 2015-2017 |
+| `4040b1a` | 2025 | Eliminar badges cargo redundantes en historia.html |
+| `66c2b34` | 2025 | Foto Padre Andrés actualizada |
+| `397588e` | 2025 | Fotos de miembros en historia.html |
+| `32f3250` | 2025 | Directivas 2023-2025 y 2026-presente con equipo correcto |
+| `399f108` | 2025 | **Nueva sección "Historia del Coro" en historia.html** |
+| `8135603` | 2025 | Botones TikTok y YouTube en footer historia.html |
+| `effc688` | 2025 | Rediseño Quiénes Somos + historia.html estilo épico |
+| `de1c52e` | 2025 | **Refactor total asambleas**: admin solo sube preguntas, proyector controla todo (countdown, ranking, finalizar), asamblea.html solo letras A/B/C/D |
+| `c3ecd75` | 2025 | **Modo Proyector**: nuevo `proyector.html`, link en admin, asamblea.html móvil-only |
+| `c48a2fc` | 2025 | Dashboard: estética + nuevas métricas (nota rendimiento gauge, fidelidad, cumpleaños) |
+| `d301b23` | 2025 | Update asamblea.html |
+
+---
+
+## 🛠️ Desarrollo Local
 
 ```bash
 # Clonar
 git clone https://github.com/luxtonsp-bot/luxto-nsp.git
+cd luxto-nsp
 
-# Servir localmente (cualquier servidor estático)
-npx serve .
-# o
-python3 -m http.server 8000
+# Servidor local (cualquier static server)
+npx serve .          # o python -m http.server 8000
+# Abre http://localhost:3000 (o 8000)
 ```
 
-## ⚙️ Configuración Requerida
-
-1. **Firebase Project:** Crear proyecto en [Firebase Console](https://console.firebase.google.com/)
-   - Habilitar Authentication (email/password)
-   - Habilitar Realtime Database
-   - Configurar reglas de seguridad
-
-2. **Google Apps Script:**
-   - Crear proyecto con las funciones `doPost`
-   - Desplegar como Web App (acceso: cualquiera)
-   - Actualizar la URL en `registro.html`, `dashboard.html` y `asamblea.html`
-
-3. **Google Sheets:**
-   - Hoja de registro de miembros con columnas: Nombre, Email, UID, FotoURL, etc.
-   - Hoja de asistencia con columnas: Fecha, Miembro, Estado (P/T/F)
+> **Nota:** Firebase y Apps Script funcionan en localhost si autorizas el dominio en Firebase Console → Authentication → Settings → Authorized domains.
 
 ---
 
-*Hecho con ❤️ para la gloria de Dios — Mateo 5:16*
+## 📄 Licencia
+
+MIT License — Libre para uso, modificación y distribución.  
+*Hecho con 🤍 para el Grupo Juvenil Luz de Cristo.*
+
+---
+
+## 👥 Créditos
+
+- **Desarrollo**: Paolo Alfaro Sotil ([@elbrujo325](https://github.com/elbrujo325))
+- **Comunidad**: Jóvenes de la Parroquia Nuestra Señora de la Piedad
+- **Asesores**: P. Andrés, Ricardo Vidal, y todos los que guiaron el grupo
+- **Fotos**: Miembros del grupo a lo largo de los años
+
+---
+
+> **"Ustedes son la sal de la tierra... la luz del mundo."** — Mateo 5:13-16
