@@ -5,27 +5,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, onValue, set, get, update, remove, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
-  authDomain: "luxto-nsp.firebaseapp.com",
-  projectId: "luxto-nsp",
-  storageBucket: "luxto-nsp.firebasestorage.app",
-  messagingSenderId: "3542836325",
-  appId: "1:3542836325:web:cf65cd50edcc431500d28c",
-  databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
-};
+// Cargar config centralizada
+await new Promise(r => { if (window.LUXTO_CONFIG) r(); else window.addEventListener('luxto-config-ready', r); });
+const { firebase, adminEmails } = window.LUXTO_CONFIG;
 
-const ADMINS = [
-  "henry.alfaro1@unmsm.edu.pe",
-  "paolosotil97@gmail.com",
-  "jorgediego.123.2002@gmail.com",
-  "gianfracamones@gmail.com",
-  "alvarorodrigosalazar.2001@gmail.com"
-];
-
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(firebase);
 const auth = getAuth(app);
 const db = getDatabase(app);
+
+const ADMINS = adminEmails;
 
 let esAdmin = false;
 let preguntaActualId = null;
