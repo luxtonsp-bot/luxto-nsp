@@ -185,33 +185,72 @@ luxto-nsp/
 
 ---
 
-## 🔐 Firebase Config
+## 🔒 Seguridad
 
-```js
-const firebaseConfig = {
-  apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
-  authDomain: "luxto-nsp.firebaseapp.com",
-  projectId: "luxto-nsp",
-  storageBucket: "luxto-nsp.firebasestorage.app",
-  messagingSenderId: "3542836325",
-  appId: "1:3542836325:web:cf65cd50edcc431500d28c",
-  databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
-};
-```
+### Protecciones implementadas
+- **Auth guard**: `onAuthStateChanged` redirige a login si no hay sesión
+- **Admin guard**: lista de emails verificados en cada página protegida
+- **Anti-XSS**: `textContent` en vez de `innerHTML` para datos dinámicos
+- **onerror fix**: `this.onerror=null` evita loops infinitos en imágenes
 
-**Auth Providers:** Email/Password (Google no configurado en código actual)  
-**Database Rules:** (recomendado para producción)
+### Firebase config
+
+Firebase config (apiKey, etc.) es público por diseño en apps cliente — **no es un secreto**, Google lo documenta así. La seguridad real reside en las reglas de Realtime Database, no en ocultar esta configuración.
+
+### Reglas de Firebase Realtime Database
+
 ```json
 {
   "rules": {
-    "asamblea": { ".read": true, ".write": "auth != null && root.child('admins').hasChild(auth.uid)" },
-    "borradores": { ".read": "auth != null", ".write": "auth != null && root.child('admins').hasChild(auth.uid)" },
-    "rankingGlobal": { ".read": true, ".write": "auth != null && root.child('admins').hasChild(auth.uid)" },
-    "admins": { ".read": "auth != null", ".write": "auth != null && root.child('admins').hasChild(auth.uid)" }
+    ".read": false,
+    ".write": false,
+    "admins": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "asamblea": {
+      "activa": { ".read": true, ".write": "auth != null && root.child('admins').child(auth.uid).exists()" },
+      "estado": { ".read": true, ".write": "auth != null && root.child('admins').child(auth.uid).exists()" },
+      "preguntaActual": { ".read": true, ".write": "auth != null && root.child('admins').child(auth.uid).exists()" },
+      "preguntaNum": { ".read": true, ".write": "auth != null && root.child('admins').child(auth.uid).exists()" },
+      "respuestas": {
+        ".read": "auth != null",
+        "$preguntaId": {
+          "$uid": {
+            ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())"
+          }
+        }
+      }
+    },
+    "borradores": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+    },
+    "rankingGlobal": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())"
+      }
+    }
   }
 }
 ```
-*Lista de admins hardcodeada en JS (`ADMINS` array) en `admin.html`, `proyector_logic.js`, `asamblea.html`, `dashboard.html`.*
+
+> Las lecturas públicas (`asamblea/activa`, `estado`, `preguntaActual`, `rankingGlobal`) siguen sin requerir autenticación, para que el modo asamblea y el proyector funcionen sin login. Las escrituras ahora requieren que el UID del usuario exista en el nodo `/admins` (verificado en el servidor), no solo que esté logueado.
+
+### Lista de Admins (autorización en servidor)
+
+Los emails de coordinadores en el código (`ADMINS` array en cada HTML) solo controlan la interfaz (mostrar/ocultar botones de admin). La autorización real ocurre en las reglas de Firebase, que verifican el UID del usuario autenticado contra un nodo `/admins` en la base de datos:
+
+```
+/admins/{uid}: true
+```
+
+Esto evita que alguien manipulando el JavaScript del navegador pueda escribir datos sin ser realmente administrador, ya que la validación ahora vive del lado del servidor (Firebase Rules), no solo en el cliente.
 
 ---
 
@@ -259,6 +298,12 @@ const firebaseConfig = {
 | `c3ecd75` | 2025 | **Modo Proyector**: nuevo `proyector.html`, link en admin, asamblea.html móvil-only |
 | `c48a2fc` | 2025 | Dashboard: estética + nuevas métricas (nota rendimiento gauge, fidelidad, cumpleaños) |
 | `d301b23` | 2025 | Update asamblea.html |
+
+### Mejoras de seguridad (2026-06-30)
+
+- **Reglas de Firebase inseguras (alerta automática de Firebase):** La regla raíz original (`.read`/`.write`: `"auth != null"`) permitía que cualquier usuario logueado leyera y escribiera TODA la base de datos, no solo los administradores. Firebase detectó esto automáticamente y envió una alerta por correo. Se corrigió implementando reglas granulares por nodo, con verificación de admin vía `/admins/{uid}` en vez de depender únicamente del check de JavaScript en el cliente (que era fácilmente evadible).
+
+---
 
 ---
 
