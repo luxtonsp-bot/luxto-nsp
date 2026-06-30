@@ -6,61 +6,392 @@
 <title>Crear cuenta — Luz de Cristo</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--y:#F5C518;--o:#C4703A;--b:#4A8FA8;--ink:#1c1814;--paper:#FBF7EE;--white:#fff;--muted:#5e554a;--err:#d94040;--ok:#2e9e6b;--border:#e8e2d4;--grad:linear-gradient(135deg,#F5C518,#e09a2e,#C4703A);--shadow:0 20px 60px -16px rgba(28,24,20,.18)}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
-body{font-family:'Inter',sans-serif;background:var(--paper);min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
-.panel-left{background:var(--grad);position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:48px 52px;overflow:hidden;min-height:100vh}
-.panel-left::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'><circle cx='200' cy='200' r='180' fill='none' stroke='rgba(255,255,255,.12)' stroke-width='1'/><circle cx='200' cy='200' r='120' fill='none' stroke='rgba(255,255,255,.08)' stroke-width='1'/><circle cx='200' cy='200' r='60' fill='none' stroke='rgba(255,255,255,.06)' stroke-width='1'/></svg>") no-repeat center/contain}
-.pl-logo{display:flex;align-items:center;gap:14px;position:relative;z-index:1}.pl-logo img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,.2))}.pl-logo-name{font-family:'Lora',serif;font-size:20px;font-weight:600;color:white;line-height:1.2}.pl-logo-sub{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.7)}
-.pl-body{position:relative;z-index:1}.pl-versiculo{font-family:'Lora',serif;font-style:italic;font-size:18px;color:rgba(255,255,255,.92);line-height:1.75;margin-bottom:20px}.pl-versiculo strong{font-style:normal;font-weight:700;color:white}.pl-ref{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.6)}
-.pl-steps{display:flex;flex-direction:column;gap:16px;position:relative;z-index:1}.pl-step{display:flex;align-items:center;gap:14px}.pl-step-num{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0}.pl-step.done .pl-step-num{background:white;color:var(--o)}.pl-step-text{font-size:14px;color:rgba(255,255,255,.8);font-weight:500}
-.panel-right{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:48px 52px;min-height:100vh}
-.form-header{width:100%;max-width:420px;margin-bottom:36px}.form-back{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--muted);font-size:13px;font-weight:600;margin-bottom:24px;transition:color .2s}.form-back:hover{color:var(--o)}
-.form-title{font-family:'Lora',serif;font-size:32px;font-weight:600;color:var(--ink);line-height:1.1;margin-bottom:8px}.form-title em{font-style:italic;color:var(--o)}
-.form-sub{font-size:15px;color:var(--muted);line-height:1.6}
-form{width:100%;max-width:420px;display:flex;flex-direction:column;gap:20px}
-.field{display:flex;flex-direction:column;gap:6px}label{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.2px}.field-hint{font-size:12px;color:var(--muted);margin-top:-2px}
-input{width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-family:'Inter',sans-serif;font-size:15px;color:var(--ink);background:white;outline:none;transition:border-color .2s,box-shadow .2s}
-input:focus{border-color:var(--o);box-shadow:0 0 0 3px rgba(196,112,58,.12)}input.error{border-color:var(--err)}input.valid{border-color:var(--ok)}
-.validacion-nombre{display:none;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;align-items:center;gap:10px}
-.validacion-nombre.ok{display:flex;background:rgba(46,158,107,.1);color:var(--ok);border:1px solid rgba(46,158,107,.25)}
-.validacion-nombre.err{display:flex;background:rgba(217,64,64,.08);color:var(--err);border:1px solid rgba(217,64,64,.2)}
-.validacion-nombre.loading{display:flex;background:rgba(74,143,168,.08);color:var(--b);border:1px solid rgba(74,143,168,.2)}
-.btn-submit{width:100%;padding:16px;border-radius:100px;background:var(--grad);color:white;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;border:none;cursor:pointer;box-shadow:0 14px 30px -10px rgba(196,112,58,.5);transition:all .25s;position:relative;overflow:hidden}
-.btn-submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 20px 40px -10px rgba(196,112,58,.6)}.btn-submit:disabled{opacity:.6;cursor:not-allowed;transform:none}
-.divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px}.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
-.link-login{text-align:center;font-size:14px;color:var(--muted)}.link-login a{color:var(--o);font-weight:700;text-decoration:none}.link-login a:hover{text-decoration:underline}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:white;padding:14px 24px;border-radius:100px;font-size:14px;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;max-width:90vw;text-align:center;z-index:999}#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}#toast.err{background:var(--err)}#toast.ok{background:var(--ok)}
-#paso2{display:none}#paso2.visible{display:contents}
-@media(max-width:800px){body{grid-template-columns:1fr}.panel-left{display:none}.panel-right{padding:40px 24px}}
+:root {
+  --y: #F5C518; --o: #C4703A; --b: #4A8FA8;
+  --ink: #1c1814; --paper: #FBF7EE; --white: #fff;
+  --muted: #5e554a; --err: #d94040; --ok: #2e9e6b;
+  --border: #e8e2d4;
+  --grad: linear-gradient(135deg,#F5C518,#e09a2e,#C4703A);
+  --shadow: 0 20px 60px -16px rgba(28,24,20,.18);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--paper);
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+}
+
+/* ── PANEL IZQUIERDO (visual) ── */
+.panel-left{
+  background:var(--grad);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:48px 52px;
+  overflow:hidden;
+  min-height:100vh;
+}
+.panel-left::before{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'><circle cx='200' cy='200' r='180' fill='none' stroke='rgba(255,255,255,.12)' stroke-width='1'/><circle cx='200' cy='200' r='120' fill='none' stroke='rgba(255,255,255,.08)' stroke-width='1'/><circle cx='200' cy='200' r='60' fill='none' stroke='rgba(255,255,255,.06)' stroke-width='1'/></svg>") no-repeat center/contain;
+}
+.pl-logo{display:flex;align-items:center;gap:14px;position:relative;z-index:1;}
+.pl-logo img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,.2));}
+.pl-logo-name{font-family:'Lora',serif;font-size:20px;font-weight:600;color:white;line-height:1.2;}
+.pl-logo-sub{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.7);}
+
+.pl-body{position:relative;z-index:1;}
+.pl-versiculo{
+  font-family:'Lora',serif;font-style:italic;font-size:18px;
+  color:rgba(255,255,255,.92);line-height:1.75;margin-bottom:20px;
+}
+.pl-versiculo strong{font-style:normal;font-weight:700;color:white;}
+.pl-ref{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.6);}
+
+.pl-steps{display:flex;flex-direction:column;gap:16px;position:relative;z-index:1;}
+.pl-step{display:flex;align-items:center;gap:14px;}
+.pl-step-num{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:white;flex-shrink:0;
+}
+.pl-step.done .pl-step-num{background:white;color:var(--o);}
+.pl-step-text{font-size:14px;color:rgba(255,255,255,.8);font-weight:500;}
+
+/* ── PANEL DERECHO (formulario) ── */
+.panel-right{
+  display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  padding:48px 52px;
+  min-height:100vh;
+}
+.form-header{width:100%;max-width:420px;margin-bottom:36px;}
+.form-back{
+  display:inline-flex;align-items:center;gap:6px;
+  text-decoration:none;color:var(--muted);font-size:13px;font-weight:600;
+  margin-bottom:24px;transition:color .2s;
+}
+.form-back:hover{color:var(--o);}
+.form-title{
+  font-family:'Lora',serif;font-size:32px;font-weight:600;
+  color:var(--ink);line-height:1.1;margin-bottom:8px;
+}
+.form-title em{font-style:italic;color:var(--o);}
+.form-sub{font-size:15px;color:var(--muted);line-height:1.6;}
+
+form{width:100%;max-width:420px;display:flex;flex-direction:column;gap:20px;}
+
+.field{display:flex;flex-direction:column;gap:6px;}
+label{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.2px;}
+.field-hint{font-size:12px;color:var(--muted);margin-top:-2px;}
+input{
+  width:100%;padding:14px 16px;
+  border:1.5px solid var(--border);border-radius:12px;
+  font-family:'Inter',sans-serif;font-size:15px;color:var(--ink);
+  background:white;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+input:focus{border-color:var(--o);box-shadow:0 0 0 3px rgba(196,112,58,.12);}
+input.error{border-color:var(--err);}
+input.valid{border-color:var(--ok);}
+
+/* Estado de validación del nombre */
+.validacion-nombre{
+  display:none;
+  padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;
+  align-items:center;gap:10px;
+}
+.validacion-nombre.ok{display:flex;background:rgba(46,158,107,.1);color:var(--ok);border:1px solid rgba(46,158,107,.25);}
+.validacion-nombre.err{display:flex;background:rgba(217,64,64,.08);color:var(--err);border:1px solid rgba(217,64,64,.2);}
+.validacion-nombre.loading{display:flex;background:rgba(74,143,168,.08);color:var(--b);border:1px solid rgba(74,143,168,.2);}
+
+.btn-submit{
+  width:100%;padding:16px;border-radius:100px;
+  background:var(--grad);color:white;
+  font-family:'Inter',sans-serif;font-size:16px;font-weight:700;
+  border:none;cursor:pointer;
+  box-shadow:0 14px 30px -10px rgba(196,112,58,.5);
+  transition:all .25s;position:relative;overflow:hidden;
+}
+.btn-submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 20px 40px -10px rgba(196,112,58,.6);}
+.btn-submit:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+.divider{
+  display:flex;align-items:center;gap:12px;
+  color:var(--muted);font-size:13px;
+}
+.divider::before,.divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+
+.link-login{
+  text-align:center;font-size:14px;color:var(--muted);
+}
+.link-login a{color:var(--o);font-weight:700;text-decoration:none;}
+.link-login a:hover{text-decoration:underline;}
+
+/* Toast / mensaje global */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:white;
+  padding:14px 24px;border-radius:100px;
+  font-size:14px;font-weight:600;
+  opacity:0;transition:all .3s;pointer-events:none;
+  max-width:90vw;text-align:center;z-index:999;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.err{background:var(--err);}
+#toast.ok{background:var(--ok);}
+
+/* Paso 2 oculto hasta que se valide el nombre */
+#paso2{display:none;}
+#paso2.visible{display:contents;}
+
+@media(max-width:800px){
+  body{grid-template-columns:1fr;}
+  .panel-left{display:none;}
+  .panel-right{padding:40px 24px;}
+}
 </style>
 </head>
 <body>
-<div class="panel-left"><div class="pl-logo"><img src="logo_luxto.png" alt="Logo" onerror="this.style.display='none'"><div><div class="pl-logo-name">Luz de Cristo</div><div class="pl-logo-sub">Portal de miembros</div></div></div>
-<div class="pl-body"><p class="pl-versiculo">"Así brille la <strong>luz de ustedes</strong> delante de los hombres, para que vean sus buenas obras y glorifiquen al Padre que está en los cielos."</p><p class="pl-ref">Mateo 5:16</p></div>
-<div class="pl-steps" id="pasos"><div class="pl-step" id="step1"><div class="pl-step-num">1</div><div class="pl-step-text">Verificar que eres miembro del grupo</div></div><div class="pl-step" id="step2"><div class="pl-step-num">2</div><div class="pl-step-text">Crear tu cuenta con email y contraseña</div></div><div class="pl-step" id="step3"><div class="pl-step-num">3</div><div class="pl-step-text">Ingresar a tu dashboard personal</div></div></div></div>
-<div class="panel-right"><div class="form-header"><a href="index.html" class="form-back">← Volver al inicio</a><h1 class="form-title">Crea tu<br><em>cuenta</em></h1><p class="form-sub">Solo miembros activos del grupo pueden registrarse. Verificamos tu nombre contra el registro oficial.</p></div>
-<form id="formRegistro" novalidate><div class="field"><label for="nombre">Tu nombre completo <span style="color:var(--o)">*</span></label><span class="field-hint">Exactamente como aparece en el registro del grupo (sin abreviaciones)</span><input type="text" id="nombre" placeholder="Ej: María Fernanda García López" autocomplete="name"><div class="validacion-nombre" id="validNombre"></div></div>
-<div id="paso2"><div class="field"><label for="email">Tu Gmail <span style="color:var(--o)">*</span></label><span class="field-hint">Usa el mismo Gmail con el que entrarás siempre</span><input type="email" id="email" placeholder="tunombre@gmail.com" autocomplete="email"></div><div class="field"><label for="password">Contraseña <span style="color:var(--o)">*</span></label><span class="field-hint">Mínimo 6 caracteres</span><input type="password" id="password" placeholder="••••••••" autocomplete="new-password"></div><div class="field"><label for="password2">Confirmar contraseña <span style="color:var(--o)">*</span></label><input type="password" id="password2" placeholder="••••••••" autocomplete="new-password"></div></div>
-<button type="submit" class="btn-submit" id="btnSubmit">Verificar nombre →</button><div class="divider">o</div><div class="link-login">¿Ya tienes cuenta? <a href="login.html">Ingresar aquí</a></div></form></div>
+
+<!-- PANEL IZQUIERDO -->
+<div class="panel-left">
+  <div class="pl-logo">
+    <img src="logo_luxto.png" alt="Logo" onerror="this.style.display='none'">
+    <div>
+      <div class="pl-logo-name">Luz de Cristo</div>
+      <div class="pl-logo-sub">Portal de miembros</div>
+    </div>
+  </div>
+
+  <div class="pl-body">
+    <p class="pl-versiculo">
+      "Así brille la <strong>luz de ustedes</strong> delante de los hombres, para que vean sus buenas obras y glorifiquen al Padre que está en los cielos."
+    </p>
+    <p class="pl-ref">Mateo 5:16</p>
+  </div>
+
+  <div class="pl-steps" id="pasos">
+    <div class="pl-step" id="step1">
+      <div class="pl-step-num">1</div>
+      <div class="pl-step-text">Verificar que eres miembro del grupo</div>
+    </div>
+    <div class="pl-step" id="step2">
+      <div class="pl-step-num">2</div>
+      <div class="pl-step-text">Crear tu cuenta con email y contraseña</div>
+    </div>
+    <div class="pl-step" id="step3">
+      <div class="pl-step-num">3</div>
+      <div class="pl-step-text">Ingresar a tu dashboard personal</div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL DERECHO -->
+<div class="panel-right">
+  <div class="form-header">
+    <a href="index.html" class="form-back">
+      ← Volver al inicio
+    </a>
+    <h1 class="form-title">Crea tu<br><em>cuenta</em></h1>
+    <p class="form-sub">Solo miembros activos del grupo pueden registrarse. Verificamos tu nombre contra el registro oficial.</p>
+  </div>
+
+  <form id="formRegistro" novalidate>
+
+    <!-- PASO 1: Verificar nombre -->
+    <div class="field">
+      <label for="nombre">Tu nombre completo <span style="color:var(--o)">*</span></label>
+      <span class="field-hint">Exactamente como aparece en el registro del grupo (sin abreviaciones)</span>
+      <input type="text" id="nombre" placeholder="Ej: María Fernanda García López" autocomplete="name">
+      <div class="validacion-nombre" id="validNombre"></div>
+    </div>
+
+    <!-- PASO 2: solo aparece si el nombre es válido -->
+    <div id="paso2">
+      <div class="field">
+        <label for="email">Tu Gmail <span style="color:var(--o)">*</span></label>
+        <span class="field-hint">Usa el mismo Gmail con el que entrarás siempre</span>
+        <input type="email" id="email" placeholder="tunombre@gmail.com" autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label for="password">Contraseña <span style="color:var(--o)">*</span></label>
+        <span class="field-hint">Mínimo 6 caracteres</span>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+
+      <div class="field">
+        <label for="password2">Confirmar contraseña <span style="color:var(--o)">*</span></label>
+        <input type="password" id="password2" placeholder="••••••••" autocomplete="new-password">
+      </div>
+    </div>
+
+    <button type="submit" class="btn-submit" id="btnSubmit">
+      Verificar nombre →
+    </button>
+
+    <div class="divider">o</div>
+    <div class="link-login">¿Ya tienes cuenta? <a href="login.html">Ingresar aquí</a></div>
+
+  </form>
+</div>
+
 <div id="toast"></div>
-<script src="config.js"></script>
+
 <script type="module">
-await new Promise(r => { if (window.LUXTO_CONFIG) r(); else window.addEventListener('luxto-config-ready', r); });
-const { firebase, appsScriptUrl } = window.LUXTO_CONFIG;
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-const app = initializeApp(firebase);
+// ── Firebase ──────────────────────────────────────────
+import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword }
+                                from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+  authDomain:        "luxto-nsp.firebaseapp.com",
+  projectId:         "luxto-nsp",
+  storageBucket:     "luxto-nsp.firebasestorage.app",
+  messagingSenderId: "3542836325",
+  appId:             "1:3542836325:web:cf65cd50edcc431500d28c"
+};
+const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const API = appsScriptUrl;
-let nombreVerificado = false, filaEnSheet = null, nombreRealSheet = "";
-function toast(msg, tipo="") { const t = document.getElementById("toast"); t.textContent = msg; t.className = "show " + tipo; setTimeout(() => t.className = "", 3500); }
-function setLoading(si) { document.getElementById("btnSubmit").disabled = si; document.getElementById("btnSubmit").textContent = si ? "Procesando..." : (nombreVerificado ? "Crear cuenta →" : "Verificar nombre →"); }
-function mostrarValidacion(estado, msg) { const el = document.getElementById("validNombre"); el.className = "validacion-nombre " + estado; el.innerHTML = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg; }
-async function verificarNombre() { const nombre = document.getElementById("nombre").value.trim(); if (!nombre || nombre.length < 4) { toast("Ingresa tu nombre completo", "err"); return; } setLoading(true); mostrarValidacion("loading", "Verificando en el registro del grupo..."); try { const res = await fetch(API, { method: "POST", body: JSON.stringify({ accion: "validarMiembro", nombre }) }); const data = await res.json(); if (data.ok) { nombreVerificado = true; filaEnSheet = data.fila; nombreRealSheet = data.nombreReal; mostrarValidacion("ok", "¡Bienvenido/a, " + data.nombreReal.split(" ")[0] + "! Ahora crea tu contraseña."); document.getElementById("nombre").classList.add("valid"); document.getElementById("nombre").readOnly = true; document.getElementById("paso2").classList.add("visible"); document.getElementById("paso2").style.display = "contents"; document.getElementById("step1").classList.add("done"); document.getElementById("btnSubmit").textContent = "Crear cuenta →"; document.getElementById("email").focus(); } else { mostrarValidacion("err", data.error || "Nombre no encontrado."); document.getElementById("nombre").classList.add("error"); document.getElementById("nombre").classList.remove("valid"); } } catch(e) { mostrarValidacion("err", "Error de conexión. Intenta de nuevo."); } setLoading(false); }
-async function crearCuenta() { const email = document.getElementById("email").value.trim(); const pass = document.getElementById("password").value; const pass2 = document.getElementById("password2").value; if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast("Ingresa un Gmail válido", "err"); return; } if (pass.length < 6) { toast("La contraseña debe tener al menos 6 caracteres", "err"); return; } if (pass !== pass2) { toast("Las contraseñas no coinciden", "err"); return; } setLoading(true); try { const cred = await createUserWithEmailAndPassword(auth, email, pass); const uid = cred.user.uid; await fetch(API, { method: "POST", body: JSON.stringify({ accion: "guardarEmail", fila: filaEnSheet, email, uid }) }); document.getElementById("step2").classList.add("done"); toast("¡Cuenta creada! Redirigiendo...", "ok"); setTimeout(() => window.location.href = "dashboard.html", 1800); } catch(e) { let msg = "Error al crear la cuenta."; if (e.code === "auth/email-already-in-use") msg = "Este email ya tiene una cuenta. ¿Quieres iniciar sesión?"; if (e.code === "auth/invalid-email") msg = "El email no es válido."; if (e.code === "auth/weak-password") msg = "La contraseña es muy débil."; toast(msg, "err"); } setLoading(false); }
-document.getElementById("formRegistro").addEventListener("submit", async (e) => { e.preventDefault(); if (!nombreVerificado) { await verificarNombre(); } else { await crearCuenta(); } });
-document.getElementById("nombre").addEventListener("input", () => { document.getElementById("nombre").classList.remove("error","valid"); document.getElementById("validNombre").className = "validacion-nombre"; if (nombreVerificado) { nombreVerificado = false; document.getElementById("nombre").readOnly = false; document.getElementById("paso2").style.display = "none"; document.getElementById("paso2").classList.remove("visible"); document.getElementById("btnSubmit").textContent = "Verificar nombre →"; } });
+
+// ── Apps Script URL ───────────────────────────────────
+// REEMPLAZA con tu URL desplegada en Apps Script
+const API = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
+
+// ── Estado ────────────────────────────────────────────
+let nombreVerificado = false;
+let filaEnSheet      = null;
+let nombreRealSheet  = "";
+
+// ── Utilidades ────────────────────────────────────────
+function toast(msg, tipo="") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className   = "show " + tipo;
+  setTimeout(() => t.className = "", 3500);
+}
+
+function setLoading(si) {
+  document.getElementById("btnSubmit").disabled = si;
+  document.getElementById("btnSubmit").textContent = si ? "Procesando..." : (nombreVerificado ? "Crear cuenta →" : "Verificar nombre →");
+}
+
+function mostrarValidacion(estado, msg) {
+  const el = document.getElementById("validNombre");
+  el.className   = "validacion-nombre " + estado;
+  el.innerHTML   = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg;
+}
+
+// ── PASO 1: Verificar nombre contra el Sheet ──────────
+async function verificarNombre() {
+  const nombre = document.getElementById("nombre").value.trim();
+  if (!nombre || nombre.length < 4) {
+    toast("Ingresa tu nombre completo", "err"); return;
+  }
+  setLoading(true);
+  mostrarValidacion("loading", "Verificando en el registro del grupo...");
+  try {
+    const res  = await fetch(API, {
+      method: "POST",
+      body:   JSON.stringify({ accion: "validarMiembro", nombre })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      nombreVerificado = true;
+      filaEnSheet      = data.fila;
+      nombreRealSheet  = data.nombreReal;
+      mostrarValidacion("ok", "¡Bienvenido/a, " + data.nombreReal.split(" ")[0] + "! Ahora crea tu contraseña.");
+      document.getElementById("nombre").classList.add("valid");
+      document.getElementById("nombre").readOnly = true;
+      document.getElementById("paso2").classList.add("visible");
+      document.getElementById("paso2").style.display = "contents";
+      document.getElementById("step1").classList.add("done");
+      document.getElementById("btnSubmit").textContent = "Crear cuenta →";
+      document.getElementById("email").focus();
+    } else {
+      mostrarValidacion("err", data.error || "Nombre no encontrado.");
+      document.getElementById("nombre").classList.add("error");
+      document.getElementById("nombre").classList.remove("valid");
+    }
+  } catch(e) {
+    mostrarValidacion("err", "Error de conexión. Intenta de nuevo.");
+  }
+  setLoading(false);
+}
+
+// ── PASO 2: Crear cuenta en Firebase ─────────────────
+async function crearCuenta() {
+  const email  = document.getElementById("email").value.trim();
+  const pass   = document.getElementById("password").value;
+  const pass2  = document.getElementById("password2").value;
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    toast("Ingresa un Gmail válido", "err"); return;
+  }
+  if (pass.length < 6) {
+    toast("La contraseña debe tener al menos 6 caracteres", "err"); return;
+  }
+  if (pass !== pass2) {
+    toast("Las contraseñas no coinciden", "err"); return;
+  }
+
+  setLoading(true);
+  try {
+    // Crear usuario en Firebase Auth
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    const uid  = cred.user.uid;
+
+    // Guardar email y UID en el Sheet
+    await fetch(API, {
+      method: "POST",
+      body:   JSON.stringify({ accion: "guardarEmail", fila: filaEnSheet, email, uid })
+    });
+
+    document.getElementById("step2").classList.add("done");
+    toast("¡Cuenta creada! Redirigiendo...", "ok");
+    setTimeout(() => window.location.href = "dashboard.html", 1800);
+
+  } catch(e) {
+    let msg = "Error al crear la cuenta.";
+    if (e.code === "auth/email-already-in-use") msg = "Este email ya tiene una cuenta. ¿Quieres iniciar sesión?";
+    if (e.code === "auth/invalid-email")        msg = "El email no es válido.";
+    if (e.code === "auth/weak-password")        msg = "La contraseña es muy débil.";
+    toast(msg, "err");
+  }
+  setLoading(false);
+}
+
+// ── Submit handler ────────────────────────────────────
+document.getElementById("formRegistro").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!nombreVerificado) {
+    await verificarNombre();
+  } else {
+    await crearCuenta();
+  }
+});
+
+// Limpiar error al escribir
+document.getElementById("nombre").addEventListener("input", () => {
+  document.getElementById("nombre").classList.remove("error","valid");
+  document.getElementById("validNombre").className = "validacion-nombre";
+  if (nombreVerificado) {
+    nombreVerificado = false;
+    document.getElementById("nombre").readOnly = false;
+    document.getElementById("paso2").style.display = "none";
+    document.getElementById("paso2").classList.remove("visible");
+    document.getElementById("btnSubmit").textContent = "Verificar nombre →";
+  }
+});
 </script>
 </body>
 </html>
