@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi dashboard — Luz de Cristo</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --y:#F5C518;--o:#C4703A;--b:#4A8FA8;--r:#C4869A;
@@ -353,6 +354,24 @@ textarea:focus{border-color:var(--o);background:white;}
   *{animation:none!important;transition:none!important;}
   .reveal{opacity:1;transform:none;}
 }
+
+/* ── GRÁFICA TARDANZAS ── */
+.tardanza-chart-wrap{position:relative;height:320px;}
+.tardanza-chart-controls{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.tardanza-trim-select{
+  padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;
+  background:white;font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);
+  cursor:pointer;transition:border-color var(--t);
+}
+.tardanza-trim-select:focus{outline:none;border-color:var(--o);}
+.tardanza-trim-label{font-size:13px;font-weight:600;color:var(--muted);}
+.chart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:14px;text-align:center;gap:8px;}
+.chart-empty-icon{font-size:32px;opacity:.5;}
+
+/* Leyenda colores tardanzas */
+.tardanza-legend{display:flex;gap:16px;justify-content:center;margin-top:12px;flex-wrap:wrap;}
+.tardanza-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.tardanza-legend-dot{width:12px;height:12px;border-radius:3px;}
 </style>
 </head>
 <body>
@@ -502,6 +521,33 @@ textarea:focus{border-color:var(--o);background:white;}
     </div>
   </div>
 
+  <!-- ── GRÁFICA TARDANZAS POR FECHA ── -->
+  <div class="card reveal" style="margin-top: 32px;">
+    <div class="card-title"><span class="card-title-ico">📈</span> Historial de tardanzas</div>
+    <div class="tardanza-chart-controls">
+      <span class="tardanza-trim-label">Filtrar por trimestre:</span>
+      <select class="tardanza-trim-select" id="tardanzaTrimSelect" onchange="renderTardanzaChart()">
+        <option value="">Todos</option>
+        <option value="T1">Trimestre 1</option>
+        <option value="T2">Trimestre 2</option>
+        <option value="T3">Trimestre 3</option>
+        <option value="T4">Trimestre 4</option>
+      </select>
+    </div>
+    <div class="tardanza-chart-wrap">
+      <canvas id="tardanzaChart"></canvas>
+      <div class="chart-empty" id="tardanzaEmpty" style="display:none;">
+        <span class="chart-empty-icon">📊</span>
+        <span>No hay datos de tardanzas para mostrar</span>
+      </div>
+    </div>
+    <div class="tardanza-legend">
+      <div class="tardanza-legend-item"><span class="tardanza-legend-dot" style="background:rgba(46,158,107,0.8)"></span> ≤ 5 min (puntual)</div>
+      <div class="tardanza-legend-item"><span class="tardanza-legend-dot" style="background:rgba(212,136,26,0.8)"></span> 6–10 min</div>
+      <div class="tardanza-legend-item"><span class="tardanza-legend-dot" style="background:rgba(217,64,64,0.8)"></span> > 10 min</div>
+    </div>
+  </div>
+
 </main>
 
 <div id="toast"></div>
@@ -646,6 +692,7 @@ onAuthStateChanged(auth, async (user) => {
   }
   setupReveal();
   cargarDashboard(user.email);
+  cargarHistorialTardanzas();
   verificarModoAsamblea();
 });
 
@@ -724,6 +771,104 @@ async function cargarDashboard(email) {
   } catch(err) {
     toast("Error de conexión con el servidor.", "err");
   }
+}
+
+/* ── Cargar y renderizar historial de tardanzas ───────── */
+let tardanzaHistorial = [];
+async function cargarHistorialTardanzas() {
+  try {
+    const res  = await fetch(API, {
+      method: "POST",
+      body:   JSON.stringify({ accion: "getHistorialAsistencia", email: usuarioActual.email })
+    });
+    const data = await res.json();
+    if (!data.ok) { console.warn("Historial tardanzas:", data.error); return; }
+    tardanzaHistorial = data.historial || [];
+    renderTardanzaChart();
+  } catch(e) { console.error("Error cargando historial:", e); }
+}
+
+let tardanzaChart = null;
+function renderTardanzaChart() {
+  const ctx = document.getElementById("tardanzaChart");
+  const empty = document.getElementById("tardanzaEmpty");
+  const trimSel = document.getElementById("tardanzaTrimSelect").value;
+
+  // Filtrar por trimestre si se seleccionó
+  let datos = tardanzaHistorial;
+  if (trimSel) {
+    // El trimestre viene en el nombre de la celda (ej: D3 = T1, E3 = T1, etc.)
+    // Pero el histórico no trae el trimestre directo, usamos la fecha
+    // Asumimos T1=ene-mar, T2=abr-jun, T3=jul-sep, T4=oct-dic
+    datos = datos.filter(d => {
+      const mes = parseInt(d.fecha.split("/")[1], 10);
+      if (trimSel === "T1") return mes >= 1 && mes <= 3;
+      if (trimSel === "T2") return mes >= 4 && mes <= 6;
+      if (trimSel === "T3") return mes >= 7 && mes <= 9;
+      if (trimSel === "T4") return mes >= 10 && mes <= 12;
+      return true;
+    });
+  }
+
+  if (datos.length === 0) {
+    ctx.style.display = "none";
+    empty.style.display = "flex";
+    if (tardanzaChart) { tardanzaChart.destroy(); tardanzaChart = null; }
+    return;
+  }
+
+  ctx.style.display = "block";
+  empty.style.display = "none";
+
+  const labels = datos.map(d => d.fecha);
+  const values = datos.map(d => d.tardanza);
+
+  if (tardanzaChart) tardanzaChart.destroy();
+
+  tardanzaChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Tardanza (min)",
+        data: values,
+        backgroundColor: values.map(v => v > 10 ? "rgba(217,64,64,0.8)" : v > 5 ? "rgba(212,136,26,0.8)" : "rgba(46,158,107,0.8)"),
+        borderColor: values.map(v => v > 10 ? "rgba(217,64,64,1)" : v > 5 ? "rgba(212,136,26,1)" : "rgba(46,158,107,1)"),
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(28,24,20,0.95)",
+          titleFont: { family: "Lora", size: 14 },
+          bodyFont: { family: "Inter", size: 13 },
+          padding: 12,
+          callbacks: {
+            label: ctx => `Tardanza: ${ctx.raw} min`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: "Inter", size: 11 }, color: "#5e554a", maxRotation: 45, minRotation: 20 }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "rgba(232,226,212,0.4)" },
+          ticks: { font: { family: "Inter", size: 11 }, color: "#5e554a", stepSize: 5 },
+          title: { display: true, text: "Minutos de retraso", font: { family: "Inter", size: 12, weight: 600 }, color: "#5e554a" }
+        }
+      },
+      animation: { duration: 800, easing: "easeOutQuart" }
+    }
+  });
 }
 
 /* ── Modo asamblea vía Firebase RTDB ────────────────── */
