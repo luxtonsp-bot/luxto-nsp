@@ -282,26 +282,84 @@ function actualizarLobby() {
     return;
   }
 
-  // Agrupar en filas de 4-5 participantes (estilo Kahoot)
+  // Mapa de UIDs actuales en el DOM
+  const existentes = new Map();
+  grid.querySelectorAll(".lobby-item").forEach(el => {
+    const uid = el.dataset.uid;
+    if (uid) existentes.set(uid, el);
+  });
+
   const POR_FILA = 5;
   const filas = [];
   for (let i = 0; i < participantes.length; i += POR_FILA) {
     filas.push(participantes.slice(i, i + POR_FILA));
   }
 
-  grid.innerHTML = filas.map((fila, fi) => {
-    const itemsHtml = fila.map((u, i) => {
+  // Construir nuevo orden de UIDs
+  const nuevosUids = filas.flatMap(fila => fila.map(u => u.email)); // usamos email como clave única
+
+  // Si el orden cambió drásticamente, reconstruir (raro)
+  const uidsActuales = Array.from(existentes.keys());
+  if (JSON.stringify(uidsActuales) !== JSON.stringify(nuevosUids)) {
+    // Reconstrucción completa solo si cambió el orden
+    grid.innerHTML = filas.map((fila, fi) => {
+      const itemsHtml = fila.map((u, i) => {
+        const fotoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "");
+        const fallback = avatarFallback(u.nombre);
+        return `
+          <div class="lobby-item" data-uid="${u.email}" style="animation-delay:${(fi * fila.length + i) * 0.05}s">
+            <img class="lobby-foto" src="${fotoSrc || fallback}" alt="${u.nombre}" onerror="this.onerror=null;this.src='${fallback}'">
+            <div class="lobby-nombre">${u.nombre}</div>
+            <div class="lobby-status">Conectado</div>
+          </div>`;
+      }).join("");
+      return `<div class="lobby-row">${itemsHtml}</div>`;
+    }).join("");
+    return;
+  }
+
+  // Actualización incremental: solo añade nuevos al final
+  nuevosUids.forEach((uid, globalIndex) => {
+    if (!existentes.has(uid)) {
+      const u = participantes.find(p => p.email === uid);
+      if (!u) return;
+      const fi = Math.floor(globalIndex / POR_FILA);
+      const ii = globalIndex % POR_FILA;
       const fotoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "");
       const fallback = avatarFallback(u.nombre);
-      return `
-        <div class="lobby-item" style="animation-delay:${(fi * fila.length + i) * 0.05}s">
-          <img class="lobby-foto" src="${fotoSrc || fallback}" alt="${u.nombre}" onerror="this.onerror=null;this.src='${fallback}'">
-          <div class="lobby-nombre">${u.nombre}</div>
-          <div class="lobby-status">Conectado</div>
-        </div>`;
-    }).join("");
-    return `<div class="lobby-row">${itemsHtml}</div>`;
-  }).join("");
+      const row = grid.querySelector(`.lobby-row:nth-child(${fi + 1})`) || (() => {
+        const r = document.createElement("div");
+        r.className = "lobby-row";
+        grid.appendChild(r);
+        return r;
+      })();
+      const item = document.createElement("div");
+      item.className = "lobby-item";
+      item.dataset.uid = uid;
+      item.style.animationDelay = `${(fi * POR_FILA + ii) * 0.05}s`;
+      item.innerHTML = `
+        <img class="lobby-foto" src="${fotoSrc || fallback}" alt="${u.nombre}" onerror="this.onerror=null;this.src='${fallback}'">
+        <div class="lobby-nombre">${u.nombre}</div>
+        <div class="lobby-status">Conectado</div>`;
+      row.appendChild(item);
+    } else {
+      // Actualizar foto/nombre si cambiaron
+      const u = participantes.find(p => p.email === uid);
+      const el = existentes.get(uid);
+      if (u && el) {
+        const img = el.querySelector(".lobby-foto");
+        const nuevoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "") || avatarFallback(u.nombre);
+        if (img.src !== nuevoSrc) img.src = nuevoSrc;
+        const nombreEl = el.querySelector(".lobby-nombre");
+        if (nombreEl.textContent !== u.nombre) nombreEl.textContent = u.nombre;
+      }
+    }
+  });
+
+  // Eliminar los que ya no están
+  existentes.forEach((el, uid) => {
+    if (!nuevosUids.includes(uid)) el.remove();
+  });
 }
 
 // ═══════════════════════════════════════════
