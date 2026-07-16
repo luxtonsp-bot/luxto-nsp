@@ -37,6 +37,10 @@ let countdownActive = false;
 let respuestasActuales = {};
 let rankingPrevio = {};
 
+// ── LOBBY: participantes conectados ──
+let conectadosListener = null;
+let conectadosActuales = {};
+
 // ── Cola de preguntas (de /borradores) ──
 let colaPreguntas = [];
 let indiceActual = 0;
@@ -71,6 +75,9 @@ function showScreen(id) {
   if (prev) { prev.classList.add("exit"); setTimeout(() => prev.classList.remove("active","exit"), 500); }
   setTimeout(() => { const next = document.getElementById(id); if (next) next.classList.add("active"); }, prev ? 200 : 0);
   pantallaActual = id;
+  // Ocultar contador de lobby en pantallas que no son lobby
+  const lobbyCount = document.getElementById("lobbyCount");
+  if (lobbyCount) lobbyCount.style.display = (id === "screenLobby") ? "flex" : "none";
 }
 
 function limpiarTimer() {
@@ -170,6 +177,21 @@ function actualizarBotones() {
 // ═══════════════════════════════════════════
 
 function iniciarEscucha() {
+  // Iniciar listener de conectados cuando la asamblea esté activa
+  onValue(ref(db, "asamblea/activa"), (snap) => {
+    const activa = snap.val() === true;
+    if (activa) {
+      escucharConectados();
+    } else {
+      if (conectadosListener) {
+        conectadosListener();
+        conectadosListener = null;
+      }
+      conectadosActuales = {};
+      actualizarLobby();
+    }
+  });
+
   onValue(ref(db, "asamblea"), (snap) => {
     const data = snap.val();
     if (!data || (!data.activa && data.estado !== "finalizada")) {
@@ -177,11 +199,16 @@ function iniciarEscucha() {
       limpiarTimer();
       document.getElementById("respBadge").style.display = "none";
       document.getElementById("pregStats").style.display = "none";
+      document.getElementById("lobbyCount").style.display = "none";
       return;
     }
 
     if (data.estado === "finalizada") {
       limpiarTimer();
+      if (conectadosListener) {
+        conectadosListener();
+        conectadosListener = null;
+      }
       construirRanking(data.respuestas || {});
       showScreen("screenRanking");
       document.getElementById("btnLanzar").style.display = "none";
@@ -189,6 +216,7 @@ function iniciarEscucha() {
       document.getElementById("btnCerrar").style.display = "none";
       document.getElementById("btnFinalizar").style.display = "none";
       document.getElementById("adminBarLabel").textContent = "🏁 Asamblea finalizada";
+      document.getElementById("lobbyCount").style.display = "none";
       return;
     }
 
@@ -198,11 +226,16 @@ function iniciarEscucha() {
       if (pantallaActual === "screenPregunta") {
         revelarCorrectaYRanking(data);
       } else if (pantallaActual !== "screenRanking" && pantallaActual !== "screenCountdown") {
-        showScreen("screenEspera");
+        // Mostrar lobby si hay asamblea activa pero no hay pregunta activa
+        showScreen("screenLobby");
+        document.getElementById("lobbyCount").style.display = "flex";
       }
       limpiarTimer();
       return;
     }
+
+    // Hay pregunta activa -> ocultar lobby
+    document.getElementById("lobbyCount").style.display = "none";
 
     if (data.respuestas && data.respuestas[p.id]) {
       respuestasActuales = data.respuestas[p.id];
@@ -220,6 +253,45 @@ function iniciarEscucha() {
       document.getElementById("adminBarLabel").textContent = `⚙️ Pregunta ${p.numero || "?"} — ${Object.keys(respuestasActuales).length} respuestas`;
     }
   });
+}
+
+function escucharConectados() {
+  if (conectadosListener) return;
+  conectadosListener = onValue(ref(db, "asamblea/conectados"), (snap) => {
+    const data = snap.val() || {};
+    conectadosActuales = data;
+    actualizarLobby();
+  });
+}
+
+function actualizarLobby() {
+  const grid = document.getElementById("lobbyGrid");
+  const countEl = document.getElementById("lobbyCountNum");
+  const participantes = Object.values(conectadosActuales);
+  const total = participantes.length;
+
+  if (countEl) countEl.textContent = total;
+
+  if (total === 0) {
+    grid.innerHTML = `
+      <div class="lobby-empty">
+        <div class="lobby-empty-icon">👥</div>
+        <div>Esperando asambleístas...</div>
+        <div style="font-size:12px;margin-top:8px;opacity:.6">Los participantes aparecerán aquí al entrar</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = participantes.map((u, i) => {
+    const fotoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "");
+    const fallback = avatarFallback(u.nombre);
+    return `
+      <div class="lobby-item" style="animation-delay:${i * 0.07}s">
+        <img class="lobby-foto" src="${fotoSrc || fallback}" alt="${u.nombre}" onerror="this.onerror=null;this.src='${fallback}'">
+        <div class="lobby-nombre">${u.nombre}</div>
+        <div class="lobby-status">Conectado</div>
+      </div>`;
+  }).join("");
 }
 
 // ═══════════════════════════════════════════

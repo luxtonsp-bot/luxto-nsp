@@ -379,7 +379,7 @@ body {
 import { initializeApp }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged }
                                from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, onValue, set, serverTimestamp }
+import { getDatabase, ref, onValue, set, serverTimestamp, onDisconnect }
                                from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -476,6 +476,25 @@ function iniciarEscucha() {
     if (!data) {
       podioMostrado = false;
       show("screenNoActiva"); limpiarTimer(); return;
+    }
+
+    // ── PRESENCIA: registrar/desregistrar usuario conectado ──
+    const conectadosRef = ref(db, "asamblea/conectados/" + usuarioActual.uid);
+    if (data.activa === true) {
+      // Registrar presencia
+      set(conectadosRef, {
+        nombre: nombreActual,
+        email: usuarioActual.email,
+        fotoUrl: fotoOriginal,
+        fotoMostrar: fotoActual,
+        ts: serverTimestamp()
+      });
+      // Auto-eliminar al desconectar
+      onDisconnect(conectadosRef).remove();
+    } else {
+      // Asamblea no activa: quitar presencia
+      onDisconnect(conectadosRef).cancel();
+      set(conectadosRef, null);
     }
 
     if (data.estado === "finalizada" && podioMostrado === "sesion") {
