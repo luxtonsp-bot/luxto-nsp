@@ -276,21 +276,31 @@ function actualizarLobby() {
     grid.innerHTML = `
       <div class="lobby-empty">
         <div class="lobby-empty-icon">👥</div>
-        <div>Esperando asambleístas...</div>
-        <div style="font-size:12px;margin-top:8px;opacity:.6">Los participantes aparecerán aquí al entrar</div>
+        <div class="lobby-empty-title">Esperando asambleístas...</div>
+        <div class="lobby-empty-sub">Los participantes aparecerán aquí al entrar a la asamblea</div>
       </div>`;
     return;
   }
 
-  grid.innerHTML = participantes.map((u, i) => {
-    const fotoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "");
-    const fallback = avatarFallback(u.nombre);
-    return `
-      <div class="lobby-item" style="animation-delay:${i * 0.07}s">
-        <img class="lobby-foto" src="${fotoSrc || fallback}" alt="${u.nombre}" onerror="this.onerror=null;this.src='${fallback}'">
-        <div class="lobby-nombre">${u.nombre}</div>
-        <div class="lobby-status">Conectado</div>
-      </div>`;
+  // Agrupar en filas de 4-5 participantes (estilo Kahoot)
+  const POR_FILA = 5;
+  const filas = [];
+  for (let i = 0; i < participantes.length; i += POR_FILA) {
+    filas.push(participantes.slice(i, i + POR_FILA));
+  }
+
+  grid.innerHTML = filas.map((fila, fi) => {
+    const itemsHtml = fila.map((u, i) => {
+      const fotoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "");
+      const fallback = avatarFallback(u.nombre);
+      return `
+        <div class="lobby-item" style="animation-delay:${(fi * fila.length + i) * 0.05}s">
+          <img class="lobby-foto" src="${fotoSrc || fallback}" alt="${u.nombre}" onerror="this.onerror=null;this.src='${fallback}'">
+          <div class="lobby-nombre">${u.nombre}</div>
+          <div class="lobby-status">Conectado</div>
+        </div>`;
+    }).join("");
+    return `<div class="lobby-row">${itemsHtml}</div>`;
   }).join("");
 }
 
