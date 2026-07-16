@@ -121,7 +121,37 @@ body {
 .dot-anim span:nth-child(3){animation-delay:.4s;}
 @keyframes dotBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
 
-/* ── PANTALLA PREGUNTA ── */
+  /* ── CONECTADOS PANEL (screenEsperando) ── */
+  .conectados-panel{
+    margin-top:24px; padding:16px 20px;
+    background:rgba(255,255,255,.04); border:1px solid var(--border);
+    border-radius:16px; max-width:360px; width:100%;
+    animation:fadeUp .5s .3s cubic-bezier(.34,1.4,.64,1) both;
+  }
+  .conectados-header{
+    display:flex; align-items:center; gap:10px; margin-bottom:12px;
+    font-size:13px; font-weight:700; color:var(--y); text-transform:uppercase; letter-spacing:1px;
+  }
+  .conectados-icon{font-size:16px}
+  .conectados-count{
+    margin-left:auto; background:var(--y); color:var(--bg);
+    font-family:'Bebas Neue',sans-serif; font-size:18px;
+    padding:2px 10px; border-radius:100px; min-width:36px; text-align:center;
+  }
+  .conectados-lista{display:flex; flex-direction:column; gap:8px; max-height:200px; overflow:auto}
+  .conectado-item{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px; background:rgba(255,255,255,.04);
+    border:1px solid var(--border); border-radius:10px;
+    transition:all .2s;
+  }
+  .conectado-item:hover{background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.15)}
+  .conectado-foto{width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.1); background:var(--bg3); flex-shrink:0}
+  .conectado-nombre{flex:1; font-size:13px; font-weight:600; color:var(--cream); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .conectado-status{font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--ok); display:flex; align-items:center; gap:4px}
+  .conectado-status::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--ok); animation:blink 1.5s infinite}
+
+  /* ── PANTALLA PREGUNTA ── */
 #screenPregunta { justify-content:flex-start; padding-top:72px; }
 .pregunta-header { width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
 .pregunta-num { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:3px; color:var(--muted); }
@@ -315,6 +345,15 @@ body {
     <div class="dot-anim"><span></span><span></span><span></span></div>
     Esperando pregunta...
   </div>
+  <!-- Conectados en tiempo real -->
+  <div class="conectados-panel" id="conectadosPanel" style="display:none;">
+    <div class="conectados-header">
+      <span class="conectados-icon">👥</span>
+      <span class="conectados-title">Conectados</span>
+      <span class="conectados-count" id="conectadosCount">0</span>
+    </div>
+    <div class="conectados-lista" id="conectadosLista"></div>
+  </div>
 </div>
 
 <div class="screen" id="screenPregunta">
@@ -471,6 +510,38 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 function iniciarEscucha() {
+  // ── LISTENER DE CONECTADOS (para panel en screenEsperando) ──
+  onValue(ref(db, "asamblea/conectados"), (snap) => {
+    const data = snap.val() || {};
+    const panel = document.getElementById("conectadosPanel");
+    const countEl = document.getElementById("conectadosCount");
+    const listaEl = document.getElementById("conectadosLista");
+    const total = Object.keys(data).length;
+
+    if (countEl) countEl.textContent = total;
+
+    if (total === 0) {
+      if (panel) panel.style.display = "none";
+      if (listaEl) listaEl.innerHTML = "";
+      return;
+    }
+
+    if (panel) panel.style.display = "block";
+
+    const participantes = Object.values(data).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+
+    listaEl.innerHTML = participantes.map((u, i) => {
+      const fotoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "");
+      const fallback = avatarFallback(u.nombre);
+      return `
+        <div class="conectado-item" style="animation-delay:${i * 0.05}s">
+          <img class="conectado-foto" src="${fotoSrc || fallback}" alt="${u.nombre}" onerror="this.onerror=null;this.src='${fallback}'">
+          <div class="conectado-nombre">${u.nombre}</div>
+          <div class="conectado-status">Conectado</div>
+        </div>`;
+    }).join("");
+  });
+
   onValue(ref(db, "asamblea"), (snap) => {
     const data = snap.val();
 
@@ -689,6 +760,11 @@ window.volverAEsperar = function() {
   show("screenEsperando");
   respondioActual  = false;
   preguntaActualId = null;
+  // Limpiar panel de conectados visualmente (el listener seguirá actualizando)
+  const panel = document.getElementById("conectadosPanel");
+  const listaEl = document.getElementById("conectadosLista");
+  if (panel) panel.style.display = "none";
+  if (listaEl) listaEl.innerHTML = "";
 };
 
 function construirPodio(todasRespuestas) {

@@ -267,7 +267,8 @@ function escucharConectados() {
 function actualizarLobby() {
   const grid = document.getElementById("lobbyGrid");
   const countEl = document.getElementById("lobbyCountNum");
-  const participantes = Object.values(conectadosActuales);
+  // Ordenar por timestamp de conexión (ts) para orden consistente
+  const participantes = Object.values(conectadosActuales).sort((a, b) => (a.ts || 0) - (b.ts || 0));
   const total = participantes.length;
 
   if (countEl) countEl.textContent = total;
@@ -296,7 +297,7 @@ function actualizarLobby() {
   }
 
   // Construir nuevo orden de UIDs
-  const nuevosUids = filas.flatMap(fila => fila.map(u => u.email)); // usamos email como clave única
+  const nuevosUids = filas.flatMap(fila => fila.map(u => u.email));
 
   // Si el orden cambió drásticamente, reconstruir (raro)
   const uidsActuales = Array.from(existentes.keys());
