@@ -537,7 +537,8 @@ function iniciarEscucha() {
         mostrarResultado(r.esCorrecta, r.pts, r.texto, opTexto, false);
         window._ultimaRespuesta = null;
       }
-      show("screenEsperando"); limpiarTimer();
+      // NO ir a screenEsperando aquí — dejar que el usuario vea el resultado
+      // volverAEsperar() se encarga de la transición
       respondioActual = false;
       preguntaPreviaEstado = p ? p.estado : null;
       return;
@@ -673,6 +674,12 @@ function mostrarResultado(esCorrecta, pts, respUser, respCorrecta, timeout) {
 
   document.getElementById("resultRespuesta").textContent = respCorrecta || "—";
   show("screenResultado");
+
+  // Auto-avanzar a "esperando" después de 4s si el usuario no pulsa "Siguiente"
+  clearTimeout(window._autoAdvanceTimer);
+  window._autoAdvanceTimer = setTimeout(() => {
+    volverAEsperar();
+  }, 4000);
 
   // Limpiar para evitar duplicados
   window._ultimaRespuesta = null;
