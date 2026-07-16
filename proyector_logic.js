@@ -291,13 +291,16 @@ function actualizarLobby() {
     filas.push(participantes.slice(i, i + POR_FILA));
   }
 
-  // Construir nuevo orden de UIDs
+  // Construir lista de UIDs en el nuevo orden (emails ordenados por ts)
   const nuevosUids = filas.flatMap(fila => fila.map(u => u.email));
 
-  // Si el orden cambió drásticamente, reconstruir (raro)
-  const uidsActuales = Array.from(existentes.keys());
-  if (JSON.stringify(uidsActuales) !== JSON.stringify(nuevosUids)) {
-    // Reconstrucción completa solo si cambió el orden
+  // Verificar si el ORDEN de los elementos EXISTENTES cambió (no solo adiciones/eliminaciones)
+  const uidsExistentesActuales = Array.from(existentes.keys());
+  const uidsExistentesNuevos = nuevosUids.filter(uid => existentes.has(uid));
+  const ordenCambio = JSON.stringify(uidsExistentesActuales) !== JSON.stringify(uidsExistentesNuevos);
+
+  if (ordenCambio) {
+    // Reconstrucción completa solo si cambió el orden relativo de los existentes
     grid.innerHTML = filas.map((fila, fi) => {
       const itemsHtml = fila.map((u, i) => {
         const fotoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "");
@@ -314,9 +317,10 @@ function actualizarLobby() {
     return;
   }
 
-  // Actualización incremental: solo añade nuevos al final
+  // Actualización incremental: los existentes mantienen su posición, solo añadimos al final
   nuevosUids.forEach((uid, globalIndex) => {
     if (!existentes.has(uid)) {
+      // Nuevo usuario - añadir al final
       const u = participantes.find(p => p.email === uid);
       if (!u) return;
       const fi = Math.floor(globalIndex / POR_FILA);
@@ -339,10 +343,10 @@ function actualizarLobby() {
         <div class="lobby-status">Conectado</div>`;
       row.appendChild(item);
     } else {
-      // Actualizar foto/nombre si cambiaron
+      // Usuario existente - actualizar foto/nombre si cambiaron
       const u = participantes.find(p => p.email === uid);
       const el = existentes.get(uid);
-      if (u && el) {
+if (u && el) {
         const img = el.querySelector(".lobby-foto");
         const nuevoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "") || avatarFallback(u.nombre);
         if (img.src !== nuevoSrc) img.src = nuevoSrc;
