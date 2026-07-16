@@ -177,32 +177,27 @@ function actualizarBotones() {
 // ═══════════════════════════════════════════
 
 function iniciarEscucha() {
-  // Iniciar listener de conectados cuando la asamblea esté activa
-  onValue(ref(db, "asamblea/activa"), (snap) => {
-    const activa = snap.val() === true;
-    if (activa) {
-      escucharConectados();
-    } else {
-      if (conectadosListener) {
-        conectadosListener();
-        conectadosListener = null;
-      }
-      conectadosActuales = {};
-      actualizarLobby();
-    }
-  });
-
+  // Un solo listener en /asamblea maneja todo: estado, pregunta, conectados
   onValue(ref(db, "asamblea"), (snap) => {
     const data = snap.val();
+
+    // Asamblea inactiva o no existe
     if (!data || (!data.activa && data.estado !== "finalizada")) {
       showScreen("screenEspera");
       limpiarTimer();
       document.getElementById("respBadge").style.display = "none";
       document.getElementById("pregStats").style.display = "none";
       document.getElementById("lobbyCount").style.display = "none";
+      if (conectadosListener) {
+        conectadosListener();
+        conectadosListener = null;
+      }
+      conectadosActuales = {};
+      actualizarLobby();
       return;
     }
 
+    // Asamblea finalizada
     if (data.estado === "finalizada") {
       limpiarTimer();
       if (conectadosListener) {
@@ -220,13 +215,22 @@ function iniciarEscucha() {
       return;
     }
 
+    // Asamblea activa - Asegurar listener de conectados
+    if (!conectadosListener) {
+      conectadosListener = onValue(ref(db, "asamblea/conectados"), (snap) => {
+        const d = snap.val() || {};
+        conectadosActuales = d;
+        actualizarLobby();
+      });
+    }
+
     const p = data.preguntaActual;
     if (!p || p.estado !== "activa") {
       if (data.respuestas) actualizarRankingBg(data.respuestas);
       if (pantallaActual === "screenPregunta") {
         revelarCorrectaYRanking(data);
       } else if (pantallaActual !== "screenRanking" && pantallaActual !== "screenCountdown") {
-        // Mostrar lobby si hay asamblea activa pero no hay pregunta activa
+        // Asamblea activa pero sin pregunta → LOBBY
         showScreen("screenLobby");
         document.getElementById("lobbyCount").style.display = "flex";
       }
@@ -234,7 +238,7 @@ function iniciarEscucha() {
       return;
     }
 
-    // Hay pregunta activa -> ocultar lobby
+    // Pregunta activa → ocultar lobby
     document.getElementById("lobbyCount").style.display = "none";
 
     if (data.respuestas && data.respuestas[p.id]) {
@@ -252,15 +256,6 @@ function iniciarEscucha() {
     if (esAdmin) {
       document.getElementById("adminBarLabel").textContent = `⚙️ Pregunta ${p.numero || "?"} — ${Object.keys(respuestasActuales).length} respuestas`;
     }
-  });
-}
-
-function escucharConectados() {
-  if (conectadosListener) return;
-  conectadosListener = onValue(ref(db, "asamblea/conectados"), (snap) => {
-    const data = snap.val() || {};
-    conectadosActuales = data;
-    actualizarLobby();
   });
 }
 

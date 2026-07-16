@@ -608,8 +608,9 @@ function iniciarEscucha() {
         mostrarResultado(r.esCorrecta, r.pts, r.texto, opTexto, false);
         window._ultimaRespuesta = null;
       }
-      // NO ir a screenEsperando aquí — dejar que el usuario vea el resultado
-      // volverAEsperar() se encarga de la transición
+      // Asamblea activa pero sin pregunta → MOSTRAR ESPERANDO
+      show("screenEsperando");
+      limpiarTimer();
       respondioActual = false;
       preguntaPreviaEstado = p ? p.estado : null;
       return;
@@ -760,11 +761,7 @@ window.volverAEsperar = function() {
   show("screenEsperando");
   respondioActual  = false;
   preguntaActualId = null;
-  // Limpiar panel de conectados visualmente (el listener seguirá actualizando)
-  const panel = document.getElementById("conectadosPanel");
-  const listaEl = document.getElementById("conectadosLista");
-  if (panel) panel.style.display = "none";
-  if (listaEl) listaEl.innerHTML = "";
+  // El listener de conectados ya está activo y actualizará el panel automáticamente
 };
 
 function construirPodio(todasRespuestas) {
