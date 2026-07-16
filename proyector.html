@@ -151,26 +151,36 @@
     .watermark img{width:28px;height:28px;object-fit:contain}
     .watermark-name{font-family:'Lora',serif;font-size:15px;font-weight:600;color:var(--cream)}
 
-    /* LOBBY - Sala de espera estilo Kahoot */
-    #screenLobby{justify-content:flex-start;padding:48px 60px 100px}
-    .lobby-header{width:100%;margin-bottom:28px;animation:slideDown .5s .1s both}
-    .lobby-eyebrow{font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--y);opacity:.7;margin-bottom:8px}
-    .lobby-titulo{font-family:'Lora',serif;font-size:clamp(28px,4vw,52px);font-weight:600;color:var(--cream)}
+    /* LOBBY - Sala de espera estilo Kahoot (pantalla completa) */
+    #screenLobby{justify-content:flex-start;padding:40px 60px 60px}
+    .lobby-header{width:100%;margin-bottom:32px;animation:slideDown .5s .1s both;text-align:center}
+    .lobby-eyebrow{font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--y);opacity:.7;margin-bottom:12px}
+    .lobby-titulo{font-family:'Lora',serif;font-size:clamp(36px,5vw,72px);font-weight:600;color:var(--cream);line-height:1.1;margin-bottom:8px}
     .lobby-titulo em{font-style:italic;color:var(--y)}
-    .lobby-sub{font-size:clamp(14px,2vw,18px);color:var(--muted);margin-top:8px}
-    .lobby-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:clamp(12px,2vw,20px);flex:1;max-height:calc(100vh - 220px);overflow:auto}
-    .lobby-item{display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:16px;padding:clamp(16px,2vh,24px);animation:lobbyIn .5s cubic-bezier(.34,1.4,.64,1) both;transition:all .3s}
-    .lobby-item:hover{background:rgba(255,255,255,.07);transform:translateY(-2px)}
-    @keyframes lobbyIn{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
-    .lobby-foto{width:clamp(60px,8vw,90px);height:clamp(60px,8vw,90px);border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.1);background:var(--bg3);transition:all .3s}
-    .lobby-item:hover .lobby-foto{border-color:rgba(245,197,24,.5);box-shadow:0 0 20px rgba(245,197,24,.2)}
-    .lobby-nombre{font-size:clamp(13px,1.5vw,16px);font-weight:700;color:var(--cream);text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .lobby-status{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ok);display:flex;align-items:center;gap:4px}
-    .lobby-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ok);animation:blink 1.5s infinite}
-    .lobby-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;color:var(--muted);text-align:center}
-    .lobby-empty-icon{font-size:64px;margin-bottom:16px;opacity:.5}
-    .lobby-count{position:fixed;top:20px;left:28px;z-index:10;background:rgba(22,18,13,.85);border:1px solid var(--border);border-radius:100px;padding:8px 18px;font-size:13px;font-weight:700;color:var(--muted);backdrop-filter:blur(12px);display:flex;align-items:center;gap:8px}
-    .lobby-count span{color:var(--y)}
+    .lobby-sub{font-size:clamp(16px,2.5vw,22px);color:var(--muted);margin-top:12px}
+    .lobby-grid{width:100%;display:flex;flex-direction:column;gap:clamp(16px,2vh,24px);flex:1;overflow:auto;padding:0 20px}
+    .lobby-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:clamp(16px,2vw,24px);animation:lobbyRowIn .5s cubic-bezier(.34,1.4,.64,1) both}
+    .lobby-row:nth-child(1){animation-delay:.1s}
+    .lobby-row:nth-child(2){animation-delay:.2s}
+    .lobby-row:nth-child(3){animation-delay:.3s}
+    .lobby-row:nth-child(4){animation-delay:.4s}
+    .lobby-row:nth-child(5){animation-delay:.5s}
+    @keyframes lobbyRowIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+    .lobby-item{display:flex;flex-direction:column;align-items:center;gap:14px;background:rgba(255,255,255,.05);border:2px solid var(--border);border-radius:20px;padding:clamp(20px,3vh,28px) clamp(16px,2vw,24px);transition:all .3s cubic-bezier(.34,1.4,.64,1);position:relative;overflow:hidden}
+    .lobby-item::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(245,197,24,.1),transparent);opacity:0;transition:opacity .3s}
+    .lobby-item:hover{transform:translateY(-4px) scale(1.02);border-color:rgba(245,197,24,.5);box-shadow:0 20px 40px -12px rgba(245,197,24,.2)}
+    .lobby-item:hover::before{opacity:1}
+    .lobby-foto{width:clamp(80px,10vw,120px);height:clamp(80px,10vw,120px);border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,.15);background:var(--bg3);transition:all .3s;box-shadow:0 0 0 4px rgba(245,197,24,.1)}
+    .lobby-item:hover .lobby-foto{border-color:rgba(245,197,24,.8);box-shadow:0 0 30px rgba(245,197,24,.4),0 0 0 4px rgba(245,197,24,.2);transform:scale(1.05)}
+    .lobby-nombre{font-size:clamp(16px,2vw,22px);font-weight:700;color:var(--cream);text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+    .lobby-status{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ok);display:flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(45,186,111,.15);border-radius:100px;border:1px solid rgba(45,186,111,.3)}
+    .lobby-status::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--ok);animation:blink 1.5s infinite}
+    .lobby-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;color:var(--muted);text-align:center;padding:40px}
+    .lobby-empty-icon{font-size:80px;margin-bottom:20px;opacity:.4;animation:float 3s ease-in-out infinite}
+    .lobby-empty-title{font-family:'Lora',serif;font-size:clamp(24px,3vw,36px);font-weight:600;color:var(--cream);margin-bottom:12px}
+    .lobby-empty-sub{font-size:clamp(14px,2vw,18px);opacity:.7}
+    .lobby-count{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(22,18,13,.9);border:2px solid rgba(245,197,24,.4);border-radius:100px;padding:10px 24px;font-size:14px;font-weight:700;color:var(--cream);backdrop-filter:blur(12px);display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px -8px rgba(245,197,24,.3)}
+    .lobby-count span{color:var(--y);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px}
   </style>
 </head>
 <body>

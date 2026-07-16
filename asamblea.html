@@ -416,6 +416,7 @@ let respondioActual  = false;
 let tiempoInicioResp = 0;
 let podioMostrado    = false;
 let participoEnAsamblea = false;
+let preguntaPreviaEstado = null; // para detectar fin de pregunta
 
 function toast(msg, tipo="") {
   const t = document.getElementById("toast");
@@ -527,8 +528,18 @@ function iniciarEscucha() {
     }
 
     if (!data.preguntaActual || data.preguntaActual.estado !== "activa") {
+      // Detectar fin de pregunta: si estaba "activa" y ahora no lo está
+      const p = data.preguntaActual;
+      if (preguntaPreviaEstado === "activa" && p && p.estado === "cerrada" && window._ultimaRespuesta) {
+        // Pregunta cerrada por admin o timer → mostrar resultado
+        const r = window._ultimaRespuesta;
+        const opTexto = (r.pregunta.opciones || [])[r.pregunta.correcta] || "—";
+        mostrarResultado(r.esCorrecta, r.pts, r.texto, opTexto, false);
+        window._ultimaRespuesta = null;
+      }
       show("screenEsperando"); limpiarTimer();
       respondioActual = false;
+      preguntaPreviaEstado = p ? p.estado : null;
       return;
     }
 
@@ -538,6 +549,7 @@ function iniciarEscucha() {
       preguntaActualId = p.id;
       respondioActual  = false;
       tiempoInicioResp = Date.now();
+      preguntaPreviaEstado = "activa";
       mostrarPregunta(p);
       return;
     }
@@ -625,15 +637,9 @@ function responderOpcion(idx, texto, pregunta) {
     ts:          serverTimestamp()
   });
 
-  const btns = document.querySelectorAll(".opcion-btn");
-  btns[idx].classList.add(esCorrecta ? "correcto" : "incorrecto");
-  if (!esCorrecta && pregunta.correcta != null && btns[pregunta.correcta]) {
-    btns[pregunta.correcta].classList.add("correcto");
-  }
-  setTimeout(() => {
-    const opTexto = (pregunta.opciones || [])[pregunta.correcta] || "—";
-    mostrarResultado(esCorrecta, pts, texto, opTexto, false);
-  }, 1000);
+  // NO mostrar correcto/incorrecto aquí — se muestra al terminar la pregunta
+  // Guardamos la respuesta local para usarla después
+  window._ultimaRespuesta = { idx, esCorrecta, pts, texto, pregunta };
 }
 
 function mostrarResultado(esCorrecta, pts, respUser, respCorrecta, timeout) {
@@ -653,8 +659,23 @@ function mostrarResultado(esCorrecta, pts, respUser, respCorrecta, timeout) {
     document.getElementById("resultSub").textContent    = "Sigue intentando";
     document.getElementById("resultPts").textContent    = "+0 PTS";
   }
+
+  // Aplicar clases visuales a los botones de opción (verde/rojo)
+  const btns = document.querySelectorAll(".opcion-btn");
+  if (window._ultimaRespuesta && window._ultimaRespuesta.pregunta) {
+    const correctIdx = window._ultimaRespuesta.pregunta.correcta ?? -1;
+    btns.forEach((b, i) => {
+      b.classList.remove("selected");
+      if (i === correctIdx) b.classList.add("correcto");
+      else if (i === window._ultimaRespuesta.idx) b.classList.add("incorrecto");
+    });
+  }
+
   document.getElementById("resultRespuesta").textContent = respCorrecta || "—";
   show("screenResultado");
+
+  // Limpiar para evitar duplicados
+  window._ultimaRespuesta = null;
 }
 
 window.volverAEsperar = function() {
