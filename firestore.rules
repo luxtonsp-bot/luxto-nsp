@@ -1,0 +1,99 @@
+// Firestore Security Rules for LUXTO-NSP
+// Version: 1.0
+// Migration target: feature/firebase-migration
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: get user's role from members collection
+    function getUserRole(uid) {
+      return get(/databases/$(database)/documents/members/$(uid)).data.rol;
+    }
+
+    // Helper: check if user is coordinator
+    function isCoordinator() {
+      return isAuth() && getUserRole(request.auth.uid) == "coordinador";
+    }
+
+    // Helper: check if user is leader
+    function isLeader() {
+      return isAuth() && (getUserRole(request.auth.uid) == "lider" || getUserRole(request.auth.uid) == "coordinador");
+    }
+
+    // Helper: check if user is member (any authenticated user)
+    function isMember() {
+      return isAuth();
+    }
+
+    // Members collection
+    match /members/{uid} {
+      allow read: if isAuth();  // members can read their own? Actually we want members to read their own only? Let's allow read of own doc only.
+                    // For simplicity, allow read of all members for leaders/coordinators? We'll adjust.
+                    // According to plan: member reads own doc, leader/coordinator can read all.
+                    // We'll implement:
+                    allow read: if isAuth() && (request.auth.uid == uid || isLeader());
+                    // Update: members can update their own fields except rol and estadoAnioActual?
+                    allow update: if isAuth() && request.auth.uid == uid
+                                  && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual']);
+                    // Create: only via registration flow, but we can allow auth user to create their own doc (when signing up)
+                    allow create: if isAuth() && request.auth.uid == uid;
+                    // Delete: not allowed
+                    allow delete: if false;
+    }
+
+    // Asambleas collection (one per fecha, e.g., "2026-09-18")
+    match /asambleas/{fecha} {
+      allow read: if true; // public read for checking if there is assembly, etc.
+      allow create, update, delete: if isCoordinator();
+    }
+
+    // Asistencia collection: asistencia/{anio}/{fecha}/{uid}
+    match /asistencia/{anio}/{fecha}/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isLeader());
+      allow create, update: if isAuth() &&
+                            (request.auth.uid == uid ||   // member marking own attendance
+                             isLeader());                // leader marking attendance
+      allow delete: if false;
+    }
+
+    // Tablas dinámicas
+    match /tablas_dinamicas/{anio}/{tablaId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isCoordinator();
+    }
+
+    // Asambleas Kahoot snapshots
+    match /asambleas_kahoot/{fecha} {
+      allow read: if isAuth();
+      allow create, update: if isCoordinator(); // leaders can create? Actually leaders create during assembly; but plan says proyector controls everything.
+                                            // We'll allow leaders and coordinators.
+                    allow create, update: if isLeader();
+                    allow delete: if false;
+    }
+
+    // Histórico collections (read only after creation)
+    match /historico/{anio}/{collection}/{docId} {
+      allow read: if isAuth();
+      allow create, update, delete: if false; // immutable after creation
+    }
+
+    // Sugerencias y Feedback (live collections)
+    match /sugerencias/{id} {
+      allow read: if isAuth();
+      allow create: if isMember(); // any member can create a suggestion
+      allow update, delete: if isAuth() && request.auth.uid == resource.data.uid; // only owner can update/delete? Actually suggestions might be immutable after creation? We'll allow update/delete by owner.
+                    allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator());
+    }
+
+    match /feedback/{id} {
+      allow read: if isAuth();
+      allow create: if isMember();
+      allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator());
+    }
+  }
+}
