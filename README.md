@@ -29,20 +29,22 @@ Portal web completo para el **Grupo Juvenil Luz de Cristo** que integra:
 
 ```
 luxto-nsp/
-├── index.html           # Landing page pública (hero, quiénes somos, historia, coro, donaciones, CTA)
-├── historia.html        # Cronología completa 2010-2025: directivas, asesores, coro, equipo, memoria
-├── login.html           # Inicio de sesión con Firebase Auth (Google) + reset password
-├── registro.html        # Registro 2 pasos: validar nombre en Sheet → crear cuenta Firebase
-├── dashboard.html       # Panel del miembro: stats, nota rendimiento, sugerencias, feedback, cumpleaños
-├── asamblea.html        # Vista móvil del miembro: solo letras A/B/C/D grandes + timer circular
-├── proyector.html       # Vista proyector (pantalla grande): pregunta completa, ranking en vivo, admin bar
-├── admin.html           # Panel coordinador: crear preguntas, activar asamblea, ranking global, finalizar
-├── proyector_logic.js   # Lógica compartida proyector (Firebase listeners, timer, ranking, countdown)
-├── logo_luxto.png       # Logo del grupo
-├── foto_grupo.jpg       # Foto grupal (hero)
-├── *.jpg / *.png        # Fotos de directivos, coro, historia (referenciadas en historia.html)
-├── remove_watermark.py  # Script utilidad para limpiar marcas de agua de imágenes
-└── README.md            # Este archivo
+├── index.html                 # Landing pública
+├── pages/                     # Páginas del sitio (moved for maintainability)
+│   ├── historia.html
+│   ├── login.html
+│   ├── registro.html
+│   ├── dashboard.html
+│   ├── asamblea.html
+│   ├── proyector.html
+│   └── admin.html
+├── assets/
+│   ├── js/proyector_logic.js  # Lógica compartida (Firebase listeners, timer, ranking)
+│   └── images/                 # Logos y fotografías (hero, directivos, coro)
+├── appscript/                  # Google Apps Script project (Sheets integration)
+├── scripts/                    # Migration and utility scripts
+├── remove_watermark.py
+└── README.md
 ```
 
 ---
