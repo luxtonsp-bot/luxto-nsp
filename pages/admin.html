@@ -422,8 +422,8 @@ body::before {
 
 <header id="topbar">
   <div class="topbar-inner">
-    <a href="index.html" class="topbar-logo">
-      <img src="logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
+    <a href="../index.html" class="topbar-logo">
+      <img src="../assets/images/logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
       <span class="topbar-logo-name">Luz de Cristo</span>
     </a>
     <span class="topbar-badge">⚙️ Admin</span>
@@ -710,12 +710,12 @@ function escucharRankingGlobal() {
       const fotoSrc = e.fotoUrl ? convertirUrlDrive(e.fotoUrl) : avatarFallbackAdmin(e.nombre);
       const fallback = avatarFallbackAdmin(e.nombre);
       return '<div class="rank-item ' + itemClass + '">' +
-        '<div class="rank-pos ' + posClass + '">' + pos + '</div>' +
-        '<img src="' + fotoSrc + '" class="rank-foto" alt="" onerror="this.onerror=null;this.src=\'' + fallback + '\'">' +
-        '<div class="rank-nombre">' + escaparHTML(e.nombre) + '</div>' +
-        '<div><div class="rank-pts">' + e.pts + '</div>' +
-        '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">pts</div></div>' +
-        '</div>';
+          '<div class="rank-pos ' + posClass + '">' + pos + '</div>' +
+          '<img src="' + fotoSrc + '" class="rank-foto" alt="" data-foto-url="' + (e.fotoUrl||'') + '" data-nombre="' + escaparHTML(e.nombre) + '" onerror="this.onerror=null;this.src=\'' + fallback + '\'">' +
+          '<div class="rank-nombre">' + escaparHTML(e.nombre) + '</div>' +
+          '<div><div class="rank-pts">' + e.pts + '</div>' +
+          '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">pts</div></div>' +
+          '</div>';
     }).join("");
   });
 }
