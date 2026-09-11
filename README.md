@@ -284,10 +284,13 @@ Esto evita que alguien manipulando el JavaScript del navegador pueda escribir da
 
 ---
 
-## 📝 Changelog Reciente (desde `2f80ba2` → `575607f`)
+## 📝 Changelog Reciente
 
 | Commit | Fecha | Cambio |
 |--------|-------|--------|
+| `b1c1a46` | 2026-09-11 | Añadir carpetas `appscript/`, `scripts/` y backup al repositorio para completitud |
+| `48e6b54` | 2026-09-11 | Añadir assets y pages faltantes tras la reorg; asegurar que imágenes, js y html estén presentes |
+| `efae5ab` | 2026-09-11 | Restaurar lógica Drive-only para fotos de perfil; eliminar fallback local (assets/images) y corregir og:image en historia.html |
 | `575607f` | 2025 | Fotos Pilar Arana y Cecilia Salazar periodo 2015-2017 |
 | `4040b1a` | 2025 | Eliminar badges cargo redundantes en historia.html |
 | `66c2b34` | 2025 | Foto Padre Andrés actualizada |
