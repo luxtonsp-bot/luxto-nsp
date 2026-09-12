@@ -1,0 +1,34 @@
+name: Feliz Cumpleaños
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Cada día a las 9:00 AM UTC
+  workflow_dispatch:
+
+jobs:
+  enviar-felicidades:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install firebase-admin
+
+      - name: Setup Firebase service account
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
+
+      - name: Send birthday emails
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          python scripts/send_birthday_emails.py
