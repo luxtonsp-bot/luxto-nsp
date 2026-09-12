@@ -212,38 +212,63 @@
             document.getElementById('finalize-attendance').addEventListener('click', finalizeAttendance);
         }
 
+        // Tolerancia confirmada: hasta 10 minutos después de horaInicio NO es tardanza (sección 5.4)
+        const TOLERANCIA_TARDANZA_MIN = 10;
+        // Perú: UTC-5 fijo, sin horario de verano
+        const OFFSET_LIMA_MIN = 300;
+
+        // Timestamp de servidor → minutos desde la medianoche en hora de Perú
+        function minutosDelDiaLima(date) {
+            const utc = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+            const lima = new Date(utc.getTime() + OFFSET_LIMA_MIN * 60000);
+            return lima.getUTCHours() * 60 + lima.getUTCMinutes();
+        }
+
+        // Calcula la tardanza con el timestamp de SERVIDOR (nunca el reloj del dispositivo,
+        // sección 8) contra horaInicio de asambleas/{fecha} y escribe tardanzaMinutos/esTardanza.
+        async function calcularTardanza(attendanceRef, fechaAsamblea) {
+            const snap = await attendanceRef.get();
+            const arrival = snap.data() && snap.data().horaLlegadaServidor;
+            if (!arrival) return;
+            const assemblyDoc = await db.collection('asambleas').doc(fechaAsamblea).get();
+            if (!assemblyDoc.exists) return;
+            const horaInicio = assemblyDoc.data().horaInicio;
+            if (!horaInicio) return;
+            const [h, m] = String(horaInicio).split(':').map(Number);
+            const inicioMin = (h || 0) * 60 + (m || 0);
+            const llegadaMin = minutosDelDiaLima(arrival.toDate());
+            let diff = llegadaMin - inicioMin;
+            if (diff < -720) diff += 1440;   // cruce de medianoche hacia adelante
+            else if (diff > 720) diff -= 1440;
+            const tardanzaMinutos = Math.max(0, diff);
+            await attendanceRef.set({
+                tardanzaMinutos,
+                esTardanza: tardanzaMinutos > TOLERANCIA_TARDANZA_MIN
+            }, { merge: true });
+        }
+
+        // Ruta del modelo del plan (sección 3): asistencia/{anio}/{fecha}/{uid}
+        function refAsistencia(fechaAsamblea, uid) {
+            const anio = new Date(fechaAsamblea).getFullYear();
+            return db.collection('asistencia').doc(String(anio))
+                .collection(fechaAsamblea).doc(uid);
+        }
+
         // Mark member as present
         async function markAsPresent() {
             if (!currentMember || !currentAssemblyDate) return;
 
             try {
-                const ahora = new Date();
-                const horaLlegadaServidor = firebase.firestore.FieldValue.serverTimestamp();
+                const attendanceRef = refAsistencia(currentAssemblyDate, currentMember.id);
 
-                // Get assembly start time to calculate tardanza
-                const assemblyDoc = await db.collection('asambleas').doc(currentAssemblyDate).get();
-                let horaInicio = null;
-                let tardanzaMinutos = 0;
-                let esTardanza = false;
-
-                if (assemblyDoc.exists) {
-                    const assemblyData = assemblyDoc.data();
-                    horaInicio = assemblyData.horaInicio;
-
-                    if (horaInicio) {
-                        // Calculate tardanza (simplified - in production would compute properly)
-                        // For now, we'll just store that we need to calculate it properly
-                        // The actual calculation would happen server-side or with proper time comparison
-                    }
-                }
-
-                await db.collection('asistencia').doc(currentAssemblyDate).collection(currentAssemblyDate).doc(currentMember.id).set({
+                await attendanceRef.set({
                     presente: true,
-                    horaLlegadaServidor: horaLlegadaServidor,
-                    tardanzaMinutos: tardanzaMinutos, // Will be calculated properly
-                    esTardanza: esTardanza,
+                    horaLlegadaServidor: firebase.firestore.FieldValue.serverTimestamp(),
                     uid: currentMember.id
                 }, { merge: true });
+
+                // Ya confirmada la escritura, el serverTimestamp resuelve y se calcula la tardanza
+                await calcularTardanza(attendanceRef, currentAssemblyDate);
 
                 alert(`${currentMember.nombre} marcado como presente`);
 
@@ -262,12 +287,12 @@
             if (!currentMember || !currentAssemblyDate) return;
 
             try {
-                await db.collection('asistencia').doc(currentAssemblyDate).collection(currentAssemblyDate).doc(currentMember.id).set({
+                await refAsistencia(currentAssemblyDate, currentMember.id).set({
                     presente: false,
-                    horaLlegadaServidor: firebase.firestore.FieldValue.serverTimestamp(),
-                    tardanzaMinutos: 0,
-                    esTardanza: false,
-                    uid: currentMember.id
+                    uid: currentMember.id,
+                    // Ausente: sin puntaje de puntualidad, no 0 min de retraso (sección 5.3)
+                    tardanzaMinutos: null,
+                    esTardanza: false
                 }, { merge: true });
 
                 alert(`${currentMember.nombre} marcado como ausente`);
@@ -294,7 +319,9 @@
                 const presentMembers = new Set();
 
                 // Get who was marked present
-                const attendanceSnapshot = await db.collection('asistencia').doc(currentAssemblyDate).collection(currentAssemblyDate).get();
+                const anioHoy = new Date(currentAssemblyDate).getFullYear();
+                const attendanceSnapshot = await db.collection('asistencia').doc(String(anioHoy))
+                    .collection(currentAssemblyDate).get();
                 attendanceSnapshot.forEach(doc => {
                     const data = doc.data();
                     if (data.presente === true) {
@@ -306,13 +333,12 @@
                 const batch = db.batch();
                 membersSnapshot.forEach(doc => {
                     if (!presentMembers.has(doc.id)) {
-                        const memberRef = db.collection('asistencia').doc(currentAssemblyDate).collection(currentAssemblyDate).doc(doc.id);
+                        const memberRef = refAsistencia(currentAssemblyDate, doc.id);
                         batch.set(memberRef, {
                             presente: false,
-                            horaLlegadaServidor: firebase.firestore.FieldValue.serverTimestamp(),
-                            tardanzaMinutos: 0,
-                            esTardanza: false,
-                            uid: doc.id
+                            uid: doc.id,
+                            tardanzaMinutos: null,
+                            esTardanza: false
                         }, { merge: true });
                     }
                 });

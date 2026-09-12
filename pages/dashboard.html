@@ -537,9 +537,13 @@ textarea:focus{border-color:var(--o);background:white;}
           <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M5 21h14"/><path d="M7 21V8a3 3 0 0 1 3-3h4a3 3 0 0 1 3-3v13"/></svg></div><div class="valor-titulo">Servicio</div><div class="valor-desc">Somos sal y luz — servimos a la comunidad parroquial</div></div>
           <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="valor-titulo">Perseverancia</div><div class="valor-desc">Generación tras generación, la llama no se apaga</div></div>
         </div>
-        <div style="margin-top:40px;">
-          <a href="pages/historia.html" class="btn btn-secondary" style="font-size:15px;padding:14px 28px;">
+        <div style="margin-top:40px;display:flex;gap:14px;flex-wrap:wrap;">
+          <a href="pages/historial.html" class="btn btn-secondary" style="font-size:15px;padding:14px 28px;">
             <svg class="icon" style="width:18px;height:18px;" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Ver historial de actividades
+          </a>
+          <a href="pages/historia.html" class="btn btn-secondary" style="font-size:15px;padding:14px 28px;">
+            <svg class="icon" style="width:18px;height:18px;" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8z"/><path d="M12 6v6l4 2"/></svg>
             Ver historia completa
           </a>
         </div>
@@ -774,29 +778,57 @@ async function obtenerMiembroPorEmail(email) {
   }
 }
 
+/* ── Registros de asistencia del año en curso ────
+   Fuente única de verdad: asistencia/{anio}/{fecha}/{uid} (modelo del plan, sección 3).
+   Los sábados con asamblea vienen de asambleas/{fecha}. */
+async function obtenerRegistrosAnio(uid, anio = String(new Date().getFullYear())) {
+  try {
+    const asambleasSnap = await getDocs(collection(db, "asambleas"));
+    const fechas = [];
+    asambleasSnap.forEach((d) => {
+      const x = d.data();
+      if (x.hayAsamblea && String(d.id).startsWith(anio)) fechas.push(d.id);
+    });
+
+    const registros = await Promise.all(
+      fechas.map(async (fecha) => {
+        const snap = await getDoc(doc(db, "asistencia", anio, fecha, uid));
+        if (!snap.exists()) return null;
+        const data = snap.data();
+        return {
+          fecha,
+          presente: data.presente === true,
+          esTardanza: data.esTardanza === true,
+          tardanza: data.tardanzaMinutos || 0
+        };
+      })
+    );
+    return registros.filter(Boolean);
+  } catch (error) {
+    console.error("Error obteniendo registros del año:", error);
+    return [];
+  }
+}
+
 /* ── Función para obtener estadísticas de asistencia ──────── */
 async function obtenerEstadisticasAsistencia(uid) {
   try {
-    // Obtener todos los registros de asistencia del miembro
-    const asistenciaLogRef = collection(db, "attendance_log");
-    const q = query(asistenciaLogRef, where("name", "==", (await obtenerMiembroPorEmail(usuarioActual.email))?.name || ""), orderBy("timestamp", "desc"));
-    const querySnapshot = await getDocs(q);
+    const registros = await obtenerRegistrosAnio(uid);
 
     let asistencias = 0;
     let tardanzas = 0;
     let faltas = 0;
     const historial = [];
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      historial.push({
-        fecha: data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'Sin fecha',
-        tardanza: data.lateness_minutes || 0
-      });
+    registros.forEach((r) => {
+      const fechaLegible = r.fecha
+        ? new Date(r.fecha + "T12:00:00").toLocaleDateString()
+        : "Sin fecha";
+      historial.push({ fecha: fechaLegible, tardanza: r.tardanza });
 
-      if (data.present === true) {
+      if (r.presente) {
         asistencias++;
-        if ((data.lateness_minutes || 0) > 0) {
+        if (r.esTardanza) {
           tardanzas++;
         }
       } else {
@@ -843,23 +875,14 @@ async function obtenerEstadisticasAsistencia(uid) {
 /* ── Función para obtener historial de tardanzas ──────── */
 async function obtenerHistorialTardanzas(uid) {
   try {
-    const miembro = await obtenerMiembroPorEmail(usuarioActual.email);
-    if (!miembro) return [];
+    const registros = await obtenerRegistrosAnio(uid);
 
-    const asistenciaLogRef = collection(db, "attendance_log");
-    const q = query(asistenciaLogRef, where("name", "==", miembro.name), orderBy("timestamp", "desc"));
-    const querySnapshot = await getDocs(q);
-
-    const historial = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      historial.push({
-        fecha: data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString('es-CL') : 'Sin fecha',
-        tardanza: data.lateness_minutes || 0
-      });
-    });
-
-    return historial;
+    return registros
+      .filter((r) => r.tardanza > 0)
+      .map((r) => ({
+        fecha: r.fecha ? new Date(r.fecha + "T12:00:00").toLocaleDateString("es-CL") : "Sin fecha",
+        tardanza: r.tardanza
+      }));
   } catch (error) {
     console.error("Error obteniendo historial de tardanzas:", error);
     return [];
