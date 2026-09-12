@@ -2,7 +2,7 @@ import os
 import smtplib
 from datetime import datetime
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultottom
+from email.mime.multipart import MIMEMultipart
 import firebase_admin
 from firebase_admin import credentials, firestore
 
@@ -19,20 +19,70 @@ def send_birthday_emails():
         today = datetime.now()
         month = str(today.month).zfill(2)
         day = str(today.day).zfill(2)
-        mmdd = f"{month}-{day}"
+        today_mmdd = f"{month}-{day}"
 
-        print(f"Checking for birthdays on {mmdd}")
+        print(f"Checking for birthdays on {today_mmdd}")
 
-        # Query members collection for today's birthdays
+        # Query all members (we'll filter by birthdate in code because Firestore doesn't support MM-dd extraction easily)
         members_ref = db.collection('members')
-        query = members_ref.where('fechaNacimientoMMdd', '==', mmdd)
-        members_snapshot = query.get()
+        members_snapshot = members_ref.get()
 
         if len(members_snapshot) == 0:
+            print('No members found')
+            return
+
+        birthday_members = []
+        for doc in members_snapshot:
+            member = doc.to_dict()
+            nombre = member.get('nombre', 'Miembro')
+            email = member.get('email')
+            birthdate_field = member.get('fechaNacimiento') or member.get('birthDate') or member.get('fechaNacimientoMMdd')
+
+            if not email:
+                print(f"Member {nombre} has no email, skipping")
+                continue
+
+            # If we have a precomputed MM-dd string, use it
+            if birthdate_field and isinstance(birthdate_field, str) and len(birthdate_field) == 5 and birthdate_field.count('-') == 1:
+                member_mmdd = birthdate_field
+            else:
+                # Try to extract MM-dd from a date or timestamp
+                try:
+                    if hasattr(birthdate_field, 'seconds'):
+                        # Firestore timestamp
+                        dt = datetime.fromtimestamp(birthdate_field.seconds)
+                    elif isinstance(birthdate_field, str):
+                        # Try to parse the string
+                        # Try common formats
+                        for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d'):
+                            try:
+                                dt = datetime.strptime(birthdate_field, fmt)
+                                break
+                            except ValueError:
+                                continue
+                        else:
+                            # If none of the formats worked, skip
+                            print(f"Could not parse birthdate for {nombre}: {birthdate_field}")
+                            continue
+                    else:
+                        # If it's not a timestamp or string, skip
+                        print(f"Unexpected birthdate type for {nombre}: {type(birthdate_field)}")
+                        continue
+
+                    # Format to MM-dd
+                    member_mmdd = dt.strftime('%m-%d')
+                except Exception as e:
+                    print(f"Error processing birthdate for {nombre}: {e}")
+                    continue
+
+            if member_mmdd == today_mmdd:
+                birthday_members.append((nombre, email))
+
+        if not birthday_members:
             print('No birthdays today')
             return
 
-        print(f"Found {len(members_snapshot)} birthday(s) today")
+        print(f"Found {len(birthday_members)} birthday(s) today")
 
         # Gmail SMTP settings
         gmail_user = os.environ['GMAIL_USER']
@@ -43,15 +93,7 @@ def send_birthday_emails():
         server.starttls()
         server.login(gmail_user, gmail_app_password)
 
-        for doc in members_snapshot:
-            member = doc.to_dict()
-            nombre = member.get('nombre', 'Miembro')
-            email = member.get('email')
-
-            if not email:
-                print(f"Member {nombre} has no email, skipping")
-                continue
-
+        for nombre, email in birthday_members:
             # Create the email
             msg = MIMEMultipart()
             msg['From'] = gmail_user
