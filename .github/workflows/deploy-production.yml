@@ -1,0 +1,48 @@
+name: Deploy Producción (main)
+
+# Publica el sitio estático de main en la RAÍZ de gh-pages — el link de producción:
+#   https://luxtonsp-bot.github.io/luxto-nsp/
+# NO toca la carpeta preview/ (los links de prueba de las ramas de trabajo).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  produccion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Copiar sitio estático de main
+        run: |
+          mkdir -p /tmp/sitio
+          cp index.html /tmp/sitio/
+          cp -r pages assets /tmp/sitio/
+
+      - name: Publicar en la raíz de gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git checkout -B gh-pages origin/gh-pages
+          # Reemplazar la raíz entera, conservando preview/ y .nojekyll
+          find . -mindepth 1 -maxdepth 1 \
+            -not -name '.git' -not -name 'preview' -not -name '.nojekyll' \
+            -exec rm -rf {} +
+          cp -r /tmp/sitio/. .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+          else
+            git commit -m "producción: main @ ${{ github.sha }}"
+            git push origin gh-pages
+          fi

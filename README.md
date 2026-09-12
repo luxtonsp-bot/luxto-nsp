@@ -269,18 +269,94 @@ Esto evita que alguien manipulando el JavaScript del navegador pueda escribir da
 
 ---
 
-## 🚀 Despliegue
+## 🚀 Despliegue — dos links independientes
 
-### GitHub Pages (Automático)
-1. Push a `main` → GitHub Actions / Pages sirve desde root
-2. URL: `https://luxtonsp-bot.github.io/luxto-nsp/`
+La web se publica en GitHub Pages con **dos links separados**: uno para producción
+(rama `main`) y uno de prueba para cada rama de trabajo. Ninguno pisa al otro.
 
-### Configuración previa
+| Link | Rama | Cuándo se actualiza |
+|---|---|---|
+| **Producción:** `https://luxtonsp-bot.github.io/luxto-nsp/` | `main` | Con cada push a `main` (`.github/workflows/deploy-production.yml`) |
+| **Preview (rama de trabajo):** `https://luxtonsp-bot.github.io/luxto-nsp/preview/<nombre-de-la-rama>/` | cualquier rama ≠ `main` | Con cada push a esa rama (`.github/workflows/deploy-preview.yml`) |
+
+### ¿Cómo funciona?
+- Todo se publica en la rama **`gh-pages`** (GitHub Pages la sirve en la raíz del sitio):
+  - **Raíz de `gh-pages`** = el contenido estático de `main` → link de producción.
+  - **`gh-pages/preview/<rama>/`** = el contenido estático de cada rama de trabajo →
+    link de prueba propio de esa rama (ej. `preview/feature-firebase-migration/`).
+- El workflow de preview copia **solo el sitio estático** (`index.html`, `pages/`,
+  `assets/`) — nunca credenciales (service account), Excel con datos personales ni
+  scripts de migración (protegidos también por `.gitignore`).
+- Para abrir una rama nueva de trabajo en el futuro no hay que configurar nada: el
+  workflow usa el nombre de la rama como subcarpeta automáticamente.
+- Cuando la rama se apruebe y se haga merge a `main`, el merge a `main` publica
+  producción y la subcarpeta `preview/` de esa rama se puede borrar de `gh-pages`.
+
+### ⚠️ PASO MANUAL ÚNICO (pendiente) — cambiar la fuente de Pages
+Hasta que se haga este paso, el link de producción sigue apuntando a lo que publique
+el workflow viejo. Hay que cambiarlo **una sola vez**:
+
+1. Entra a `https://github.com/luxtonsp-bot/luxto-nsp/settings/pages`
+2. En **"Build and deployment"** → **"Source"** → elegir **"Deploy from a branch"**
+3. En **"Branch"** → seleccionar **`gh-pages`** y carpeta **`/ (root)`** → **Save**
+
+después de esto: la raíz sirve producción (main) y las subcarpetas `preview/` sirven
+las ramas de trabajo. Hecho una vez, no se vuelve a tocar.
+
+---
+
+## ✅ PASOS PENDIENTES — hacer al iniciar sesión (en este orden)
+
+### 1. Desplegar las reglas de Firestore (2 minutos)
+El archivo `firestore.rules` del repo ya está corregido y completo, pero **no está
+publicado en Firebase** — mientras no se publique, la app usa las reglas viejas y
+algunas cosas fallarán (registro, roles, tablas).
+
+**Opción rápida (sin instalar nada):**
+1. Abre este archivo en el repo: `firestore.rules` — cópialo completo
+   (`https://github.com/luxtonsp-bot/luxto-nsp/blob/feature/firebase-migration/firestore.rules`)
+2. Ve a **Firebase Console** → `luxto-nsp` → **Firestore Database** → pestaña **"Reglas"**
+3. Pega las reglas completes → botón **"Publicar"**
+4. Debe decir "Reglas publicadas" sin errores
+
+**Opción con CLI (si prefieres terminal):**
+```bash
+npm install -g firebase-tools
+firebase login
+# crea firebase.json con: {"firestore": {"rules": "firestore.rules"}}
+echo '{"firestore": {"rules": "firestore.rules"}}' > firebase.json
+firebase deploy --only firestore:rules --project luxto-nsp
+```
+
+### 2. Configurar los secrets de GitHub (3 minutos)
+El Action de cumpleaños (`.github/workflows/felicitar-cumpleanos.yml`) necesita 3 credenciales:
+
+1. Ve a `https://github.com/luxtonsp-bot/luxto-nsp/settings/secrets/actions`
+2. Botón **"New repository secret"** y crea los 3:
+   | Nombre del secret | Dónde sacar el valor |
+   |---|---|
+   | `FIREBASE_SERVICE_ACCOUNT` | **Firebase Console** → ⚙️ Configuración del proyecto → **Cuentas de servicio** → *Nueva clave privada* → se descarga un `.json` → copia **todo el contenido** del JSON |
+   | `GMAIL_USER` | El Gmail de la cuenta que envía los correos (ej. `luxtonsp@gmail.com`) |
+   | `GMAIL_APP_PASSWORD` | **Cuenta de Google** → Seguridad → **Verificación en 2 pasos** (activarla primero si no está) → **Contraseñas de aplicación** → crear una para "Correo" → copia la contraseña de 16 letras |
+3. Probar el envío: `https://github.com/luxtonsp-bot/luxto-nsp/actions/workflows/felicitar-cumpleanos.yml`
+   → botón **"Run workflow"** (_dispatch) → revisa el log del job.
+
+### 3. Probar todo con el coordinador (Fase 10, antes del merge a `main`)
+En el link de preview: `https://luxtonsp-bot.github.io/luxto-nsp/preview/feature-firebase-migration/`
+
+- [ ] Registrar un miembro nuevo (nombre → Gmail + contraseña + **fecha de nacimiento**)
+- [ ] Login → dashboard carga perfil, cumpleaños y estadísticas
+- [ ] `planificacion.html` → activar asamblea del sábado + "Descargar esquema" (imagen PNG)
+- [ ] `tomar-asistencia.html` → marcar presente (verificar que guarda con tolerancia de 10 min)
+- [ ] `admin.html` → gestión de líderes (promover/degradar con cuenta coordinador)
+- [ ] `tablas.html` → crear una tabla dinámica de prueba
+- [ ] `historial.html` → se abre y muestra "sin datos" para años cerrados (normal hasta el primer cierre de año)
+- [ ] Recibir correo de cumpleaños de prueba (paso 2)
+
+### Configuración previa (ya hecha ✅, referencia)
 1. **Firebase Console** → Authentication → Sign-in method → Email/Password ✅
-2. **Firebase Console** → Realtime Database → Create database → Reglas (ver arriba)
-3. **Google Cloud** → Apps Script → Desplegar como "Web App" (Execute as: Me, Access: Anyone) → Copiar URL a `API` constante en todos los HTML
-4. **Google Sheet** → Columnas según tabla backend
-5. **Drive** → Carpeta para fotos de perfil (Apps Script sube ahí)
+2. **Firestore** con los datos migrados (ver `migration/MIGRATION_SUMMARY.md`) ✅
+3. Foto de miembros en Drive (función `convertirUrlDrive()` en el frontend) ✅
 
 ---
 
