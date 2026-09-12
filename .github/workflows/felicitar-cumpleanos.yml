@@ -32,3 +32,4 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
           python scripts/send_birthday_emails.py
+# Null edit to force workflow recognition - 2026-09-12_14:45:01
