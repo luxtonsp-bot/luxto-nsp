@@ -3,7 +3,8 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, onValue, set, get, update, remove, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getFirestore, collection, query, where, onSnapshot, doc, set, deleteDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
@@ -11,9 +12,17 @@ const firebaseConfig = {
   projectId: "luxto-nsp",
   storageBucket: "luxto-nsp.firebasestorage.app",
   messagingSenderId: "3542836325",
-  appId: "1:3542836325:web:cf65cd50edcc431500d28c",
-  databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+  appId: "1:3542836325:web:cf65cd50edcc431500d28c"
 };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const dbFirestore = getFirestore(app);
+
+// Keep Realtime Database for other functionality (preguntas, respuestas, etc.)
+import { getDatabase, ref, onValue, set as rtdbSet, remove as rtdbRemove }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const dbRtdb = getDatabase(app);
 
 const ADMINS = [
   "henry.alfaro1@unmsm.edu.pe",
@@ -22,10 +31,6 @@ const ADMINS = [
   "gianfracamones@gmail.com",
   "alvarorodrigosalazar.2001@gmail.com"
 ];
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
 
 let esAdmin = false;
 let preguntaActualId = null;
@@ -37,24 +42,24 @@ let countdownActive = false;
 let respuestasActuales = {};
 let rankingPrevio = {};
 
-// ── LOBBY: participantes conectados ──
-let conectadosListener = null;
+// ── LOBBY: participantes conectados (Firestore) ──
+let conectadosUnsubscribe = null;
 let conectadosActuales = {};
 
-// ── Cola de preguntas (de /borradores) ──
+// ── Cola de preguntas (de /borradores) (Realtime Database) ──
 let colaPreguntas = [];
 let indiceActual = 0;
 let preguntaNumActual = 0;
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // UTILS
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 function toast(msg, tipo="") {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.className = "show " + tipo;
-  setTimeout(() => t.className="", 3000);
+  setTimeout(() => t.className = "", 3000);
 }
 
 function convertirUrlDrive(url) {
@@ -84,9 +89,9 @@ function limpiarTimer() {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // AUTH
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 onAuthStateChanged(auth, (user) => {
   if (!user) { window.location.href = "login.html"; return; }
@@ -97,34 +102,35 @@ onAuthStateChanged(auth, (user) => {
   }
   leerPreguntaNum();
   escucharBorradores();
-  iniciarEscucha();
+  iniciarEscuchaRtdb(); // Realtime Database for preguntas/respuestas
+  iniciarEscuchaFirestore(); // Firestore for conectados
 });
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // BARRA ADMIN
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 window.toggleAdminBar = function() {
   document.getElementById("adminBar").classList.toggle("visible");
 };
 
-// ═══════════════════════════════════════════
-// LEER preguntaNum DE FIREBASE
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
+// LEER preguntaNum DE FIREBASE (Realtime Database)
+// ═════════════════════════════════════════════
 
 async function leerPreguntaNum() {
   try {
-    const snap = await get(ref(db, "asamblea/preguntaNum"));
+    const snap = await get(ref(dbRtdb, "asamblea/preguntaNum"));
     preguntaNumActual = snap.val() || 0;
   } catch(e) {}
 }
 
-// ═══════════════════════════════════════════
-// ESCUCHAR BORRADORES (cola de preguntas)
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
+// ESCUCHAR BORRADORES (cola de preguntas) (Realtime Database)
+// ═════════════════════════════════════════════
 
 function escucharBorradores() {
-  onValue(ref(db, "borradores"), (snap) => {
+  onValue(ref(dbRtdb, "borradores"), (snap) => {
     const data = snap.val();
     if (!data) { colaPreguntas = []; actualizarBotones(); return; }
     colaPreguntas = Object.entries(data)
@@ -172,13 +178,13 @@ function actualizarBotones() {
   }
 }
 
-// ═══════════════════════════════════════════
-// ESCUCHAR ASAMBLEA (Firebase)
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
+// ESCUCHAR ASAMBLEA (Realtime Database)
+// ═════════════════════════════════════════════
 
-function iniciarEscucha() {
-  // Un solo listener en /asamblea maneja todo: estado, pregunta, conectados
-  onValue(ref(db, "asamblea"), (snap) => {
+function iniciarEscuchaRtdb() {
+  // Un solo listener en /asamblea maneja todo: estado, pregunta, respuestas
+  onValue(ref(dbRtdb, "asamblea"), (snap) => {
     const data = snap.val();
 
     // Asamblea inactiva o no existe
@@ -188,22 +194,13 @@ function iniciarEscucha() {
       document.getElementById("respBadge").style.display = "none";
       document.getElementById("pregStats").style.display = "none";
       document.getElementById("lobbyCount").style.display = "none";
-      if (conectadosListener) {
-        conectadosListener();
-        conectadosListener = null;
-      }
-      conectadosActuales = {};
-      actualizarLobby();
+      // Nota: No limpiamos el listener de Firestore aquí, se maneja en iniciarEscuchaFirestore
       return;
     }
 
     // Asamblea finalizada
     if (data.estado === "finalizada") {
       limpiarTimer();
-      if (conectadosListener) {
-        conectadosListener();
-        conectadosListener = null;
-      }
       construirRanking(data.respuestas || {});
       showScreen("screenRanking");
       document.getElementById("btnLanzar").style.display = "none";
@@ -215,15 +212,7 @@ function iniciarEscucha() {
       return;
     }
 
-    // Asamblea activa - Asegurar listener de conectados
-    if (!conectadosListener) {
-      conectadosListener = onValue(ref(db, "asamblea/conectados"), (snap) => {
-        const d = snap.val() || {};
-        conectadosActuales = d;
-        actualizarLobby();
-      });
-    }
-
+    // Asamblea activa
     const p = data.preguntaActual;
     if (!p || p.estado !== "activa") {
       if (data.respuestas) actualizarRankingBg(data.respuestas);
@@ -258,6 +247,41 @@ function iniciarEscucha() {
     }
   });
 }
+
+// ═════════════════════════════════════════════
+// ESCUCHAR CONECTADOS (Firestore)
+// ═════════════════════════════════════════════
+
+function iniciarEscuchaFirestore() {
+  // Escuchar la subcolección conectados bajo asamblea en Firestore
+  const conectadosRef = collection(dbFirestore, "asamblea", "conectados");
+
+  conectadosUnsubscribe = onSnapshot(conectadosRef, (snapshot) => {
+    const conectadosMap = {};
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      // Usar el document ID como email (o usar email del dato)
+      const email = data.email || doc.id;
+      conectadosMap[email] = {
+        email: email,
+        nombre: data.nombre || "",
+        fotoUrl: data.fotoUrl || "",
+        fotoMostrar: data.fotoMostrar || "",
+        ts: data.ts?.toMillis?.() || data.ts || Date.now()
+      };
+    });
+
+    conectadosActuales = conectadosMap;
+    actualizarLobby();
+  }, (error) => {
+    console.error("Error listening to conectados Firestore:", error);
+    toast("Error al escuchar participantes conectados", "err");
+  });
+}
+
+// ═════════════════════════════════════════════
+// ACTUALIZAR LOBBY
+// ═════════════════════════════════════════════
 
 function actualizarLobby() {
   const grid = document.getElementById("lobbyGrid");
@@ -346,7 +370,7 @@ function actualizarLobby() {
       // Usuario existente - actualizar foto/nombre si cambiaron
       const u = participantes.find(p => p.email === uid);
       const el = existentes.get(uid);
-if (u && el) {
+    if (u && el) {
         const img = el.querySelector(".lobby-foto");
         const nuevoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "") || avatarFallback(u.nombre);
         if (img.src !== nuevoSrc) img.src = nuevoSrc;
@@ -362,9 +386,45 @@ if (u && el) {
   });
 }
 
-// ═══════════════════════════════════════════
+// Función para registrar un usuario como conectado (llamado desde login.html o similar)
+window.registrarConectado = async function(nombre, email, fotoUrl, fotoMostrar = "") {
+  try {
+    const conectadosRef = collection(dbFirestore, "asamblea", "conectados");
+    const emailDoc = doc(conectadosRef, email.replace(/[.#$\[\]]/g, "_")); // Sanitizar email para usar como doc ID
+
+    await set(emailDoc, {
+      nombre: nombre,
+      email: email,
+      fotoUrl: fotoUrl,
+      fotoMostrar: fotoMostrar,
+      ts: serverTimestamp()
+    });
+
+    // También actualizar timestamp cada 30 segundos para mantener conexión activa
+    setInterval(async () => {
+      await set(emailDoc, {
+        ts: serverTimestamp()
+      }, { merge: true });
+    }, 30000);
+  } catch (error) {
+    console.error("Error registering connected user:", error);
+  }
+};
+
+// Función para desregistrar un usuario como conectado (llamado al salir o cerrar sesión)
+window.desregistrarConectado = async function(email) {
+  try {
+    const conectadosRef = collection(dbFirestore, "asamblea", "conectados");
+    const emailDoc = doc(conectadosRef, email.replace(/[.#$\[\]]/g, "_"));
+    await deleteDoc(emailDoc);
+  } catch (error) {
+    console.error("Error deregistering connected user:", error);
+  }
+};
+
+// ═════════════════════════════════════════════
 // MOSTRAR PREGUNTA
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 function mostrarPregunta(p) {
   limpiarTimer();
@@ -431,9 +491,9 @@ function iniciarTimer(duracion) {
   }, 1000);
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // CONTADORES EN VIVO
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 function actualizarContadores(resps, p) {
   const total = Object.keys(resps).length;
@@ -454,9 +514,9 @@ function actualizarContadores(resps, p) {
   });
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // REVELAR CORRECTA
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 function revelarCorrectaYRanking(data) {
   const p = data.preguntaActual;
@@ -480,9 +540,9 @@ function revelarCorrectaYRanking(data) {
   if (data.respuestas) actualizarRankingBg(data.respuestas);
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // RANKING
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 function actualizarRankingBg(todasRespuestas) {
   const acum = {};
@@ -528,9 +588,9 @@ function renderRanking() {
   }).join("");
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // CONTROLES ADMIN (desde proyector)
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 // Lanzar primera pregunta (o relanzar si no hay ninguna activa)
 window.lanzarPrimeraPregunta = async function() {
@@ -538,7 +598,7 @@ window.lanzarPrimeraPregunta = async function() {
   if (colaPreguntas.length === 0) { toast("No hay preguntas guardadas", "err"); return; }
 
   // Verificar que la asamblea está activa
-  const snapActiva = await get(ref(db, "asamblea/activa"));
+  const snapActiva = await get(ref(dbRtdb, "asamblea/activa"));
   if (!snapActiva.val()) { toast("Activa la asamblea primero desde el panel admin", "err"); return; }
 
   indiceActual = 0;
@@ -570,7 +630,7 @@ window.lanzarSiguientePregunta = async function() {
 // Cerrar pregunta manualmente
 window.cerrarPreguntaManual = async function() {
   if (!esAdmin) return;
-  await set(ref(db, "asamblea/preguntaActual/estado"), "cerrada");
+  await rtdbSet(ref(dbRtdb, "asamblea/preguntaActual/estado"), "cerrada");
   toast("Pregunta cerrada", "");
 };
 
@@ -592,12 +652,12 @@ window.finalizarAsamblea = async function() {
     await acumularEnRankingGlobal();
 
     // Cerrar pregunta actual y marcar como finalizada
-    await set(ref(db, "asamblea/preguntaActual/estado"), "cerrada");
-    await set(ref(db, "asamblea/activa"), false);
-    await set(ref(db, "asamblea/estado"), "finalizada");
+    await rtdbSet(ref(dbRtdb, "asamblea/preguntaActual/estado"), "cerrada");
+    await rtdbSet(ref(dbRtdb, "asamblea/activa"), false);
+    await rtdbSet(ref(dbRtdb, "asamblea/estado"), "finalizada");
 
     // Borrar respuestas después de acumular
-    await remove(ref(db, "asamblea/respuestas"));
+    await rtdbRemove(ref(dbRtdb, "asamblea/respuestas"));
 
     preguntaNumActual = 0;
     indiceActual = 0;
@@ -609,12 +669,12 @@ window.finalizarAsamblea = async function() {
   }
 };
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // ACUMULAR EN RANKING GLOBAL
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 async function acumularEnRankingGlobal() {
-  const snap = await get(ref(db, "asamblea/respuestas"));
+  const snap = await get(ref(dbRtdb, "asamblea/respuestas"));
   const respuestas = snap.val();
   if (!respuestas) return;
 
@@ -629,9 +689,9 @@ async function acumularEnRankingGlobal() {
   });
 
   for (const key of Object.keys(acum)) {
-    const prevSnap = await get(ref(db, "rankingGlobal/" + key));
+    const prevSnap = await get(ref(dbRtdb, "rankingGlobal/" + key));
     const prev = prevSnap.val() || { pts: 0 };
-    await set(ref(db, "rankingGlobal/" + key), {
+    await rtdbSet(ref(dbRtdb, "rankingGlobal/" + key), {
       nombre: acum[key].nombre,
       email: acum[key].email,
       fotoUrl: acum[key].fotoUrl || prev.fotoUrl || "",
@@ -641,16 +701,16 @@ async function acumularEnRankingGlobal() {
   }
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // LANZAR PREGUNTA DESDE LA COLA
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 async function lanzarPreguntaDesdeCola(idx) {
   if (idx >= colaPreguntas.length) return;
 
   const b = colaPreguntas[idx];
   preguntaNumActual++;
-  await set(ref(db, "asamblea/preguntaNum"), preguntaNumActual);
+  await rtdbSet(ref(dbRtdb, "asamblea/preguntaNum"), preguntaNumActual);
 
   const pregunta = {
     id: "p_" + Date.now(),
@@ -663,14 +723,14 @@ async function lanzarPreguntaDesdeCola(idx) {
     ts: Date.now()
   };
 
-  await set(ref(db, "asamblea/preguntaActual"), pregunta);
+  await rtdbSet(ref(dbRtdb, "asamblea/preguntaActual"), pregunta);
   indiceActual = idx + 1;
   toast("🚀 Pregunta " + preguntaNumActual + " lanzada", "ok");
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 // COUNTDOWN 3-2-1
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 function iniciarCountdown(n, cb) {
   if (countdownActive) return;
@@ -695,3 +755,9 @@ function iniciarCountdown(n, cb) {
   }, 1000);
 }
 
+// Limpieza al salir
+window.addEventListener('beforeunload', () => {
+  if (conectadosUnsubscribe) {
+    conectadosUnsubscribe();
+  }
+});

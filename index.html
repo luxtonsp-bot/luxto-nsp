@@ -113,7 +113,7 @@ img { max-width: 100%; display: block; }
 /* NAVBAR */
 nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: 0 32px; transition: all .5s cubic-bezier(.4,0,.2,1); }
 nav.scrolled { background: rgba(255,251,238,.25); backdrop-filter: blur(48px) saturate(2.4) brightness(1.05); -webkit-backdrop-filter: blur(48px) saturate(2.4) brightness(1.05); box-shadow: 0 8px 40px -12px rgba(20,17,13,.10), 0 0 0 1px rgba(245,197,24,.06); border-bottom: none; border-radius: 0 0 20px 20px; margin: 0 12px; padding: 0 20px; }
-nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } nav.scrolled .nav-logo-text { font-size: 17px; }
+.nav-scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } nav.scrolled .nav-logo-text { font-size: 17px; }
 .nav-inner { max-width: 1240px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 84px; transition: all .5s cubic-bezier(.4,0,.2,1); position: relative; }
 .nav-links { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; list-style: none; background: rgba(255,255,255,.55); border: 1px solid rgba(245,197,24,.18); padding: 6px; border-radius: 100px; backdrop-filter: blur(10px); box-shadow: 0 6px 20px -10px rgba(20,17,13,.10); }
 
@@ -127,10 +127,8 @@ nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } 
 .nav-links a:hover { color: var(--negro); background: var(--amarillo-soft); }
 .nav-cta { padding: 11px 22px !important; font-size: 13.5px !important; }
 .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; flex-direction: column; gap: 5px; }
-.hamburger span { display: block; width: 24px; height: 2px; background: var(--texto); border-radius: 2px; transition: all var(--t-base); }
 .mobile-menu { position: fixed; top: 84px; left: 16px; right: 16px; background: var(--blanco); border-radius: var(--radio); padding: 20px; box-shadow: var(--sombra-lg); display: none; flex-direction: column; gap: 4px; z-index: 999; }
 .mobile-menu a { text-decoration: none; color: var(--texto); font-weight: 500; padding: 14px 16px; border-radius: 12px; transition: background var(--t-fast); }
-.mobile-menu a:hover { background: var(--crema-warm); }
 .mobile-menu.open { display: flex; }
 
 /* HERO */
@@ -141,7 +139,7 @@ nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } 
 .hero-shape-1 { top: 18%; left: 6%; width: 90px; height: 50px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 50'><path fill='%234A8FA8' d='M22 35c-9 0-16-6-16-14s7-14 16-14c2 0 5 1 7 2 3-7 11-12 20-12 11 0 20 8 21 18 8 1 14 7 14 15 0 8-7 14-16 14H22z' opacity='.45'/></svg>"); animation: float 9s ease-in-out infinite; }
 .hero-shape-2 { top: 12%; right: 12%; width: 60px; height: 60px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><path fill='%23C4703A' d='M30 4l7 18 19 1-15 12 5 19-16-11-16 11 5-19L4 23l19-1z' opacity='.6'/></svg>"); animation: spin 18s linear infinite; }
 .hero-shape-3 { bottom: 18%; left: 14%; width: 50px; height: 50px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'><path fill='%23C4869A' d='M25 44C13 35 4 27 4 17 4 10 9 5 16 5c4 0 7 2 9 5 2-3 5-5 9-5 7 0 12 5 12 12 0 10-9 18-21 27z' opacity='.55'/></svg>"); animation: float 7s ease-in-out infinite reverse; }
-@keyframes float { 0%,100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-20px) translateX(10px); } }
+@keyframes float { 0%,100% { transform: translateY(0) translateX(0); } 50% { translate: translateY(-20px) translateX(10px); } }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .hero-inner { position: relative; z-index: 2; max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 1.05fr 1fr; gap: 80px; align-items: center; min-height: calc(100vh - 210px); }
 .hero-badge { margin-bottom: 28px; animation: fadeUp .8s ease both; }
@@ -251,12 +249,9 @@ nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } 
 .footer-red-fb:hover { background: #1877F2; border-color: transparent; color: white; }
 .footer-red-tt:hover { background: #ffffff; border-color: transparent; color: #000000; }
 .footer-red-yt:hover { background: #FF0000; border-color: transparent; }
-  }
 .footer-red-yt:hover svg, .footer-red-yt:hover svg * { fill: white !important; }
-  } 
-.footer-red-yt:hover svg { fill: white; } 
+.footer-red-yt:hover svg { fill: white; }
 .footer-red-yt:hover svg path { fill: white; }
-  } 
 .footer-red-yt:hover svg { fill: white; }
 
 /* CORO */
@@ -286,7 +281,7 @@ nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } 
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 .coro-galeria-item:hover { transform: scale(1.02); box-shadow: var(--sombra); border-style: solid; animation: pulse 1.5s infinite; }
 .coro-galeria-item.full { grid-column: 1 / -1; min-height: 240px; }
-.coro-galeria-item::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C4703A' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'><path d='M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z'/><circle cx='12' cy='13' r='3'/></svg>") no-repeat center / 38px; opacity: .35; transition: all var(--t-base); }
+.coro-galeria-item::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23C4703A' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'><path d='M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2v9h16a2 2 0 0 0 2-2V9a2 2 0 0 0 2-2h-3l-2.5-3z'/><circle cx='12' cy='13' r='3'/></svg>") no-repeat center / 38px; opacity: .35; transition: all var(--t-base); }
 .coro-galeria-item:hover::before { opacity: .55; transform: scale(1.08); }
 
 /* DONACIONES */
@@ -345,7 +340,7 @@ nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } 
 .versiculo-sal::before { background: var(--grad-calor); }
 .versiculo-luz::before { background: linear-gradient(90deg, var(--amarillo), #fff8b0); }
 .versiculo:hover { background: rgba(255,255,255,.10); transform: translateY(-4px); border-color: rgba(255,255,255,.18); }
-.versiculo-icono { font-size: 36px; margin-bottom: 12px; display: block; }
+.versiculo-icono { font-size: 36px; margin-bottom=12px; display: block; }
 .versiculo-num { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--amarillo); margin-bottom: 16px; opacity: .8; }
 .versiculo-texto { font-family: 'Lora', serif; font-size: 16px; font-style: italic; color: rgba(255,248,231,.85); line-height: 1.8; border: none; padding: 0; margin: 0; }
 .versiculo-texto strong { font-style: normal; font-weight: 700; color: var(--amarillo); }
@@ -479,7 +474,7 @@ footer .container { position: relative; z-index: 2; }
       </div>
       <div class="hero-stats">
         <div class="stat"><div class="stat-num">15</div><div class="stat-label">Años de historia</div></div>
-        <div class="stat"><div class="stat-num">+40</div><div class="stat-label">Jóvenes activos</div></div>
+        <div class="stat"><div class="stat-num" id="miembros-count">+40</div><div class="stat-label">Jóvenes activos</div></div>
         <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Generaciones</div></div>
       </div>
     </div>
@@ -568,9 +563,9 @@ footer .container { position: relative; z-index: 2; }
           </div>
         </div>
         <div class="quienes-valores">
-          <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 14c.83.642 2.077 1.017 4 1 3.5-.014 6 0 9-1 4.5-1.5 7-5.5 7-9-3 .67-5 .5-7 0-3-.75-5.96-1.5-9 0C3.6 6.45 1.5 9.5 2 12c.5 2.5 2 4 4 5l1 1z"/><circle cx="14" cy="10" r="1" fill="currentColor" stroke="none"/></svg></div><div class="valor-titulo">Fe</div><div class="valor-desc">Crecemos en la fe a través de la Palabra y los sacramentos</div></div>
-          <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><div class="valor-titulo">Fraternidad</div><div class="valor-desc">Somos familia que se apoya en cada etapa del camino</div></div>
-          <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M5 21h14"/><path d="M7 21V8a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v13"/></svg></div><div class="valor-titulo">Servicio</div><div class="valor-desc">Somos sal y luz — servimos a la comunidad parroquial</div></div>
+          <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 14c.83.642 2.077 1.017 4 1 3.5-.014 6 0 9-1 3.5-.014 6 0 9-1 4.5-1.5 7-5.5 7-9-3 .67-5 .5-7 0-3-.75-5.96-1.5-9 0C3.6 6.45 1.5 9.5 2 12c.5 2.5 2 4 4 5l1 1z"/><circle cx="14" cy="10" r="1" fill="currentColor" stroke="none"}}</div><div class="valor-titulo">Fe</div><div class="valor-desc">Crecemos en la fe a través de la Palabra y los sacramentos</div></div>
+          <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><div class="valor-titulo">Fraternidad</div><div class="valor-desc">Somos familia que se apoya en cada etapa del camino</div></div>
+          <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M5 21h14"/><path d="M7 21V8a3 3 0 0 1 3-3h4a3 3 0 0 1 3-3v13"/></svg></div><div class="valor-titulo">Servicio</div><div class="valor-desc">Somos sal y luz — servimos a la comunidad parroquial</div></div>
           <div class="valor-card"><div class="valor-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="valor-titulo">Perseverancia</div><div class="valor-desc">Generación tras generación, la llama no se apaga</div></div>
         </div>
         <div style="margin-top:40px;">
@@ -611,7 +606,7 @@ footer .container { position: relative; z-index: 2; }
           <span>Facebook</span>
         </a>
         <a href="https://www.tiktok.com/@luxto_nsp" target="_blank" rel="noopener" class="red-social red-tt" title="TikTok">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
           <span>TikTok</span>
         </a>
         <a href="https://www.youtube.com/@luxto_nsp" target="_blank" rel="noopener" class="red-social red-yt" title="YouTube">
@@ -646,16 +641,16 @@ footer .container { position: relative; z-index: 2; }
         <p class="coro-desc">El <strong>Coro Parroquial Luz de Cristo</strong> nació del corazón del grupo juvenil como una forma concreta de servicio. Cantamos en las misas dominicales de la parroquia y acompañamos celebraciones especiales en Lima.</p>
         <div class="servicios-grid">
           <div class="servicio-card"><div class="servicio-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="15" r="6"/><circle cx="15" cy="9" r="6"/></svg></div><div><div class="servicio-nombre">Matrimonios</div><div class="servicio-desc">Acompañamos la celebración de tu misa nupcial</div></div></div>
-          <div class="servicio-card"><div class="servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 14c.83.642 2.077 1.017 4 1 3.5-.014 6 0 9-1 4.5-1.5 7-5.5 7-9-3 .67-5 .5-7 0-3-.75-5.96-1.5-9 0C3.6 6.45 1.5 9.5 2 12c.5 2.5 2 4 4 5l1 1z"/><circle cx="14" cy="10" r="1" fill="currentColor" stroke="none"/></svg></div><div><div class="servicio-nombre">Difuntos</div><div class="servicio-desc">Misas de sepelio y aniversario con dignidad</div></div></div>
-          <div class="servicio-card"><div class="servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M9 12h.01"/><path d="M15 12h.01"/><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1"/></svg></div><div><div class="servicio-nombre">Bautizos</div><div class="servicio-desc">El primer sacramento acompañado de canto</div></div></div>
-          <div class="servicio-card"><div class="servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M10 9h4"/><path d="M12 7v5"/><path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22"/><path d="m18 7 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.618a1 1 0 0 1 .553-.894L6 7"/></svg></div><div><div class="servicio-nombre">Misas especiales</div><div class="servicio-desc">Quinceañeros, primeras comuniones y más</div></div></div>
+          <div class="servicio-card><div class="servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 14c.83.642 2.077 1.017 4 1 3.5-.014 6 0 9-1 4.5-1.5 7-5.5 7-9-3 .67-5 .5-7 0-3-.75-5.96-1.5-9 0C3.6 6.45 1.5 9.5 2 12c.5 2.5 2 4 4 5l1 1z"/><circle cx="14" cy="10" r="1" fill="currentColor" stroke="none"/></svg></div><div><div class="servicio-nombre">Difuntos</div><div class="servicio-desc">Misas de sepelio y aniversario con dignidad</div></div></div>
+          <div class="servicio-card><div class="servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M10 9h4"/><path d="M12 7v5"/><path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22"/></svg></div><div><div class="servicio-nombre">Bautizos</div><div class="servicio-desc">El primer sacramento acompañado de canto</div></div></div>
+          <div class="servicio-card><div class="servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22"/></svg></div><div><div class="servicio-nombre">Misas especiales</div><div class="servicio-desc">Quinceañeros, primeras comuniones y más</div></div></div>
         </div>
         <div class="coro-contact">
           <div class="coro-contact-title">¿Nos necesitas para tu celebración?</div>
           <div class="coro-contact-sub">Contáctanos con anticipación para coordinar la misa y el repertorio. Atendemos en toda Lima.</div>
           <a href="https://wa.me/51982175495?text=Hola%20quisiera%20información%20sobre%20el%20coro%20Luz%20de%20Cristo"
              target="_blank" class="btn-whatsapp">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.670.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
             Escribir por WhatsApp
           </a>
         </div>
@@ -687,14 +682,14 @@ footer .container { position: relative; z-index: 2; }
         <div class="donacion-numero">N° · · · - · · · - · · ·</div>
       </div>
       <div class="donacion-card featured">
-        <div class="donacion-card-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 15 6 6"/><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.7 2.7 0 0 0 18.3 3c-1.1 0-1.9.4-2.8 1.2-.9-.8-1.7-1.2-2.8-1.2A2.7 2.7 0 0 0 10 5.8c0 1.1.8 2 1.5 2.7L16 13z"/></svg></div>
+        <div class="donacion-card-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 15 6 6"/></svg></div>
         <div class="donacion-card-title">¿Para qué?</div>
         <div class="donacion-card-desc" style="font-size:15px;margin-bottom:20px;">Cada sol que aportas se convierte en fe, fraternidad y servicio.</div>
         <div style="display:flex;flex-direction:column;gap:12px;text-align:left;width:100%;">
           <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--texto-suave);"><span style="color:var(--naranja);display:inline-flex;"><svg class="icon" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Actividades y retiros del grupo</div>
           <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--texto-suave);"><span style="color:var(--naranja);display:inline-flex;"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>Materiales para el coro</div>
           <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--texto-suave);"><span style="color:var(--naranja);display:inline-flex;"><svg class="icon" viewBox="0 0 24 24"><path d="M10 9h4"/><path d="M12 7v5"/><path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22"/></svg></span>Servicio a la parroquia</div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--texto-suave);"><span style="color:var(--naranja);display:inline-flex;"><svg class="icon" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg></span>Formación de nuevas generaciones</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--texto-suave);"><span style="color:var(--naranja);display:inline-flex;"><svg class="icon" viewBox="0 0 24 24"><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg></span>Formación de nuevas generaciones</div>
         </div>
       </div>
       <div class="donacion-card">
@@ -778,7 +773,7 @@ footer .container { position: relative; z-index: 2; }
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
             </a>
             <a href="https://www.tiktok.com/@luxto_nsp" target="_blank" rel="noopener" class="footer-red footer-red-tt" title="TikTok @luxto_nsp">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
             </a>
             <a href="https://www.youtube.com/@luxto_nsp" target="_blank" rel="noopener" class="footer-red footer-red-yt" title="YouTube @luxto_nsp">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" /></svg>
@@ -786,10 +781,10 @@ footer .container { position: relative; z-index: 2; }
           </div>
         </div>
       </div>
-    </div>
-    <div class="footer-bottom">
-      <span>© 2026 Grupo Juvenil Luz de Cristo — <a href="https://www.google.com/maps/search/Parroquia+Nuestra+Se%C3%B1ora+de+la+Piedad+Villa+Jard%C3%ADn+San+Luis+Lima" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px" title="Ver en Google Maps">Parroquia Nuestra Señora de la Piedad, Villa Jardín, San Luis</a></span>
-      <span>"Somos sal y luz del mundo" — Mt 5:13-16</span>
+      <div class="footer-bottom">
+        <span>© 2026 Grupo Juvenil Luz de Cristo — <a href="https://www.google.com/maps/search/Parroquia+Nuestra+Se%C3%B1ora+de+la+Piedad+Villa+Jard%C3%ADn+San+Luis+Lima" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px" title="Ver en Google Maps">Parroquia Nuestra Señora de la Piedad, Villa Jardín, San Luis</a></span>
+        <span>"Somos sal y luz del mundo" — Mt 5:13-16</span>
+      </div>
     </div>
   </div>
 </footer>
@@ -819,6 +814,47 @@ document.querySelectorAll('img').forEach(function(img) {
     this.style.display = 'none';
   });
 });
+</script>
+
+<!-- Firebase integration for member count -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+    authDomain: "luxto-nsp.firebaseapp.com",
+    projectId: "luxto-nsp",
+    storageBucket: "luxto-nsp.firebasestorage.app",
+    messagingSenderId: "3542836325",
+    appId: "1:3542836325:web:cf65cd50edcc431500d28c"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  async function updateMemberCount() {
+    try {
+      const membersRef = collection(db, "members");
+      const snap = await getCountFromServer(membersRef);
+      const count = snap.data().count;
+      const countEl = document.getElementById("miembros-count");
+      if (countEl) {
+        // Keep the plus sign if desired, or just show the number
+        countEl.textContent = `+${count}`;
+      }
+    } catch (error) {
+      console.error("Error fetching member count:", error);
+      // Optionally show a fallback or leave as is
+    }
+  }
+
+  // Update count when DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", updateMemberCount);
+  } else {
+    updateMemberCount();
+  }
 </script>
 </body>
 </html>

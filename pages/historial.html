@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial — Luz de Cristo</title>
+    <!-- Firebase imports (same as other pages) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Historial de Actividades</h1>
+        <p>Consulte los datos históricos de años anteriores, incluyendo asistencia, tablas dinámicas, rankings de asambleas y más.</p>
+
+        <div class="filters">
+            <div>
+                <label for="year-select">Seleccionar año:</label>
+                <select id="year-select">
+                    <option value="">-- Seleccione un año --</option>
+                    <!-- Years will be populated dynamically -->
+                </select>
+            </div>
+            <div>
+                <label for="view-type">Tipo de vista:</label>
+                <select id="view-type">
+                    <option value="resumen">Resumen General</option>
+                    <option value="asistencia">Asistencia</option>
+                    <option value="tablas">Tablas Dinámicas</option>
+                    <option value="kahoot">Ranking Kahoot</option>
+                    <option value="sugerencias">Sugerencias y Feedback</option>
+                </select>
+            </div>
+            <button id="load-history-button" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Cargar Historial
+            </button>
+        </div>
+
+        <div id="history-content" style="margin-top: 30px;">
+            <!-- Historical data will be displayed here -->
+            <p>Seleccione un año y tipo de vista para cargar el historial.</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+            authDomain: "luxto-nsp.firebaseapp.com",
+            projectId: "luxto-nsp",
+            storageBucket: "luxto-nsp.firebasestorage.app",
+            messagingSenderId: "3542836325",
+            appId: "1:3542836325:web:cf65cd50edcc431500d28c",
+            databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // DOM Elements
+        const yearSelect = document.getElementById('year-select');
+        const viewTypeSelect = document.getElementById('view-type');
+        const loadHistoryButton = document.getElementById('load-history-button');
+        const historyContentDiv = document.getElementById('history-content');
+
+        // Initialize
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                await populateYears();
+                // Load default view when year changes
+                yearSelect.addEventListener('change', () => {
+                    if (yearSelect.value) {
+                        loadHistoricalData();
+                    } else {
+                        historyContentDiv.innerHTML = '<p>Seleccione un año y tipo de vista para cargar el historial.</p>';
+                    }
+                });
+
+                // Load default view when view type changes
+                viewTypeSelect.addEventListener('change', loadHistoricalData);
+
+                // Load button click
+                loadHistoryButton.addEventListener('click', loadHistoricalData);
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Populate available years from historical collections
+        async function populateYears() {
+            try {
+                yearSelect.innerHTML = '<option value="">-- Seleccione un año --</option>';
+
+                // Get all historical years from the historico collection group
+                const historicoCollections = await db.collectionGroup('historico').get();
+
+                // Extract unique years
+                const years = new Set();
+                historicoCollections.forEach(doc => {
+                    // The year is part of the path: historico/{year}/collection/{doc}
+                    const pathParts = doc.ref.path.split('/');
+                    if (pathParts.length >= 2 && pathParts[0] === 'historico') {
+                        const year = pathParts[1];
+                        if (!isNaN(year) && year.length === 4) {
+                            years.push(parseInt(year));
+                        }
+                    }
+                });
+
+                // Sort years descending (most recent first)
+                const sortedYears = Array.from(years).sort((a, b) => b - a);
+
+                // Populate dropdown
+                sortedYears.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                });
+
+                // If no historical data yet, show a message
+                if (sortedYears.length === 0) {
+                    yearSelect.innerHTML += '<option value="" disabled>No hay datos históricos aún</option>';
+                }
+
+            } catch (error) {
+                console.error("Error populating years:", error);
+                yearSelect.innerHTML = '<option value="">-- Seleccione un año --</option><option value="" disabled>Error cargando años</option>';
+            }
+        }
+
+        // Load historical data based on selections
+        async function loadHistoricalData() {
+            const year = parseInt(yearSelect.value);
+            const viewType = viewTypeSelect.value;
+
+            if (isNaN(year) || !viewType) {
+                historyContentDiv.innerHTML = '<p>Por favor, seleccione un año y tipo de vista.</p>';
+                return;
+            }
+
+            try {
+                historyContentDiv.innerHTML = '<p>Cargando datos históricos...</p>';
+
+                switch (viewType) {
+                    case 'resumen':
+                        await loadHistoricalSummary(year);
+                        break;
+                    case 'asistencia':
+                        await loadHistoricalAttendance(year);
+                        break;
+                    case 'tablas':
+                        await loadHistoricalTables(year);
+                        break;
+                    case 'kahoot':
+                        await loadHistoricalKahoot(year);
+                        break;
+                    case 'sugerencias':
+                        await loadHistoricalSuggestionsFeedback(year);
+                        break;
+                    default:
+                        historyContentDiv.innerHTML = '<p>Tipo de vista no válido.</p>';
+                }
+            } catch (error) {
+                console.error("Error loading historical data:", error);
+                historyContentDiv.innerHTML = `<p>Error al cargar los datos históricos: ${error.message}</p>`;
+            }
+        }
+
+        // Load historical summary
+        async function loadHistoricalSummary(year) {
+            try {
+                const memberRef = db.collection('historico').doc(year.toString()).collection('members');
+                const membersSnapshot = await memberRef.get();
+
+                if (membersSnapshot.empty) {
+                    historyContentDiv.innerHTML = `<p>No hay datos de miembros para el año ${year}.</p>`;
+                    return;
+                }
+
+                const members = [];
+                membersSnapshot.forEach(doc => {
+                    members.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Calculate summary statistics
+                const totalMembers = members.length;
+                const activeMembers = members.filter(m => m.estadoAnioActual === 'activo' || m.estadoAnioActual === 'perseverante').length;
+                const promedioAsistencia = members.reduce((sum, m) => sum + (m.porcentajeAsistencia || 0), 0) / totalMembers;
+
+                let html = `
+                    <h2>Resumen Histórico del Año ${year}</h2>
+                    <div class="summary-stats">
+                        <div class="stat-card">
+                            <h3>Total de Miembros</h3>
+                            <p class="stat-number">${totalMembers}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Miembros Activos/Perseverantes</h3>
+                            <p class="stat-number">${activeMembers}</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Promedio de Asistencia</h3>
+                            <p class="stat-number">${promedioAsistencia.toFixed(1)}%</p>
+                        </div>
+                    </div>
+
+                    <h3>Lista de Miembros</h3>
+                    <div class="members-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Rol</th>
+                                    <th>Estado</th>
+                                    <th>% Asistencia</th>
+                                    <th>Nota Rendimiento</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                members.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(member => {
+                    html += `
+                        <tr>
+                            <td>${member.nombre || 'Sin nombre'}</td>
+                            <td>${member.email || 'N/A'}</td>
+                            <td>${member.rol || 'miembro'}</td>
+                            <td>${ member.estadoAnioActual === 'activo' ? 'Activo' :
+                                  member.estadoAnioActual === 'perseverante' ? 'Perseverante' :
+                                  member.estadoAnioActual === 'dado_de_baja' ? 'Dado de baja' :
+                                  member.estadoAnioActual || 'N/A' }</td>
+                            <td>${(member.porcentajeAsistencia || 0).toFixed(1)}%</td>
+                            <td>${(member.notaRendimiento || 0).toFixed(1)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                historyContentDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error loading historical summary:", error);
+                throw error;
+            }
+        }
+
+        // Load historical attendance
+        async function loadHistoricalAttendance(year) {
+            try {
+                const attendanceRef = db.collection('historico').doc(year.toString()).collection('asistencia');
+                const attendanceSnapshot = await attendanceRef.get();
+
+                if (attendanceSnapshot.empty) {
+                    historyContentDiv.innerHTML = `<p>No hay registros de asistencia para el año ${year}.</p>`;
+                    return;
+                }
+
+                // Group by date
+                const attendanceByDate = {};
+                attendanceSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Extract date from document ID or data
+                    const date = data.fecha || doc.id.substring(0, 10); // Assuming ID format or date field
+                    if (!attendanceByDate[date]) {
+                        attendanceByDate[date] = [];
+                    }
+                    attendanceByDate[date].push({ id: doc.id, ...data });
+                });
+
+                let html = `
+                    <h2>Historial de Asistencia - Año ${year}</h2>
+                `;
+
+                // Sort dates descending
+                const sortedDates = Object.keys(attendanceByDate).sort().reverse();
+
+                sortedDates.forEach(date => {
+                    const records = attendanceByDate[date];
+                    const presentes = records.filter(r => r.presente === true).length;
+                    const total = records.length;
+                    const porcentaje = (total > 0) ? (presentes / total * 100) : 0;
+
+                    html += `
+                        <div class="attendance-date">
+                            <h3>${date} (${presentes}/${total} presentes - ${porcentaje.toFixed(1)}%)</h3>
+                            <ul>
+                    `;
+
+                    records.forEach(record => {
+                        html += `
+                            <li>
+                                <strong>${record.nombre || 'Sin nombre'}</strong>:
+                                ${record.presente === true ? '✅ Presente' : '❌ Ausente'}
+                                ${record.tardanzaMinutos !== undefined && record.tardanzaMinutos > 0 ? ` (${record.tardanzaMinutos} min tarde)` : ''}
+                            </li>
+                        `;
+                    });
+
+                    html += `
+                            </ul>
+                        </div>
+                    `;
+                });
+
+                historyContentDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error loading historical attendance:", error);
+                throw error;
+            }
+        }
+
+        // Load historical tables
+        async function loadHistoricalTables(year) {
+            try {
+                const tablesRef = db.collection('historico').doc(year.toString()).collection('tablas_dinamicas');
+                const tablesSnapshot = await tablesRef.get();
+
+                if (tablesSnapshot.empty) {
+                    historyContentDiv.innerHTML = `<p>No hay tablas dinámicas para el año ${year}.</p>`;
+                    return;
+                }
+
+                // Group by table ID
+                const tablesById = {};
+                tablesSnapshot.forEach(doc => {
+                    const tableId = doc.id; // This would be the table definition ID
+                    if (!tablesById[tableId]) {
+                        tablesById[tableId] = [];
+                    }
+                    tablesById[tableId].push({ id: doc.id, ...doc.data() });
+                });
+
+                let html = `<h2>Tablas Dinámicas - Año ${year}</h2>`;
+
+                // For each table, we would need to get the definition from historical definitions
+                // For now, we'll show the data we have
+                Object.keys(tablesById).forEach(tableId => {
+                    const records = tablesById[tableId];
+                    html += `
+                        <div class="historical-table">
+                            <h3>Tabla ID: ${tableId} (${records.length} registros)</h3>
+                            <div class="table-records">
+                    `;
+
+                    // Show first few records as sample
+                    const sampleSize = Math.min(5, records.length);
+                    records.slice(0, sampleSize).forEach(record => {
+                        html += `<div class="record">`;
+                        // Show some fields - in reality we'd format based on table definition
+                        Object.keys(record).forEach(key => {
+                            if (!['id', 'fechaCreacion'].includes(key)) {
+                                html += `<span><strong>${key}:</strong> ${record[key]} </span>`;
+                            }
+                        });
+                        html += `</div>`;
+                    });
+
+                    if (records.length > sampleSize) {
+                        html += `<p><em>... y ${records.length - sampleSize} registros más</em></p>`;
+                    }
+
+                    html += `</div></div>`;
+                });
+
+                historyContentDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error loading historical tables:", error);
+                throw error;
+            }
+        }
+
+        // Load historical Kahoot rankings
+        async function loadHistoricalKahoot(year) {
+            try {
+                const kahootRef = db.collection('historico').doc(year.toString()).collection('asambleas_kahoot');
+                const kahootSnapshot = await kahootRef.get();
+
+                if (kahootSnapshot.empty) {
+                    historyContentDiv.innerHTML = `<p>No hay datos de asambleas Kahoot para el año ${year}.</p>`;
+                    return;
+                }
+
+                // Group by date
+                const kahootByDate = {};
+                kahootSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const date = data.fecha || doc.id.substring(0, 10);
+                    if (!kahootByDate[date]) {
+                        kahootByDate[date] = [];
+                    }
+                    kahootByDate[date].push({ id: doc.id, ...data });
+                });
+
+                let html = `<h2>Historial Kahoot - Año ${year}</h2>`;
+
+                // Sort dates descending
+                const sortedDates = Object.keys(kahootByDate).sort().reverse();
+
+                sortedDates.forEach(date => {
+                    const records = kahootByDate[date];
+                    html += `
+                        <div class="kahoot-date">
+                            <h3>Asamblea del ${date}</h3>
+                    `;
+
+                    // Sort by points descending
+                    records.sort((a, b) => (b.puntos || 0) - (a.puntos || 0)).forEach((record, index) => {
+                        html += `
+                            <div class="kahoot-participant">
+                                <span class="rank">${index + 1}.</span>
+                                <span class="nombre">${record.nombre || 'Sin nombre'}</span>
+                                <span class="puntos">${record.puntos || 0} pts</span>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`;
+                });
+
+                historyContentDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error loading historical Kahoot:", error);
+                throw error;
+            }
+        }
+
+        // Load historical suggestions and feedback
+        async function loadHistoricalSuggestionsFeedback(year) {
+            try {
+                let html = `<h2>Sugerencias y Feedback - Año ${year}</h2>`;
+
+                // Load suggestions
+                const suggestionsRef = db.collection('historico').doc(year.toString()).collection('sugerencias');
+                const suggestionsSnapshot = await suggestionsRef.get();
+
+                html += `<div class="historical-section">
+                            <h3>Sugerencias (${suggestionsSnapshot.size})</h3>
+                        `;
+
+                if (suggestionsSnapshot.empty) {
+                    html += `<p>No hay sugerencias para este año.</p>`;
+                } else {
+                    html += `<ul>`;
+                    suggestionsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const fecha = data.fechaCreacion ?
+                            new Date(data.fechaCreacion.seconds * 1000).toLocaleString() :
+                            'Fecha desconocida';
+                        html += `
+                            <li>
+                                <strong>${data.tema || 'Sin tema'}</strong><br>
+                                <span>${data.descripcion || 'Sin descripción'}</span><br>
+                                <small>Por: ${data.nombre || 'Anónimo'} - ${fecha}</small>
+                            </li>
+                        `;
+                    });
+                    html += `</ul>`;
+                }
+                html += `</div>`;
+
+                // Load feedback
+                const feedbackRef = db.collection('historico').doc(year.toString()).collection('feedback');
+                const feedbackSnapshot = await feedbackRef.get();
+
+                html += `<div class="historical-section">
+                            <h3>Feedback (${feedbackSnapshot.size})</h3>
+                        `;
+
+                if (feedbackSnapshot.empty) {
+                    html += `<p>No hay feedback para este año.</p>`;
+                } else {
+                    html += `<ul>`;
+                    feedbackSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const fecha = data.fechaCreacion ?
+                            new Date(data.fechaCreacion.seconds * 1000).toLocaleString() :
+                            'Fecha desconocida';
+                        html += `
+                            <li>
+                                <strong>Asamblea:</strong> ${data.asambleaFecha || 'No especificada'}<br>
+                                <strong>Comentario:</strong> ${data.comentario || 'Sin comentario'}<br>
+                                <strong>Calificación:</strong> ${'⭐'.repeat(data.puntuacion || 0)}${'☆'.repeat(5 - (data.puntuacion || 0))}<br>
+                                <small>Por: ${data.nombre || 'Anónimo'} - ${fecha}</small>
+                            </li>
+                        `;
+                    });
+                    html += `</ul>`;
+                }
+                html += `</div>`;
+
+                historyContentDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error loading historical suggestions/feedback:", error);
+                throw error;
+            }
+        }
+    </script>
+
+    <style>
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+
+        .filters div {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+
+        .filters label {
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .filters select, .filters button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filters button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .filters button:hover {
+            background-color: #0056b3;
+        }
+
+        .summary-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            flex: 1;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            margin-top: 0;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0;
+        }
+
+        .members-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .members-table th, .members-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .members-table th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+
+        .members-table tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .attendance-date {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+
+        .attendance-date h3 {
+            margin-top: 0;
+        }
+
+        .attendance-date ul {
+            padding-left: 20px;
+        }
+
+        .attendance-date li {
+            margin-bottom: 5px;
+        }
+
+        .historical-table {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
+        .historical-table h3 {
+            margin-top: 0;
+        }
+
+        .table-records {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .record {
+            padding: 10px;
+            margin-bottom: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .kahoot-date {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .kahoot-date h3 {
+            margin-top: 0;
+        }
+
+        .kahoot-participant {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .kahoot-participant:last-child {
+            border-bottom: none;
+        }
+
+        .rank {
+            font-weight: bold;
+            color: #007bff;
+            min-width: 30px;
+        }
+
+        .nombre {
+            flex: 1;
+        }
+
+        .puntos {
+            font-weight: bold;
+            color: #28a745;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .historical-section {
+            margin-bottom: 30px;
+        }
+
+        .historical-section h3 {
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 8px;
+        }
+
+        .historical-section ul {
+            padding-left: 20px;
+        }
+
+        .historical-section li {
+            margin-bottom: 15px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filters div {
+                min-width: auto;
+            }
+
+            .summary-stats {
+                flex-wrap: wrap;
+            }
+
+            .stat-card {
+                min-width: 150px;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</body>
+</html>

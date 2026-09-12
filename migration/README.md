@@ -4,7 +4,7 @@ This folder contains tools and instructions to migrate existing data from Google
 
 ## Prerequisites
 - Google Service Account JSON with access to the target Google Sheet and Drive folder.
-- Firebase Service Account JSON (or use Firebase Admin SDK with sufficient privileges).
+- Firebase Service Account JSON (required for Admin SDK). Obtain from Firebase Console > Project Settings > Service Accounts > Generate new private key.
 - Node.js >= 14 or Python 3.8+ (choose your preferred language).
 
 ## Steps
@@ -30,15 +30,13 @@ Place exported CSVs in this folder under `sheets_export/`.
 
 ### 3. Run Migration Script
 - Choose language: Python (recommended) or Node.js.
-- The script will:
-  1. Read CSVs and build member documents.
-  2. Upload photos to Firebase Storage (`memberPhotos/{uid}.jpg`).
-  3. Write member documents to Firestore (`members/{uid}`) with fields: name, email, fechaNacimiento, fotoUrl (Storage download URL), rol (default "miembro"), estadoAnioActual, fechaIngresoGrupo.
-  4. Write stats, asistencia, etc. to appropriate collections.
-  5. Write configuracion to `asambleas/{fecha}`.
-  6. Write dynamic tables to `tablas_dinamicas/{anio}/{tablaId}`.
-  7. Write historical data (suggestions, feedback) to `historico/2026/...` (if migrating past year).
-  8. Optionally, create snapshots of current year data for historical archive.
+- **Use the improved script**: `migrate_members_improved.py` which properly handles your specific Excel data format:
+  1. Reads CSVs and builds member documents.
+  2. Extracts UID correctly from either "Columna 1" or "Codigo Foto" URL.
+  3. Parses dates from Excel format.
+  4. Uploads photos to Firebase Storage (`memberPhotos/{uid}.{ext}`).
+  5. Writes member documents to Firestore (`members/{uid}`) with fields: name, email, birthDate (timestamp), fotoUrl (Storage download URL), rol (default "miembro"), estadoAnioActual, fechaIngresoGrupo (timestamp), generation, etc.
+- To migrate other collections (stats, attendance, config, etc.), similar scripts can be created following the same pattern: read CSV, process data, write to appropriate Firestore collections and/or Firebase Storage.
 
 ### 4. Verify
 - Compare row counts between CSV and Firestore collections.
@@ -50,8 +48,12 @@ Place exported CSVs in this folder under `sheets_export/`.
 - Update any frontend constants if needed (currently none; all data comes from Firestore/Storage).
 
 ## Scripts
-- `migrate_members.py` — example Python script using `firebase-admin` and `gspread`.
-- `upload_photos.py` — example photo upload to Firebase Storage.
+- `migrate_members.py` — original basic Python script using `firebase-admin`.
+- `migrate_members_improved.py` — **recommended** Python script that properly handles the specific format of your exported Excel data:
+  - Extracts UID correctly from either "Columna 1" or "Codigo Foto" URL
+  - Parses dates from Excel format
+  - Handles missing data gracefully
+- `upload_photos.py` — placeholder for photo upload; the member migration script handles photo upload.
 
 ## Notes
 - The Firestore data model is defined in `PLAN_MIGRAT...md` and reflected in `firestore.rules`.
