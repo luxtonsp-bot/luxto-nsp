@@ -1,35 +1,24 @@
 name: Feliz Cumpleaños
-
 on:
   schedule:
-    - cron: '0 9 * * *'  # Cada día a las 9:00 AM UTC
+    - cron: '0 8 * * *'  # Every day at 8:00 AM UTC
   workflow_dispatch:
 
 jobs:
-  enviar-felicidades:
+  send-birthday-emails:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.x'
-
+          node-version: '20'
       - name: Install dependencies
-        run: pip install firebase-admin
-
-      - name: Setup Firebase service account
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > firebase-service-account.json
-
-      - name: Send birthday emails
+        run: npm install firebase-admin node-fetch
+      - name: Run birthday email script
         env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-        run: |
-          python scripts/send_birthday_emails.py
-
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          EMAILJS_SERVICE_ID: ${{ secrets.EMAILJS_SERVICE_ID }}
+          EMAILJS_TEMPLATE_ID: ${{ secrets.EMAILJS_TEMPLATE_ID }}
+          EMAILJS_USER_ID: ${{ secrets.EMAILJS_USER_ID }}
+        run: node scripts/send-birthday-emails.js
