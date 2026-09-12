@@ -1,50 +1,48 @@
-name: Deploy Preview
+name: Deploy Preview (rama de trabajo)
+
+# Publica cada rama de trabajo en una subcarpeta propia de gh-pages:
+#   https://luxtonsp-bot.github.io/luxto-nsp/preview/<nombre-de-la-rama>/
+# NO toca la raíz de gh-pages (ahí vive producción, de la rama main).
+# Copia SOLO el sitio estático — nunca credenciales ni datos personales.
 
 on:
   push:
-    branches:
-      - feature/firebase-migration
+    branches-ignore:
+      - main
+      - gh-pages
+  workflow_dispatch:
+
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  preview:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create environment if it doesn't exist
+      - name: Copiar sitio estático de la rama
         run: |
-          # Check if environment exists
-          response=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/environments/github-pages)
-          if [ "$response" -ne 200 ]; then
-            # Create environment
-            curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              https://api.github.com/repos/${{ github.repository }}/environments \
-              -d '{"name":"github-pages"}'
+          mkdir -p /tmp/sitio
+          cp index.html /tmp/sitio/
+          cp -r pages assets /tmp/sitio/
+
+      - name: Publicar en subcarpeta de gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git checkout -B gh-pages origin/gh-pages
+          # feature/firebase-migration -> feature-firebase-migration
+          SLUG=$(echo "${{ github.ref_name }}" | sed 's|/|-|g')
+          rm -rf "preview/$SLUG"
+          mkdir -p "preview/$SLUG"
+          cp -r /tmp/sitio/. "preview/$SLUG/"
+          git add "preview/$SLUG"
+          if git diff --cached --quiet; then
+            echo "Sin cambios que publicar"
+          else
+            git commit -m "preview: ${{ github.ref_name }} @ ${{ github.sha }}"
+            git push origin gh-pages
           fi
-
-      - name: Prepare preview folder
-        run: |
-          # Publicar SOLO el sitio estático — nunca credenciales (service account),
-          # datos personales (.xlsx con DNI), scripts de migración ni el Excel de respaldo.
-          mkdir -p preview/feature-firebase-migration
-          cp index.html preview/feature-firebase-migration/
-          cp -r pages assets preview/feature-firebase-migration/
-          rm -rf preview/feature-firebase-migration/preview
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: preview/feature-firebase-migration
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
