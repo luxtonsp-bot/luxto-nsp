@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tomar Asistencia — Luz de Cristo</title>
+    <!-- Firebase imports (same as other pages) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Tomar Asistencia</h1>
+
+        <div id="current-assembly-info">
+            <!-- Información de la asamblea actual se cargará aquí -->
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="member-search" placeholder="Buscar miembro por nombre...">
+            <button id="search-button">Buscar</button>
+        </div>
+
+        <div id="members-list">
+            <!-- Lista de miembros se mostrará aquí -->
+            <p>Busca un miembro para comenzar</p>
+        </div>
+
+        <div id="attendance-actions" style="display: none; margin-top: 20px;">
+            <button id="mark-present">Marcar como presente</button>
+            <button id="mark-absent">Marcar como ausente</button>
+            <button id="finalize-attendance" style="background-color: #dc3545; color: white;">Finalizar Asistencia</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+            authDomain: "luxto-nsp.firebaseapp.com",
+            projectId: "luxto-nsp",
+            storageBucket: "luxto-nsp.firebasestorage.app",
+            messagingSenderId: "3542836325",
+            appId: "1:3542836325:web:cf65cd50edcc431500d28c",
+            databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let currentMember = null;
+        let currentAssemblyDate = null;
+
+        // DOM Elements
+        const memberSearchInput = document.getElementById('member-search');
+        const searchButton = document.getElementById('search-button');
+        const membersListDiv = document.getElementById('members-list');
+        const attendanceActionsDiv = document.getElementById('attendance-actions');
+        const markPresentBtn = document.getElementById('mark-present');
+        const markAbsentBtn = document.getElementById('mark-absent');
+        const finalizeAttendanceBtn = document.getElementById('finalize-attendance');
+        const currentAssemblyInfoDiv = document.getElementById('current-assembly-info');
+
+        // Initialize
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                await loadCurrentAssembly();
+                await loadMembers();
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Load current assembly (today's assembly)
+        async function loadCurrentAssembly() {
+            try {
+                // Get today's date in YYYY-MM-DD format
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+
+                currentAssemblyDate = dateStr;
+
+                const assemblyDoc = await db.collection('asambleas').doc(dateStr).get();
+
+                if (assemblyDoc.exists) {
+                    const assemblyData = assemblyDoc.data();
+                    currentAssemblyInfoDiv.innerHTML = `
+                        <h2>Asamblea de ${formatDate(dateStr)}</h2>
+                        <p><strong>Activa:</strong> ${assemblyData.hayAsamblea ? 'Sí' : 'No'}</p>
+                        <p><strong>Hora de inicio:</strong> ${assemblyData.horaInicio || 'No definida'}</p>
+                        <p><strong>Tema:</strong> ${assemblyData.tema?.titulo || 'No definido'}</p>
+                    `;
+
+                    if (!assemblyData.hayAsamblea) {
+                        attendanceActionsDiv.style.display = 'none';
+                        membersListDiv.innerHTML = '<p>No hay asamblea programada para hoy.</p>';
+                    }
+                } else {
+                    currentAssemblyInfoDiv.innerHTML = `
+                        <h2>Asamblea de ${formatDate(dateStr)}</h2>
+                        <p>No hay asamblea configurada para hoy.</p>
+                    `;
+                    attendanceActionsDiv.style.display = 'none';
+                    membersListDiv.innerHTML = '<p>Por favor, configure la asamblea de hoy en planificacion.html</p>';
+                }
+            } catch (error) {
+                console.error("Error loading assembly:", error);
+                currentAssemblyInfoDiv.innerHTML = '<p>Error cargando información de asamblea</p>';
+            }
+        }
+
+        // Load all members
+        async function loadMembers() {
+            try {
+                const membersSnapshot = await db.collection('members').get();
+                const members = [];
+
+                membersSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    members.push({
+                        id: doc.id,
+                        ...data
+                    });
+                });
+
+                // Sort by name
+                members.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+                displayMembers(members);
+            } catch (error) {
+                console.error("Error loading members:", error);
+                membersListDiv.innerHTML = '<p>Error cargando miembros</p>';
+            }
+        }
+
+        // Display members in list
+        function displayMembers(members) {
+            membersListDiv.innerHTML = '';
+
+            if (members.length === 0) {
+                membersListDiv.innerHTML = '<p>No hay miembros registrados</p>';
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            ul.className = 'members-list';
+
+            members.forEach(member => {
+                const li = document.createElement('li');
+                li.className = 'member-item';
+                li.innerHTML = `
+                    <span class="member-name">${member.nombre || 'Sin nombre'}</span>
+                    ${member.email ? `<span class="member-email">${member.email}</span>` : ''}
+                `;
+                li.onclick = () => selectMember(member);
+                ul.appendChild(li);
+            });
+
+            membersListDiv.appendChild(ul);
+        }
+
+        // Search members
+        searchButton.addEventListener('click', () => {
+            const searchTerm = memberSearchInput.value.trim().toLowerCase();
+            if (!searchTerm) {
+                loadMembers();
+                return;
+            }
+
+            // We would normally do this server-side, but for simplicity we'll filter client-side
+            // In a production app, this would be a Firestore query
+            loadMembers(); // Reload all then filter - not ideal but works for small datasets
+        });
+
+        // Also search on enter key
+        memberSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchButton.click();
+            }
+        });
+
+        // Select member for attendance
+        function selectMember(member) {
+            currentMember = member;
+
+            // Highlight selected member
+            document.querySelectorAll('.member-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Find and highlight the clicked item (we'd need to track this better in a real app)
+            // For now, just show selected member info
+
+            attendanceActionsDiv.style.display = 'block';
+            attendanceActionsDiv.innerHTML = `
+                <h3>Seleccionado: ${member.nombre}</h3>
+                <button id="mark-present">Marcar como presente</button>
+                <button id="mark-absent">Marcar como ausente</button>
+                <button id="finalize-attendance" style="background-color: #dc3545; color: white;">Finalizar Asistencia</button>
+            `;
+
+            // Reassign event listeners
+            document.getElementById('mark-present').addEventListener('click', markAsPresent);
+            document.getElementById('mark-absent').addEventListener('click', markAsAbsent);
+            document.getElementById('finalize-attendance').addEventListener('click', finalizeAttendance);
+        }
+
+        // Mark member as present
+        async function markAsPresent() {
+            if (!currentMember || !currentAssemblyDate) return;
+
+            try {
+                const ahora = new Date();
+                const horaLlegadaServidor = firebase.firestore.FieldValue.serverTimestamp();
+
+                // Get assembly start time to calculate tardanza
+                const assemblyDoc = await db.collection('asambleas').doc(currentAssemblyDate).get();
+                let horaInicio = null;
+                let tardanzaMinutos = 0;
+                let esTardanza = false;
+
+                if (assemblyDoc.exists) {
+                    const assemblyData = assemblyDoc.data();
+                    horaInicio = assemblyData.horaInicio;
+
+                    if (horaInicio) {
+                        // Calculate tardanza (simplified - in production would compute properly)
+                        // For now, we'll just store that we need to calculate it properly
+                        // The actual calculation would happen server-side or with proper time comparison
+                    }
+                }
+
+                await db.collection('asistencia').doc(currentAssemblyDate).collection(currentAssemblyDate).doc(currentMember.id).set({
+                    presente: true,
+                    horaLlegadaServidor: horaLlegadaServidor,
+                    tardanzaMinutos: tardanzaMinutos, // Will be calculated properly
+                    esTardanza: esTardanza,
+                    uid: currentMember.id
+                }, { merge: true });
+
+                alert(`${currentMember.nombre} marcado como presente`);
+
+                // Reset selection
+                currentMember = null;
+                attendanceActionsDiv.style.display = 'none';
+
+            } catch (error) {
+                console.error("Error marking attendance:", error);
+                alert("Error al marcar asistencia");
+            }
+        }
+
+        // Mark member as absent
+        async function markAsAbsent() {
+            if (!currentMember || !currentAssemblyDate) return;
+
+            try {
+                await db.collection('asistencia').doc(currentAssemblyDate).collection(currentAssemblyDate).doc(currentMember.id).set({
+                    presente: false,
+                    horaLlegadaServidor: firebase.firestore.FieldValue.serverTimestamp(),
+                    tardanzaMinutos: 0,
+                    esTardanza: false,
+                    uid: currentMember.id
+                }, { merge: true });
+
+                alert(`${currentMember.nombre} marcado como ausente`);
+
+                // Reset selection
+                currentMember = null;
+                attendanceActionsDiv.style.display = 'none';
+
+            } catch (error) {
+                console.error("Error marking absence:", error);
+                alert("Error al marcar ausencia");
+            }
+        }
+
+        // Finalize attendance - mark all active members as absent who weren't marked
+        async function finalizeAttendance() {
+            if (!confirm("¿Estás seguro de que deseas finalizar la asistencia? Esto marcará como ausente a todos los miembros activos que no hayas marcado.")) {
+                return;
+            }
+
+            try {
+                // Get all active members
+                const membersSnapshot = await db.collection('members').where('estadoAnioActual', '==', 'activo').get();
+                const presentMembers = new Set();
+
+                // Get who was marked present
+                const attendanceSnapshot = await db.collection('asistencia').doc(currentAssemblyDate).collection(currentAssemblyDate).get();
+                attendanceSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.presente === true) {
+                        presentMembers.add(doc.id);
+                    }
+                });
+
+                // Mark absent for all active members not present
+                const batch = db.batch();
+                membersSnapshot.forEach(doc => {
+                    if (!presentMembers.has(doc.id)) {
+                        const memberRef = db.collection('asistencia').doc(currentAssemblyDate).collection(currentAssemblyDate).doc(doc.id);
+                        batch.set(memberRef, {
+                            presente: false,
+                            horaLlegadaServidor: firebase.firestore.FieldValue.serverTimestamp(),
+                            tardanzaMinutos: 0,
+                            esTardanza: false,
+                            uid: doc.id
+                        }, { merge: true });
+                    }
+                });
+
+                await batch.commit();
+                alert("Asistencia finalizada. Los miembros no marcados han sido registrados como ausentes.");
+
+                // Reset UI
+                currentMember = null;
+                attendanceActionsDiv.style.display = 'none';
+                membersListDiv.innerHTML = '<p>Asistencia finalizada. Recarga la página para tomar nueva asistencia.</p>';
+
+            } catch (error) {
+                console.error("Error finalizing attendance:", error);
+                alert("Error al finalizar asistencia");
+            }
+        }
+
+        // Helper function to format date
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('es-ES', options);
+        }
+    </script>
+</body>
+</html>

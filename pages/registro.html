@@ -87,7 +87,7 @@ body{
 form{width:100%;max-width:420px;display:flex;flex-direction:column;gap:20px;}
 
 .field{display:flex;flex-direction:column;gap:6px;}
-label{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.2px;}
+.label{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.2px;}
 .field-hint{font-size:12px;color:var(--muted);margin-top:-2px;}
 input{
   width:100%;padding:14px 16px;
@@ -247,151 +247,156 @@ input.valid{border-color:var(--ok);}
 <div id="toast"></div>
 
 <script type="module">
-// ── Firebase ──────────────────────────────────────────
-import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword }
-                                from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  // ── Firebase ──────────────────────────────────────────
+  import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword }
+                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, query, where, getDocs, updateDoc, doc }
+                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
-  authDomain:        "luxto-nsp.firebaseapp.com",
-  projectId:         "luxto-nsp",
-  storageBucket:     "luxto-nsp.firebasestorage.app",
-  messagingSenderId: "3542836325",
-  appId:             "1:3542836325:web:cf65cd50edcc431500d28c"
-};
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+  const firebaseConfig = {
+    apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+    authDomain:        "luxto-nsp.firebaseapp.com",
+    projectId:         "luxto-nsp",
+    storageBucket:     "luxto-nsp.firebasestorage.app",
+    messagingSenderId: "3542836325",
+    appId:             "1:3542836325:web:cf65cd50edcc431500d28c"
+  };
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
 
-// ── Apps Script URL ───────────────────────────────────
-// REEMPLAZA con tu URL desplegada en Apps Script
-const API = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
+  // ── Estado ────────────────────────────────────────────
+  let nombreVerificado = false;
+  let memberDocRef     = null;
+  let nombreRealSheet  = "";
 
-// ── Estado ────────────────────────────────────────────
-let nombreVerificado = false;
-let filaEnSheet      = null;
-let nombreRealSheet  = "";
-
-// ── Utilidades ────────────────────────────────────────
-function toast(msg, tipo="") {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.className   = "show " + tipo;
-  setTimeout(() => t.className = "", 3500);
-}
-
-function setLoading(si) {
-  document.getElementById("btnSubmit").disabled = si;
-  document.getElementById("btnSubmit").textContent = si ? "Procesando..." : (nombreVerificado ? "Crear cuenta →" : "Verificar nombre →");
-}
-
-function mostrarValidacion(estado, msg) {
-  const el = document.getElementById("validNombre");
-  el.className   = "validacion-nombre " + estado;
-  el.innerHTML   = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg;
-}
-
-// ── PASO 1: Verificar nombre contra el Sheet ──────────
-async function verificarNombre() {
-  const nombre = document.getElementById("nombre").value.trim();
-  if (!nombre || nombre.length < 4) {
-    toast("Ingresa tu nombre completo", "err"); return;
+  // ── Utilidades ────────────────────────────────────────
+  function toast(msg, tipo="") {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className   = "show " + tipo;
+    setTimeout(() => t.className = "", 3500);
   }
-  setLoading(true);
-  mostrarValidacion("loading", "Verificando en el registro del grupo...");
-  try {
-    const res  = await fetch(API, {
-      method: "POST",
-      body:   JSON.stringify({ accion: "validarMiembro", nombre })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      nombreVerificado = true;
-      filaEnSheet      = data.fila;
-      nombreRealSheet  = data.nombreReal;
-      mostrarValidacion("ok", "¡Bienvenido/a, " + data.nombreReal.split(" ")[0] + "! Ahora crea tu contraseña.");
-      document.getElementById("nombre").classList.add("valid");
-      document.getElementById("nombre").readOnly = true;
-      document.getElementById("paso2").classList.add("visible");
-      document.getElementById("paso2").style.display = "contents";
-      document.getElementById("step1").classList.add("done");
-      document.getElementById("btnSubmit").textContent = "Crear cuenta →";
-      document.getElementById("email").focus();
-    } else {
-      mostrarValidacion("err", data.error || "Nombre no encontrado.");
-      document.getElementById("nombre").classList.add("error");
-      document.getElementById("nombre").classList.remove("valid");
+
+  function setLoading(si) {
+    document.getElementById("btnSubmit").disabled = si;
+    document.getElementById("btnSubmit").textContent = si ? "Procesando..." : (nombreVerificado ? "Crear cuenta →" : "Verificar nombre →");
+  }
+
+  function mostrarValidacion(estado, msg) {
+    const el = document.getElementById("validNombre");
+    el.className   = "validacion-nombre " + estado;
+    el.innerHTML   = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg;
+  }
+
+  // ── PASO 1: Verificar nombre contra Firestore ──────────
+  async function verificarNombre() {
+    const nombre = document.getElementById("nombre").value.trim();
+    if (!nombre || nombre.length < 4) {
+      toast("Ingresa tu nombre completo", "err"); return;
     }
-  } catch(e) {
-    mostrarValidacion("err", "Error de conexión. Intenta de nuevo.");
+    setLoading(true);
+    mostrarValidacion("loading", "Verificando en el registro del grupo...");
+    try {
+      const membersRef = collection(db, "members");
+      const q = query(membersRef, where("name", "==", nombre));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        nombreVerificado = true;
+        const doc = querySnapshot.docs[0];
+        memberDocRef = doc.ref;
+        nombreRealSheet = doc.data().name;
+        mostrarValidacion("ok", "¡Bienvenido/a, " + nombreRealSheet.split(" ")[0] + "! Ahora crea tu contraseña.");
+        document.getElementById("nombre").classList.add("valid");
+        document.getElementById("nombre").readOnly = true;
+        document.getElementById("paso2").classList.add("visible");
+        document.getElementById("paso2").style.display = "contents";
+        document.getElementById("step1").classList.add("done");
+        document.getElementById("btnSubmit").textContent = "Crear cuenta →";
+        document.getElementById("email").focus();
+      } else {
+        mostrarValidacion("err", "Nombre no encontrado en el registro.");
+        document.getElementById("nombre").classList.add("error");
+        document.getElementById("nombre").classList.remove("valid");
+      }
+    } catch(e) {
+      mostrarValidacion("err", "Error de conexión. Intenta de nuevo.");
+    }
+    setLoading(false);
   }
-  setLoading(false);
-}
 
-// ── PASO 2: Crear cuenta en Firebase ─────────────────
-async function crearCuenta() {
-  const email  = document.getElementById("email").value.trim();
-  const pass   = document.getElementById("password").value;
-  const pass2  = document.getElementById("password2").value;
+  // ── PASO 2: Crear cuenta en Firebase ─────────────────
+  async function crearCuenta() {
+    if (!memberDocRef) {
+      toast("Error: No se encontró el miembro verificado", "err");
+      return;
+    }
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    toast("Ingresa un Gmail válido", "err"); return;
+    const email  = document.getElementById("email").value.trim();
+    const pass   = document.getElementById("password").value;
+    const pass2  = document.getElementById("password2").value;
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast("Ingresa un Gmail válido", "err"); return;
+    }
+    if (pass.length < 6) {
+      toast("La contraseña debe tener al menos 6 caracteres", "err"); return;
+    }
+    if (pass !== pass2) {
+      toast("Las contraseñas no coinciden", "err"); return;
+    }
+
+    setLoading(true);
+    try {
+      // Crear usuario en Firebase Auth
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      const uid  = cred.user.uid;
+
+      // Actualizar documento del miembro en Firestore con email y UID
+      await updateDoc(memberDocRef, {
+        email: email,
+        uid: uid
+      });
+
+      document.getElementById("step2").classList.add("done");
+      toast("¡Cuenta creada! Redirigiendo...", "ok");
+      setTimeout(() => window.location.href = "dashboard.html", 1800);
+
+    } catch(e) {
+      let msg = "Error al crear la cuenta.";
+      if (e.code === "auth/email-already-in-use") msg = "Este email ya tiene una cuenta. ¿Quieres iniciar sesión?";
+      if (e.code === "auth/invalid-email")        msg = "El email no es válido.";
+      if (e.code === "auth/weak-password")        msg = "La contraseña es muy débil.";
+      toast(msg, "err");
+    }
+    setLoading(false);
   }
-  if (pass.length < 6) {
-    toast("La contraseña debe tener al menos 6 caracteres", "err"); return;
-  }
-  if (pass !== pass2) {
-    toast("Las contraseñas no coinciden", "err"); return;
-  }
 
-  setLoading(true);
-  try {
-    // Crear usuario en Firebase Auth
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    const uid  = cred.user.uid;
+  // ── Submit handler ────────────────────────────────────
+  document.getElementById("formRegistro").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!nombreVerificado) {
+      await verificarNombre();
+    } else {
+      await crearCuenta();
+    }
+  });
 
-    // Guardar email y UID en el Sheet
-    await fetch(API, {
-      method: "POST",
-      body:   JSON.stringify({ accion: "guardarEmail", fila: filaEnSheet, email, uid })
-    });
-
-    document.getElementById("step2").classList.add("done");
-    toast("¡Cuenta creada! Redirigiendo...", "ok");
-    setTimeout(() => window.location.href = "dashboard.html", 1800);
-
-  } catch(e) {
-    let msg = "Error al crear la cuenta.";
-    if (e.code === "auth/email-already-in-use") msg = "Este email ya tiene una cuenta. ¿Quieres iniciar sesión?";
-    if (e.code === "auth/invalid-email")        msg = "El email no es válido.";
-    if (e.code === "auth/weak-password")        msg = "La contraseña es muy débil.";
-    toast(msg, "err");
-  }
-  setLoading(false);
-}
-
-// ── Submit handler ────────────────────────────────────
-document.getElementById("formRegistro").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!nombreVerificado) {
-    await verificarNombre();
-  } else {
-    await crearCuenta();
-  }
-});
-
-// Limpiar error al escribir
-document.getElementById("nombre").addEventListener("input", () => {
-  document.getElementById("nombre").classList.remove("error","valid");
-  document.getElementById("validNombre").className = "validacion-nombre";
-  if (nombreVerificado) {
-    nombreVerificado = false;
-    document.getElementById("nombre").readOnly = false;
-    document.getElementById("paso2").style.display = "none";
-    document.getElementById("paso2").classList.remove("visible");
-    document.getElementById("btnSubmit").textContent = "Verificar nombre →";
-  }
-});
+  // Limpiar error al escribir
+  document.getElementById("nombre").addEventListener("input", () => {
+    document.getElementById("nombre").classList.remove("error","valid");
+    document.getElementById("validNombre").className = "validacion-nombre";
+    if (nombreVerificado) {
+      nombreVerificado = false;
+      memberDocRef = null;
+      document.getElementById("nombre").readOnly = false;
+      document.getElementById("paso2").style.display = "none";
+      document.getElementById("paso2").classList.remove("visible");
+      document.getElementById("btnSubmit").textContent = "Verificar nombre →";
+    }
+  });
 </script>
 </body>
 </html>
