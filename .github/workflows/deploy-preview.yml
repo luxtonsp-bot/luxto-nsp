@@ -8,6 +8,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: read
       pages: write
@@ -30,10 +33,11 @@ jobs:
 
       - name: Prepare preview folder
         run: |
+          # Publicar SOLO el sitio estático — nunca credenciales (service account),
+          # datos personales (.xlsx con DNI), scripts de migración ni el Excel de respaldo.
           mkdir -p preview/feature-firebase-migration
-          cp -r * preview/feature-firebase-migration/ || true
-          cp -r .* preview/feature-firebase-migration/ 2>/dev/null || true
-          # Remove the preview folder from itself to avoid recursion
+          cp index.html preview/feature-firebase-migration/
+          cp -r pages assets preview/feature-firebase-migration/
           rm -rf preview/feature-firebase-migration/preview
 
       - name: Upload artifact

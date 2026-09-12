@@ -232,6 +232,12 @@ input.valid{border-color:var(--ok);}
         <label for="password2">Confirmar contraseña <span style="color:var(--o)">*</span></label>
         <input type="password" id="password2" placeholder="••••••••" autocomplete="new-password">
       </div>
+
+      <div class="field">
+        <label for="fechaNacimiento">Fecha de nacimiento <span style="color:var(--o)">*</span></label>
+        <span class="field-hint">Se usa para los cumpleaños del grupo — la edad nunca se guarda fija, se calcula al vuelo cada vez</span>
+        <input type="date" id="fechaNacimiento" required>
+      </div>
     </div>
 
     <button type="submit" class="btn-submit" id="btnSubmit">
@@ -299,15 +305,18 @@ input.valid{border-color:var(--ok);}
     setLoading(true);
     mostrarValidacion("loading", "Verificando en el registro del grupo...");
     try {
-      const membersRef = collection(db, "members");
-      const q = query(membersRef, where("name", "==", nombre));
+      // Lookup PÚBLICO solo-nombre (miembros_registro): la verificación ocurre antes de
+      // iniciar sesión (sin request.auth), así que no puede consultar members/ directamente.
+      const registroRef = collection(db, "miembros_registro");
+      const q = query(registroRef, where("nombre", "==", nombre));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
         nombreVerificado = true;
-        const doc = querySnapshot.docs[0];
-        memberDocRef = doc.ref;
-        nombreRealSheet = doc.data().name;
+        // El lookup está indexado por uid: el documento real del miembro va en members/{uid}
+        const lookupDoc = querySnapshot.docs[0];
+        memberDocRef = doc(db, "members", lookupDoc.id);
+        nombreRealSheet = lookupDoc.data().nombre;
         mostrarValidacion("ok", "¡Bienvenido/a, " + nombreRealSheet.split(" ")[0] + "! Ahora crea tu contraseña.");
         document.getElementById("nombre").classList.add("valid");
         document.getElementById("nombre").readOnly = true;
@@ -341,6 +350,10 @@ input.valid{border-color:var(--ok);}
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast("Ingresa un Gmail válido", "err"); return;
     }
+    const fechaNac = document.getElementById("fechaNacimiento").value;
+    if (!fechaNac) {
+      toast("Ingresa tu fecha de nacimiento", "err"); return;
+    }
     if (pass.length < 6) {
       toast("La contraseña debe tener al menos 6 caracteres", "err"); return;
     }
@@ -354,10 +367,12 @@ input.valid{border-color:var(--ok);}
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       const uid  = cred.user.uid;
 
-      // Actualizar documento del miembro en Firestore con email y UID
+      // Actualizar documento del miembro en Firestore con email, UID y fecha de nacimiento
+      // (la edad nunca se guarda como número fijo, sección 6.3 del plan)
       await updateDoc(memberDocRef, {
         email: email,
-        uid: uid
+        uid: uid,
+        fechaNacimiento: fechaNac
       });
 
       document.getElementById("step2").classList.add("done");

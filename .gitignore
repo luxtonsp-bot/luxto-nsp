@@ -1,0 +1,22 @@
+# Credenciales — NUNCA subir al repo
+firebase-service-account.json
+migration/firebase-service-account.json
+*.pem
+*.key
+
+# Datos personales (Excel con DNI, fotos de miembros)
+*.xlsx
+fotos_miembros/
+
+# Exportaciones de migración (datos de Sheets)
+migration/sheets_export/
+migration/photos_export/
+migration/__pycache__/
+
+# Python
+__pycache__/
+*.pyc
+
+# Node / entornos
+node_modules/
+.env

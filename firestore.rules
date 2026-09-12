@@ -1,99 +1,125 @@
 // Firestore Security Rules for LUXTO-NSP
-// Version: 1.0
-// Migration target: feature/firebase-migration
+// Modelo de colecciones: PLAN_MIGRACION_LUXTO_NSP.md (sección 3)
+// Reglas por rol: miembro / líder / coordinador (sección 4)
+// NOTA: sin allows duplicados — Firestore rechaza statements solapados.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: check if user is authenticated
+    // ── Helpers ──────────────────────────────────────────────
     function isAuth() {
       return request.auth != null;
     }
 
-    // Helper: get user's role from members collection
     function getUserRole(uid) {
       return get(/databases/$(database)/documents/members/$(uid)).data.rol;
     }
 
-    // Helper: check if user is coordinator
     function isCoordinator() {
       return isAuth() && getUserRole(request.auth.uid) == "coordinador";
     }
 
-    // Helper: check if user is leader
-    function isLeader() {
+    // Líder = tiene permisos de líder (el coordinador también hereda todo lo de líder)
+    function isLider() {
       return isAuth() && (getUserRole(request.auth.uid) == "lider" || getUserRole(request.auth.uid) == "coordinador");
     }
 
-    // Helper: check if user is member (any authenticated user)
-    function isMember() {
-      return isAuth();
-    }
-
-    // Members collection
+    // ── members ──────────────────────────────────────────────
     match /members/{uid} {
-      allow read: if isAuth();  // members can read their own? Actually we want members to read their own only? Let's allow read of own doc only.
-                    // For simplicity, allow read of all members for leaders/coordinators? We'll adjust.
-                    // According to plan: member reads own doc, leader/coordinator can read all.
-                    // We'll implement:
-                    allow read: if isAuth() && (request.auth.uid == uid || isLeader());
-                    // Update: members can update their own fields except rol and estadoAnioActual?
-                    allow update: if isAuth() && request.auth.uid == uid
-                                  && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual']);
-                    // Create: only via registration flow, but we can allow auth user to create their own doc (when signing up)
-                    allow create: if isAuth() && request.auth.uid == uid;
-                    // Delete: not allowed
-                    allow delete: if false;
-    }
-
-    // Asambleas collection (one per fecha, e.g., "2026-09-18")
-    match /asambleas/{fecha} {
-      allow read: if true; // public read for checking if there is assembly, etc.
-      allow create, update, delete: if isCoordinator();
-    }
-
-    // Asistencia collection: asistencia/{anio}/{fecha}/{uid}
-    match /asistencia/{anio}/{fecha}/{uid} {
-      allow read: if isAuth() && (request.auth.uid == uid || isLeader());
-      allow create, update: if isAuth() &&
-                            (request.auth.uid == uid ||   // member marking own attendance
-                             isLeader());                // leader marking attendance
+      // Un miembro lee solo su propio documento; líder/coordinador leen todos.
+      // El lookup público de nombres vive en miembros_registro, no aquí.
+      allow read: if isAuth() && (request.auth.uid == uid || isLider());
+      // El propio miembro puede editar sus campos, PERO nunca rol ni estadoAnioActual.
+      // El coordinador puede escribir todo (promover/degradar roles, cambiar estados).
+      allow update: if (isAuth() && request.auth.uid == uid
+                        && !request.resource.data.diff(resource.data).affectedKeys()
+                              .hasAny(['rol', 'estadoAnioActual']))
+                     || isCoordinator();
+      // Crear su propio documento (registro) y borrar, nunca.
+      allow create: if isAuth() && request.auth.uid == uid;
       allow delete: if false;
     }
 
-    // Tablas dinámicas
-    match /tablas_dinamicas/{anio}/{tablaId} {
-      allow read: if isAuth();
-      allow create, update, delete: if isCoordinator();
+    // ── miembros_registro (lookup público solo-nombre, para registro.html) ──
+    // registro.html verifica el nombre ANTES de iniciar sesión (sin request.auth),
+    // así que este lookup debe ser de lectura pública.
+    // Solo contiene {nombre}; nada de emails, fotos ni datos personales.
+    match /miembros_registro/{uid} {
+      allow read: if true;
+      allow write: if false; // solo lo escribe el service account / migración
     }
 
-    // Asambleas Kahoot snapshots
+    // ── asambleas (una por fecha, sección 3) ─────────────────
+    match /asambleas/{fecha} {
+      allow read: if true; // pública: ¿hay asamblea este sábado?
+      allow create, update, delete: if isLider(); // planificar (sección 4)
+    }
+
+    // ── asamblea/config (control en vivo del módulo Asamblea/Kahoot) ──
+    // Se conserva intacto (principio 0.7 del plan).
+    match /asamblea/{docId} {
+      allow read: if isAuth();
+      allow create, update: if isLider();
+      allow delete: if isCoordinator();
+    }
+
+    // ── asistencia (secciones 3 y 8) ─────────────────────────
+    match /asistencia/{anio}/{fecha}/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isLider());
+      // El miembro puede registrar su propia asistencia; el líder registra cualquiera.
+      allow create, update: if isAuth() && (request.auth.uid == uid || isLider());
+      allow delete: if false;
+    }
+
+    // ── tablas dinámicas (secciones 3 y 4) ───────────────────
+    match /tablas_definiciones/{tablaId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isLider();
+    }
+
+    match /tablas_dinamicas/{anio}/{tablaId}/{rowId} {
+      // La tabla con DNI (EJUTOR 2026) solo la lee el coordinador (nota seguridad, sección 3)
+      function tablaRestringida() {
+        return tablaId == 'lista-asistentes-ejutor-2026';
+      }
+      allow read: if isAuth() && (!tablaRestringida() || isCoordinator());
+      // Líderes crean/editan filas; la tabla con DNI solo la escribe el coordinador.
+      allow create, update: if (isLider() && !tablaRestringida()) || isCoordinator();
+      allow delete: if isCoordinator();
+    }
+
+    // ── snapshots de asambleas Kahoot ────────────────────────
     match /asambleas_kahoot/{fecha} {
       allow read: if isAuth();
-      allow create, update: if isCoordinator(); // leaders can create? Actually leaders create during assembly; but plan says proyector controls everything.
-                                            // We'll allow leaders and coordinators.
-                    allow create, update: if isLeader();
-                    allow delete: if false;
+      allow create, update: if isLider();
+      allow delete: if false;
     }
 
-    // Histórico collections (read only after creation)
+    // ── historico (sección 10, inmutable) ────────────────────
+    // Solo el coordinador puede escribir durante el cierre de año.
+    // Ninguna pantalla debe ofrecer editar estos datos después.
     match /historico/{anio}/{collection}/{docId} {
       allow read: if isAuth();
-      allow create, update, delete: if false; // immutable after creation
+      allow create, update: if isCoordinator();
+      allow delete: if false;
     }
 
-    // Sugerencias y Feedback (live collections)
+    // ── sugerencias y feedback (colección viva del año en curso) ──
     match /sugerencias/{id} {
       allow read: if isAuth();
-      allow create: if isMember(); // any member can create a suggestion
-      allow update, delete: if isAuth() && request.auth.uid == resource.data.uid; // only owner can update/delete? Actually suggestions might be immutable after creation? We'll allow update/delete by owner.
-                    allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator());
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator());
     }
 
     match /feedback/{id} {
       allow read: if isAuth();
-      allow create: if isMember();
+      allow create: if isAuth();
       allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator());
     }
+
+    // Colecciones planas de la primera migración (attendance, attendance_log,
+    // config, caporales_2026, polladas_pastoral, votaciones_aniversario,
+    // ejutor_2026_attendees, stats_dashboard): sin reglas → denegadas por defecto.
+    // Quedan solo como respaldo; el source de verdad ahora es el modelo de arriba.
   }
 }
