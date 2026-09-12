@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nuestra Historia — Grupo Juvenil Luz de Cristo</title>
+<meta name="description" content="Cronología completa del Grupo Juvenil Luz de Cristo desde su fundación en 2010 hasta hoy. Conoce a todos los que han sido parte de esta historia.">
+<meta property="og:title" content="Nuestra Historia — Grupo Juvenil Luz de Cristo">
+<meta property="og:description" content="Desde 2010: toda la historia del grupo juvenil, sus directivas y servidores.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="../assets/images/foto_grupo.jpg">
+<meta name="theme-color" content="#F5C518">
+<link rel="icon" href="../assets/images/logo_luxto.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@400;500;600;700&family=Fraunces:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --amarillo:        #F5C518;
+  --amarillo-dark:   #d4a912;
+  --amarillo-soft:   #fdf3c4;
+  --naranja:         #C4703A;
+  --naranja-dark:    #a35a28;
+  --naranja-soft:    #f5d8c0;
+  --naranja-glow:    #e08a4e;
+  --rosa:            #C4869A;
+  --rosa-soft:       #f3dde4;
+  --azul:            #4A8FA8;
+  --azul-dark:       #2f6f87;
+  --azul-deep:       #1f4f63;
+  --azul-soft:       #d6ebf2;
+  --negro:           #2a2218;
+  --negro-warm:      #3a2e1f;
+  --texto:           #1c1814;
+  --texto-suave:     #5e554a;
+  --gris:            #8d8478;
+  --gris-claro:      #e8e2d4;
+  --crema:           #FBF7EE;
+  --crema-warm:      #F5EFE0;
+  --crema-glow:      #FFF8E7;
+  --blanco:          #ffffff;
+  --dorado:          #c9a227;
+  --dorado-soft:     rgba(201,162,39,.15);
+  --grad-luz:        linear-gradient(135deg, #FFF8E7 0%, #FBE7B6 40%, #F5C518 100%);
+  --grad-calor:      linear-gradient(135deg, #F5C518 0%, #e09a2e 50%, #C4703A 100%);
+  --grad-aurora:     linear-gradient(135deg, #FBF7EE 0%, #fdecc8 50%, #f3d3a8 100%);
+  --grad-noche-calida: linear-gradient(160deg, #2a2218 0%, #3a2e1f 55%, #553e22 100%);
+  --sombra-sm:    0 2px 10px rgba(20,17,13,.05);
+  --sombra:       0 16px 50px -18px rgba(20,17,13,.18);
+  --sombra-lg:    0 30px 80px -22px rgba(20,17,13,.25);
+  --sombra-warm:  0 16px 40px -12px rgba(196,112,58,.40);
+  --sombra-glow:  0 18px 50px -14px rgba(245,197,24,.55);
+  --radio:    20px;
+  --radio-sm: 14px;
+  --radio-lg: 32px;
+  --t-fast:   .2s cubic-bezier(.4,0,.2,1);
+  --t-base:   .4s cubic-bezier(.4,0,.2,1);
+  --t-slow:   .7s cubic-bezier(.4,0,.2,1);
+  --t-spring: .55s cubic-bezier(.34, 1.4, .64, 1);
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--crema);
+  color: var(--texto);
+  overflow-x: hidden;
+  line-height: 1.65;
+  font-size: 16px;
+}
+::selection { background: var(--azul); color: var(--blanco); }
+img { max-width: 100%; display: block; }
+.container { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+.section-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 3.5px; text-transform: uppercase;
+  color: var(--naranja); margin-bottom: 18px;
+  display: inline-flex; align-items: center; gap: 14px;
+}
+.section-label::before {
+  content: ''; width: 36px; height: 2px;
+  background: currentColor; border-radius: 2px;
+}
+.section-title {
+  font-family: 'Lora', serif;
+  font-size: clamp(34px, 4.6vw, 56px);
+  font-weight: 600; line-height: 1.1;
+  letter-spacing: -0.015em; color: var(--texto);
+}
+.section-title em {
+  font-style: italic; font-weight: 500; color: var(--naranja); position: relative;
+}
+.section-title em::after {
+  content: ''; position: absolute;
+  left: 0; right: 0; bottom: -6px; height: 10px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 10' preserveAspectRatio='none'><path d='M2 6 Q 50 0, 100 5 T 198 4' stroke='%23F5C518' stroke-width='3' fill='none' stroke-linecap='round'/></svg>") no-repeat center / 100% 100%;
+  opacity: .9;
+}
+.icon { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 32px; border-radius: 100px;
+  font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
+  text-decoration: none; cursor: pointer; border: none;
+  transition: all var(--t-base); position: relative; white-space: nowrap;
+}
+.btn-primary { background: var(--grad-calor); background-size: 200% 200%; background-position: 0% 50%; color: var(--blanco); box-shadow: var(--sombra-warm); }
+.btn-secondary { background: rgba(255,255,255,.6); color: var(--texto); border: 1.5px solid var(--texto); backdrop-filter: blur(8px); }
+.btn-secondary:hover { background: var(--texto); color: var(--crema); transform: translateY(-2px); }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: 0 32px; transition: all .5s cubic-bezier(.4,0,.2,1); }
+nav.scrolled { background: rgba(255,251,238,.25); backdrop-filter: blur(48px) saturate(2.4) brightness(1.05); -webkit-backdrop-filter: blur(48px) saturate(2.4) brightness(1.05); box-shadow: 0 8px 40px -12px rgba(20,17,13,.10), 0 0 0 1px rgba(245,197,24,.06); border-bottom: none; border-radius: 0 0 20px 20px; margin: 0 12px; padding: 0 20px; }
+nav.scrolled .nav-inner { height: 64px; } nav.scrolled .nav-logo { gap: 10px; } nav.scrolled .nav-logo-text { font-size: 17px; }
+.nav-inner { max-width: 1240px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 84px; transition: all .5s cubic-bezier(.4,0,.2,1); position: relative; }
+.nav-links { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; list-style: none; background: rgba(255,255,255,.55); border: 1px solid rgba(245,197,24,.18); padding: 6px; border-radius: 100px; backdrop-filter: blur(10px); box-shadow: 0 6px 20px -10px rgba(20,17,13,.10); }
+.nav-logo { display: flex; align-items: center; gap: 14px; text-decoration: none; transition: transform var(--t-base); overflow: visible; }
+.nav-logo:hover { transform: scale(1.02); }
+.nav-logo img { width: 68px; height: 68px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(245,197,24,.35)); transition: all var(--t-base); } nav.scrolled .nav-logo img { width: 48px; height: 48px; }
+.nav-logo:hover img { transform: rotate(-8deg) scale(1.06); }
+.nav-logo-text { font-family: 'Lora', serif; font-weight: 600; font-size: 19px; color: var(--texto); line-height: 1.1; transition: all .5s cubic-bezier(.4,0,.2,1); }
+.nav-logo-sub { font-size: 10px; color: var(--naranja); font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; margin-top: 2px; text-decoration: none; display: block; transition: all .5s cubic-bezier(.4,0,.2,1); cursor: pointer; padding: 2px 8px; border-radius: 100px; } .nav-logo-sub:hover { color: var(--naranja-dark); background: var(--amarillo-soft); } nav.scrolled .nav-logo-sub { font-size: 9px; letter-spacing: 1.2px; margin-top: 0; opacity: .85; }
+.nav-links a { text-decoration: none; color: var(--texto); font-size: 14px; font-weight: 600; padding: 9px 18px; border-radius: 100px; transition: all var(--t-fast); position: relative; }
+.nav-links a:hover { color: var(--negro); background: var(--amarillo-soft); }
+.nav-cta { padding: 11px 22px !important; font-size: 13.5px !important; }
+.hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; flex-direction: column; gap: 5px; }
+.hamburger span { display: block; width: 24px; height: 2px; background: var(--texto); border-radius: 2px; transition: all var(--t-base); }
+.mobile-menu { position: fixed; top: 84px; left: 16px; right: 16px; background: var(--blanco); border-radius: var(--radio); padding: 20px; box-shadow: var(--sombra-lg); display: none; flex-direction: column; gap: 4px; z-index: 999; }
+.mobile-menu a { text-decoration: none; color: var(--texto); font-weight: 500; padding: 14px 16px; border-radius: 12px; transition: background var(--t-fast); }
+.mobile-menu a:hover { background: var(--crema-warm); }
+.mobile-menu.open { display: flex; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes float { 0%,100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-20px) translateX(10px); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes floatLogo { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-10px) rotate(3deg); } }
+@keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 4px rgba(196,112,58,.18); } 50% { box-shadow: 0 0 0 8px rgba(196,112,58,.05); } }
+@keyframes flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+.fade-in { opacity: 0; transform: translateY(30px); transition: opacity .9s ease, transform .9s ease; }
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+.fade-in-delay-1 { transition-delay: .12s; }
+.fade-in-delay-2 { transition-delay: .24s; }
+.fade-in-delay-3 { transition-delay: .36s; }
+
+#historia-hero { position: relative; min-height: 70vh; padding: 140px 32px 100px; background: var(--crema); overflow: hidden; }
+.historia-hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 85% 15%, rgba(245,197,24,.12), transparent 55%), radial-gradient(ellipse at 10% 80%, rgba(196,112,58,.10), transparent 60%); pointer-events: none; }
+.historia-hero-inner { position: relative; z-index: 2; max-width: 1240px; margin: 0 auto; text-align: center; }
+.historia-hero-inner .badge { margin-bottom: 24px; animation: fadeUp .8s ease both; }
+.badge { display: inline-flex; align-items: center; gap: 10px; background: #c9a84c; color: #fff; border: 2px solid #a07830; font-size: 12px; font-weight: 700; padding: 9px 18px; border-radius: 100px; box-shadow: 0 4px 12px rgba(201,162,39,.35); }
+.badge::before { content:''; width: 7px; height: 7px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,.3); animation: pulse-dot 2.4s ease-in-out infinite; }
+.historia-hero-title { font-family: 'Cinzel', serif; font-size: clamp(48px, 7vw, 88px); font-weight: 600; line-height: 1.02; letter-spacing: 0.08em; color: var(--texto); margin-bottom: 24px; animation: fadeUp .9s .1s ease both; text-transform: uppercase; }
+.historia-hero-title em { font-style: normal; font-weight: 500; background: var(--grad-calor); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.historia-hero-subtitle { font-size: 18px; color: #3a2a0a; line-height: 1.65; max-width: 680px; margin: 0 auto 40px; animation: fadeUp 1s .2s ease both; font-weight: 500; }
+.historia-hero-stats { display: flex; gap: 60px; justify-content: center; margin-top: 50px; padding-top: 50px; border-top: 1px solid var(--gris-claro); animation: fadeUp 1.2s .4s ease both; }
+.stat-num { font-family: 'Cinzel', serif; font-size: 44px; font-weight: 700; color: #b8860b; line-height: 1; letter-spacing: 0.02em; }
+.stat-label { font-size: 12px; color: #3a3a3a; margin-top: 8px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; }
+.stat { position: relative; cursor: default; }
+.stat::after { content: ''; position: absolute; bottom: -10px; left: 0; width: 0; height: 2px; background: var(--grad-calor); border-radius: 2px; transition: width var(--t-spring); }
+.stat:hover::after { width: 100%; }
+.stat:hover .stat-num { background: var(--grad-calor); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; transition: all var(--t-base); }
+
+#fundacion { padding: 120px 0; background: var(--grad-noche-calida); position: relative; overflow: hidden; }
+.fundacion-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 15% 20%, rgba(245,197,24,.25), transparent 55%), radial-gradient(ellipse at 85% 80%, rgba(196,112,58,.35), transparent 60%); pointer-events: none; }
+.fundacion-inner { position: relative; z-index: 2; max-width: 900px; margin: 0 auto; text-align: center; }
+.fundacion-inner .section-label { color: var(--amarillo); }
+.fundacion-inner .section-label::before { background: var(--amarillo); }
+.fundacion-inner .section-title { color: var(--blanco); font-family: 'Cinzel', serif; text-transform: uppercase; letter-spacing: 0.05em; }
+.fundacion-inner .section-title em { color: var(--amarillo); font-style: normal; }
+.fundacion-inner > p { color: rgba(255,255,255,.78); font-size: 17px; margin-top: 20px; line-height: 1.75; }
+.fechas-fundadora { display: flex; justify-content: center; gap: 40px; margin-top: 60px; flex-wrap: wrap; }
+.fecha-card { background: rgba(255,255,255,.06); backdrop-filter: blur(20px); border: 1px solid rgba(245,197,24,.25); border-radius: var(--radio); padding: 40px 32px; text-align: center; min-width: 260px; transition: all var(--t-base); position: relative; overflow: hidden; }
+.fecha-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--grad-calor); }
+.fecha-card:hover { background: rgba(255,255,255,.10); transform: translateY(-6px); border-color: rgba(245,197,24,.4); }
+.fecha-card-icon { width: 64px; height: 64px; border-radius: 50%; background: var(--dorado-soft); border: 2px solid var(--dorado); color: var(--amarillo); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.fecha-card-icon .icon { width: 30px; height: 30px; stroke-width: 1.8; }
+.fecha-card-num { font-family: 'Cinzel', serif; font-size: 13px; font-weight: 600; color: var(--amarillo); margin-bottom: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+.fecha-card-title { font-family: 'Cinzel', serif; font-size: 28px; font-weight: 700; color: var(--blanco); margin-bottom: 12px; letter-spacing: 0.03em; }
+.fecha-card-desc { font-size: 14px; color: rgba(255,255,255,.88); line-height: 1.6; }
+
+#cronologia { padding: 120px 0; background: var(--crema); position: relative; overflow: hidden; }
+.cronologia-header { text-align: center; max-width: 720px; margin: 0 auto 80px; }
+.periodo { margin-bottom: 100px; }
+.periodo:last-child { margin-bottom: 0; }
+.periodo-header { display: flex; align-items: center; gap: 24px; margin-bottom: 40px; }
+.periodo-badge { background: linear-gradient(135deg, var(--naranja-dark), var(--naranja)); color: var(--blanco); font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; padding: 12px 28px; border-radius: 4px; white-space: nowrap; box-shadow: 0 8px 24px rgba(196,112,58,.35); letter-spacing: 0.08em; text-transform: uppercase; position: relative; }
+.periodo-badge::before { content: ''; position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 4px; height: 60%; background: rgba(255,255,255,.4); border-radius: 2px; }
+.periodo-divider { flex: 1; height: 2px; background: linear-gradient(90deg, var(--dorado), transparent); border-radius: 2px; }
+.periodo-title { font-family: 'Cinzel', serif; font-size: 28px; font-weight: 600; color: var(--texto); margin-bottom: 10px; letter-spacing: 0.03em; text-transform: uppercase; }
+.periodo-desc { font-size: 15px; color: var(--texto-suave); line-height: 1.7; max-width: 700px; margin-bottom: 32px; }
+
+.personas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+.persona-card { background: var(--blanco); border-radius: var(--radio); padding: 0; border: 1px solid var(--gris-claro); transition: all var(--t-base); overflow: hidden; position: relative; box-shadow: var(--sombra-sm); }
+.persona-card:hover { transform: translateY(-6px); box-shadow: var(--sombra); border-color: var(--dorado); }
+.persona-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--grad-calor); opacity: 0; transition: opacity var(--t-base); }
+.persona-card:hover::before { opacity: 1; }
+
+.persona-avatar-wrap { position: relative; padding: 24px 24px 16px; text-align: center; background: linear-gradient(180deg, var(--crema-warm) 0%, var(--blanco) 100%); }
+.persona-avatar { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 16px; object-fit: cover; border: 3px solid var(--dorado); box-shadow: 0 8px 24px rgba(201,162,39,.25), inset 0 0 0 4px rgba(201,162,39,.1); overflow: hidden; background: var(--amarillo-soft); display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-size: 32px; font-weight: 600; color: var(--naranja-dark); }
+.persona-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.persona-cargo-badge { position: absolute; top: 12px; right: 12px; background: var(--naranja); color: var(--blanco); font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; border-radius: 100px; }
+
+.persona-info { padding: 0 20px 20px; text-align: center; }
+.persona-nombre { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 600; color: var(--texto); margin-bottom: 4px; letter-spacing: 0.02em; }
+.persona-rol { font-size: 12px; color: var(--naranja); font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+
+.persona-card.memoria { border-color: #bbb; }
+.persona-card.memoria::before { background: linear-gradient(90deg, #999, #666); opacity: 1; }
+.persona-card.memoria:hover { border-color: #999; }
+.persona-card.memoria .persona-avatar { border-color: #999; box-shadow: 0 8px 24px rgba(0,0,0,.2); background: #eee; color: #555; }
+.persona-card.memoria .persona-cargo-badge { background: #777; }
+.persona-card.memoria .persona-nombre { color: #444; font-weight: 600; }
+.persona-card.memoria .persona-rol { color: #777; }
+.persona-card.memoria .memoria-vela { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font-size: 20px; animation: flicker 3s ease-in-out infinite; }
+
+.asesor-card .persona-avatar { background: var(--azul); color: white; border-color: var(--azul-dark); }
+.asesor-card:hover { border-color: var(--azul); }
+.asesor-card::before { background: var(--azul); opacity: 1; }
+.asesor-card .persona-cargo-badge { background: var(--azul); }
+
+.equipo-section { margin-top: 28px; padding-top: 28px; border-top: 1px dashed var(--dorado); }
+.equipo-label { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--dorado); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.equipo-label::before { content: ''; width: 20px; height: 2px; background: var(--dorado); border-radius: 2px; }
+.equipo-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.equipo-persona { display: inline-flex; align-items: center; gap: 8px; background: var(--blanco); padding: 8px 16px; border-radius: 100px; font-size: 13px; font-weight: 500; color: var(--texto); border: 1px solid var(--gris-claro); transition: all var(--t-fast); }
+.equipo-persona:hover { background: var(--crema-warm); border-color: var(--dorado); transform: translateY(-2px); }
+.equipo-persona-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 2px solid var(--dorado); }
+.equipo-persona-initials { width: 28px; height: 28px; border-radius: 50%; background: var(--naranja); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; border: 2px solid var(--naranja); }
+
+#historia-coro { padding: 120px 0; background: var(--crema); position: relative; overflow: hidden; }
+#historia-coro::before { content: ''; position: absolute; top: 60px; right: 8%; width: 80px; height: 80px; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><path fill='%234A8FA8' d='M30 4l7 18 19 1-15 12 5 19-16-11-16 11 5-19L4 23l19-1z' opacity='.5'/></svg>") no-repeat center / contain; animation: spin 22s linear infinite; }
+#historia-coro .section-label { color: var(--azul-dark); }
+#historia-coro .section-title em { color: var(--azul-dark); }
+#historia-coro .section-title em::after { background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 10' preserveAspectRatio='none'><path d='M2 6 Q 50 0, 100 5 T 198 4' stroke='%232f6f87' stroke-width='2.5' fill='none' stroke-linecap='round'/></svg>") no-repeat center / 100% 100%; }
+.coro-historia-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 70px; align-items: start; margin-top: 60px; }
+.coro-historia-texto { font-size: 17px; color: var(--texto-suave); line-height: 1.8; margin-bottom: 36px; }
+.coro-historia-texto strong { color: var(--texto); font-weight: 600; }
+.coro-timeline-wrap { position: sticky; top: 110px; }
+.coro-timeline-title { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; margin-bottom: 28px; color: var(--texto); }
+.coro-timeline { position: relative; padding-left: 28px; border-left: 2px solid var(--azul-soft); }
+.coro-timeline-item { position: relative; padding-bottom: 24px; }
+.coro-timeline-item::before { content:''; position: absolute; left: -36px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: var(--azul); border: 3px solid var(--crema); box-shadow: 0 0 0 3px var(--azul-soft); }
+.coro-timeline-year { font-family: 'Lora', serif; font-size: 15px; font-weight: 700; color: var(--azul-dark); margin-bottom: 4px; }
+.coro-timeline-desc { font-size: 13.5px; color: var(--texto-suave); line-height: 1.6; }
+.coro-servicios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 32px; }
+.coro-servicio-card { display: flex; gap: 12px; align-items: flex-start; background: var(--blanco); padding: 18px; border-radius: var(--radio-sm); border: 1px solid var(--gris-claro); transition: all var(--t-base); }
+.coro-servicio-card:hover { transform: translateY(-3px); box-shadow: var(--sombra-sm); border-color: var(--azul-soft); }
+.coro-servicio-icon { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; background: var(--azul-soft); color: var(--azul-dark); display: inline-flex; align-items: center; justify-content: center; transition: all var(--t-spring); }
+.coro-servicio-icon .icon { width: 20px; height: 20px; }
+.coro-servicio-card:hover .coro-servicio-icon { transform: scale(1.08) rotate(-4deg); }
+.coro-servicio-nombre { font-family: 'Lora', serif; font-size: 15px; font-weight: 600; color: var(--texto); margin-bottom: 3px; }
+.coro-servicio-desc { font-size: 12px; color: var(--texto-suave); line-height: 1.5; }
+.coro-contacto-card { background: var(--azul-soft); border-radius: var(--radio); padding: 28px; border-left: 4px solid var(--azul); margin-top: 32px; }
+.coro-contacto-titulo { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: var(--azul-deep); margin-bottom: 6px; }
+.coro-contacto-sub { font-size: 13.5px; color: var(--texto-suave); line-height: 1.55; margin-bottom: 18px; }
+.btn-whatsapp { display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 12px 22px; border-radius: 100px; text-decoration: none; font-weight: 600; font-size: 14px; transition: all var(--t-base); box-shadow: 0 10px 24px -8px rgba(37,211,102,.5); }
+.btn-whatsapp:hover { transform: translateY(-2px); background: #1fbb59; }
+.coro-foto-wrap { position: relative; }
+.coro-foto { width: 100%; border-radius: var(--radio-lg); overflow: hidden; box-shadow: var(--sombra); border: 4px solid var(--azul-soft); }
+.coro-foto img { width: 100%; height: 400px; object-fit: cover; }
+.coro-foto-badge { position: absolute; bottom: 16px; left: -16px; background: var(--blanco); border-radius: 100px; padding: 12px 22px 12px 14px; box-shadow: var(--sombra); display: flex; align-items: center; gap: 10px; border: 2px solid var(--azul); }
+.coro-foto-badge-icon { width: 36px; height: 36px; background: var(--azul); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; }
+.coro-foto-badge-icon .icon { width: 18px; height: 18px; stroke-width: 2; }
+.coro-foto-badge-text { font-size: 13px; font-weight: 600; color: var(--texto); font-family: 'Lora', serif; }
+.coro-foto-badge-sub { font-size: 10px; color: var(--azul-dark); font-weight: 600; margin-top: 1px; }
+
+footer { position: relative; background: var(--grad-noche-calida); color: rgba(255,248,231,.78); padding: 100px 0 36px; overflow: hidden; }
+footer::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 10% 0%, rgba(245,197,24,.18), transparent 50%), radial-gradient(ellipse at 90% 100%, rgba(196,112,58,.20), transparent 55%); pointer-events: none; }
+footer .container { position: relative; z-index: 2; }
+.footer-biblica { text-align: center; margin-bottom: 60px; padding-bottom: 60px; border-bottom: 1px solid rgba(245,197,24,.12); }
+.footer-biblica-text { font-family: 'Lora', serif; font-style: italic; font-size: 18px; color: rgba(255,248,231,.6); line-height: 1.7; max-width: 600px; margin: 0 auto 10px; }
+.footer-biblica-ref { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--amarillo); opacity: .6; }
+.footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 60px; margin-bottom: 60px; }
+.footer-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.footer-logo img { width: 56px; height: 56px; filter: drop-shadow(0 6px 16px rgba(245,197,24,.45)); }
+.footer-logo-name { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; color: var(--crema-glow); line-height: 1.15; }
+.footer-logo-sub { font-size: 11px; color: var(--amarillo); font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; margin-top: 5px; }
+.footer-desc { font-size: 14.5px; line-height: 1.75; color: rgba(255,248,231,.65); max-width: 340px; margin-bottom: 18px; }
+.footer-lema { display: inline-block; font-family: 'Lora', serif; font-style: italic; font-size: 15px; color: var(--amarillo); background: rgba(245,197,24,.10); border: 1px solid rgba(245,197,24,.28); padding: 8px 16px; border-radius: 100px; }
+.footer-col-title { font-size: 11px; font-weight: 700; letter-spacing: 2.2px; text-transform: uppercase; color: var(--amarillo); margin-bottom: 20px; }
+.footer-links { list-style: none; }
+.footer-links li { margin-bottom: 12px; }
+.footer-links a { color: rgba(255,248,231,.72); text-decoration: none; font-size: 14.5px; font-weight: 500; transition: all var(--t-fast); }
+.footer-links a:hover { color: var(--crema-glow); padding-left: 4px; }
+.footer-redes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.footer-red { width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: rgba(255,248,231,.7); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); transition: all var(--t-base); }
+.footer-red:hover { transform: translateY(-3px); }
+.footer-red-ig:hover { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); border-color: transparent; color: white; }
+.footer-red-fb:hover { background: #1877F2; border-color: transparent; color: white; }
+.footer-red-tt:hover { background: #000000; border-color: transparent; color: white; }
+.footer-red-yt:hover { background: #FF0000; border-color: transparent; color: white; }
+.footer-bottom { border-top: 1px solid rgba(245,197,24,.15); padding-top: 30px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; font-size: 13px; color: rgba(255,248,231,.55); }
+.footer-bottom span:last-child { color: var(--amarillo); font-style: italic; font-family: 'Lora', serif; }
+
+@media (max-width: 980px) {
+  .nav-links { display: none; }
+  .nav-cta { display: none; }
+  .hamburger { display: flex; }
+  .historia-hero-stats { gap: 28px; }
+  .stat-num { font-size: 32px; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
+  .fechas-fundadora { gap: 24px; }
+  .personas-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+}
+@media (max-width: 640px) {
+  .container { padding: 0 22px; }
+  .historia-hero-stats { flex-direction: column; gap: 24px; align-items: center; }
+  .personas-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
+  .footer-grid { grid-template-columns: 1fr; }
+  .periodo-badge { font-size: 12px; padding: 10px 20px; }
+  .periodo-title { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="navbar">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-logo">
+      <img src="../assets/images/logo_luxto.png" alt="Logo Luz de Cristo">
+      <div>
+        <div class="nav-logo-text">Luz de Cristo</div>
+        <span class="nav-logo-sub">Villa Jardín · San Luis · Lima</span>
+      </div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Inicio</a></li>
+      <li><a href="../index.html#quienes">Quiénes somos</a></li>
+      <li><a href="historia.html">Nuestra historia</a></li>
+      <li><a href="../index.html#coro">Coro</a></li>
+    </ul>
+    <a href="login.html" class="btn btn-primary nav-cta" style="padding:10px 22px;font-size:14px;">Portal de miembros</a>
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="../index.html" onclick="closeMenu()">Inicio</a>
+  <a href="../index.html#quienes" onclick="closeMenu()">Quiénes somos</a>
+  <a href="historia.html" onclick="closeMenu()">Nuestra historia</a>
+  <a href="../index.html#coro" onclick="closeMenu()">Coro Parroquial</a>
+  <div style="height:1px;background:var(--gris-claro);margin:8px 0"></div>
+  <a href="login.html" class="btn btn-primary" style="margin-top:4px;justify-content:center;">Portal de miembros →</a>
+</div>
+
+<section id="historia-hero">
+  <div class="historia-hero-bg"></div>
+  <div class="historia-hero-inner">
+    <div class="badge">Desde 2010 hasta hoy</div>
+    <h1 class="historia-hero-title">Nuestra <em>Historia</em></h1>
+    <p class="historia-hero-subtitle">Más de 15 años de fe, servicio y fraternidad. Cada generación dejó su huella en esta historia de luz y esperanza.</p>
+    <div class="historia-hero-stats">
+      <div class="stat"><div class="stat-num">2010</div><div class="stat-label">Año de fundación</div></div>
+      <div class="stat"><div class="stat-num">9</div><div class="stat-label">Períodos directivos</div></div>
+      <div class="stat"><div class="stat-num">+50</div><div class="stat-label">Servidores</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="fundacion">
+  <div class="fundacion-bg"></div>
+  <div class="fundacion-inner container">
+    <p class="section-label">Orígenes</p>
+    <h2 class="section-title">Cómo nació <em>Luz de Cristo</em></h2>
+    <p>Todo comenzó con jóvenes que culminaron su Confirmación y querían seguir creciendo en la fe juntos. Así nació la necesidad de crear un espacio propio dentro de la Parroquia Nuestra Señora de la Piedad.</p>
+    <div class="fechas-fundadora">
+      <div class="fecha-card">
+        <div class="fecha-card-icon">
+          <svg class="icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+        </div>
+        <div class="fecha-card-num">15 de noviembre</div>
+        <div class="fecha-card-title">2010</div>
+        <div class="fecha-card-desc">Fecha oficial de creación del grupo juvenil. Un grupo de jóvenes post-Confirmación decide quedarse unidos y formar una comunidad de fe.</div>
+      </div>
+      <div class="fecha-card">
+        <div class="fecha-card-icon">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+        </div>
+        <div class="fecha-card-num">30 de abril</div>
+        <div class="fecha-card-title">2011</div>
+        <div class="fecha-card-desc">Se instituye oficialmente el grupo con el nombre "Luz de Cristo", adoptando como identidad el versículo de Mateo 5:13-16.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cronologia">
+  <div class="container">
+    <div class="cronologia-header fade-in">
+      <p class="section-label">Cronología</p>
+      <h2 class="section-title">Todas las <em>directivas</em></h2>
+      <p style="font-size:17px;color:var(--texto-suave);max-width:560px;margin:18px auto 0;line-height:1.7;">Conoce a los responsables de cada período. Cada coordinator, subcoordinador y asesor dejó su huella en esta historia.</p>
+    </div>
+
+    <div class="periodo fade-in">
+      <div class="periodo-header">
+        <span class="periodo-badge">2011 - 2012</span>
+        <div class="periodo-divider"></div>
+      </div>
+      <div class="periodo-title">Primera directiva</div>
+      <p class="periodo-desc">El primer grupo encargado de dar forma al sueño de crear el grupo juvenil. Encargados de organizar reuniones, actividades y mantener la llama encendida desde el inicio.</p>
+      <div class="personas-grid">
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar">
+              <img src="../assets/images/Diana_Herreros.jpeg" alt="Diana Herreros" onerror="this.style.display='none';this.parentElement.innerHTML='DH'">
+            </div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Diana Herreros</div>
+            <div class="persona-rol">Encargada</div>
+          </div>
+        </div>
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Antonio_Sedano.jpeg" alt="Antonio Sedano" onerror="this.style.display='none';this.parentElement.innerHTML='AN'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Antonio Sedano</div>
+            <div class="persona-rol">Encargado</div>
+          </div>
+        </div>
+        <div class="persona-card memoria">
+          <div class="persona-avatar-wrap">
+            <div class="memoria-vela">🕯️</div>
+            <div class="persona-cargo-badge" style="background:var(--gris);">✝ 2025</div>
+            <div class="persona-avatar">
+              <img src="../assets/images/Omar_Naveda.jpeg" alt="Omar Naveda" onerror="this.style.display='none';this.parentElement.innerHTML='ON'">
+            </div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Omar Naveda</div>
+            <div class="persona-rol">Encargado</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="periodo fade-in">
+      <div class="periodo-header">
+        <span class="periodo-badge">2012 - 2013</span>
+        <div class="periodo-divider"></div>
+      </div>
+      <div class="periodo-title">Continuidad y crecimiento</div>
+      <p class="periodo-desc">Se mantiene la estructura del grupo mientras se consolidan las reuniones semanales de los sábados, conocidas ahora como "Sábados de Luxto".</p>
+      <div class="personas-grid">
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Antonio_Sedano.jpeg" alt="Antonio Sedano" onerror="this.style.display='none';this.parentElement.innerHTML='AN'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Antonio Sedano</div>
+            <div class="persona-rol">Encargado</div>
+          </div>
+        </div>
+        <div class="persona-card memoria">
+          <div class="persona-avatar-wrap">
+            <div class="memoria-vela">🕯️</div>
+            <div class="persona-cargo-badge" style="background:var(--gris);">✝ 2025</div>
+            <div class="persona-avatar">
+              <img src="../assets/images/Omar_Naveda.jpeg" alt="Omar Naveda" onerror="this.style.display='none';this.parentElement.innerHTML='ON'">
+            </div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Omar Naveda</div>
+            <div class="persona-rol">Encargado</div>
+          </div>
+        </div>
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar" style="background:var(--rosa);color:white;">PC</div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Patty Caycho</div>
+            <div class="persona-rol">Encargada</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="periodo fade-in">
+      <div class="periodo-header">
+        <span class="periodo-badge">2013 - 2014</span>
+        <div class="periodo-divider"></div>
+      </div>
+      <div class="periodo-title">Primera coordinadora</div>
+      <p class="periodo-desc">Se establece el rol de coordinador general y se formaliza la figura del asesor espiritual para guiar al grupo desde la fe.</p>
+      <div class="personas-grid">
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Bressia_Anamaria.jpg" alt="Brecia Ana María" onerror="this.style.display='none';this.parentElement.innerHTML='BA'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Brecia Ana María</div>
+            <div class="persona-rol">Coordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card asesor-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar">
+              <img src="../assets/images/Ricardo_Vidal.jpeg" alt="Ricardo Vidal" onerror="this.style.display='none';this.parentElement.innerHTML='RV'">
+            </div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Ricardo Vidal</div>
+            <div class="persona-rol">Asesor espiritual</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="periodo fade-in">
+      <div class="periodo-header">
+        <span class="periodo-badge">2014 - 2015</span>
+        <div class="periodo-divider"></div>
+      </div>
+      <div class="periodo-title">Consolidación del grupo</div>
+      <p class="periodo-desc">Se incorporan subcoordinadores para distribuir responsabilidades y el grupo sigue creciendo en número y en compromiso con la parroquia.</p>
+      <div class="personas-grid">
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Cecilia_Salazar.jpg" alt="Cecilia Salazar" onerror="this.style.display='none';this.parentElement.innerHTML='CS'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Cecilia Salazar</div>
+            <div class="persona-rol">Coordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Pilar_Arana.jpg" alt="Pilar Arana" onerror="this.style.display='none';this.parentElement.innerHTML='PA'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Pilar Arana</div>
+            <div class="persona-rol">Subcoordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card asesor-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar">
+              <img src="../assets/images/Ricardo_Vidal.jpeg" alt="Ricardo Vidal" onerror="this.style.display='none';this.parentElement.innerHTML='RV'">
+            </div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Ricardo Vidal</div>
+            <div class="persona-rol">Asesor espiritual</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="periodo fade-in">
+      <div class="periodo-header">
+        <span class="periodo-badge">2015 - 2017</span>
+        <div class="periodo-divider"></div>
+      </div>
+      <div class="periodo-title">Crecimiento y nuevos desafíos</div>
+      <p class="periodo-desc">El grupo sigue madurando. Se establece el coro parroquial como forma concreta de servicio a la comunidad.</p>
+      <div class="personas-grid">
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Pilar_Arana.jpg" alt="Pilar Arana" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'PA\'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Pilar Arana</div>
+            <div class="persona-rol">Coordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Cecilia_Salazar.jpg" alt="Cecilia Salazar" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'CS\'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Cecilia Salazar</div>
+            <div class="persona-rol">Subcoordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar" style="background:var(--gris-claro);color:var(--gris);">?</div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Por confirmar</div>
+            <div class="persona-rol">Asesor (posiblemente Patty Caycho)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="periodo fade-in">
+      <div class="periodo-header">
+        <span class="periodo-badge">2017 - 2020</span>
+        <div class="periodo-divider"></div>
+      </div>
+      <div class="periodo-title">Nueva generación</div>
+      <p class="periodo-desc">Una nueva generación asume el liderazgo. El grupo sigue siendo un espacio de crecimiento para jóvenes post-Confirmación.</p>
+      <div class="personas-grid">
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Maria_Fernanda_Arana.jpg" alt="María Fernanda Arana" onerror="this.style.display='none';this.parentElement.innerHTML='MA'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">María Fernanda Arana</div>
+            <div class="persona-rol">Coordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Camila_Santivañez.png" alt="Camila Santivañez" onerror="this.style.display='none';this.parentElement.innerHTML='CS'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Camila Santivañez</div>
+            <div class="persona-rol">Subcoordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card asesor-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar" style="background:var(--naranja);color:white;">R</div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Richard</div>
+            <div class="persona-rol">Asesor</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="periodo fade-in">
+      <div class="periodo-header">
+        <span class="periodo-badge">2020 - 2023</span>
+        <div class="periodo-divider"></div>
+      </div>
+      <div class="periodo-title">Años de transformación</div>
+      <p class="periodo-desc">Período marcado por desafíos globales. El grupo se adapta y sigue unido, fortaleciendo el compromiso con la fe y la comunidad.</p>
+      <div class="personas-grid">
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar">
+              <img src="../assets/images/Bryan_Ballon.jpeg" alt="Bryan Ballón" onerror="this.style.display='none';this.parentElement.innerHTML='BB'">
+            </div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Bryan Ballón</div>
+            <div class="persona-rol">Coordinador</div>
+          </div>
+        </div>
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar" style="background:var(--rosa);color:white;">CA</div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Claudia Arana</div>
+            <div class="persona-rol">Subcoordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card asesor-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Padre_Andres.png" alt="Padre Andrés" onerror="this.style.display='none';this.parentElement.innerHTML='PA'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Padre Andrés</div>
+            <div class="persona-rol">Sacerdote</div>
+          </div>
+        </div>
+      </div>
+      <div class="equipo-section">
+        <div class="equipo-label">Equipo de servidores</div>
+        <div class="equipo-grid">
+          <div class="equipo-persona"><img class="equipo-persona-avatar" src="../assets/images/arleth_Cardenas.jpg" alt="Arleth" onerror="this.style.display='none';this.style.width='0'"><span class="equipo-persona-initials" style="display:none">AC</span> Arleth Cárdenas</div>
+          <div class="equipo-persona"><span class="equipo-persona-initials">ZN</span> Zait Navarro</div>
+          <div class="equipo-persona"><img class="equipo-persona-avatar" src="../assets/images/alex_vega.jpg" alt="Alex" onerror="this.style.display='none';this.style.width='0'"><span class="equipo-persona-initials" style="display:none">AV</span> Alex Vega (2021)</div>
+          <div class="equipo-persona"><span class="equipo-persona-initials">PA</span> Paolo Alfaro (2022)</div>
+          <div class="equipo-persona"><img class="equipo-persona-avatar" src="../assets/images/Danilo_Varillas.jpeg" alt="Danilo" onerror="this.style.display='none';this.style.width='0'"><span class="equipo-persona-initials" style="display:none">DV</span> Danilo Varillas (2022)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="periodo fade-in">
+      <div class="periodo-header">
+        <span class="periodo-badge">2023 - 2025</span>
+        <div class="periodo-divider"></div>
+      </div>
+      <div class="periodo-title">Directiva 2023–2025</div>
+      <p class="periodo-desc">Bajo el liderazgo de Claudia Arana, el grupo creció con nuevas actividades, retiros y un fuerte compromiso con la comunidad. Su gestión se extendió hasta finales de 2025.</p>
+      <div class="personas-grid">
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar" style="background:var(--rosa);color:white;">CA</div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Claudia Arana</div>
+            <div class="persona-rol">Coordinadora</div>
+          </div>
+        </div>
+        <div class="persona-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar">
+              <img src="../assets/images/Bryan_Ballon.jpeg" alt="Bryan Ballón" onerror="this.style.display='none';this.parentElement.innerHTML='BB'">
+            </div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Bryan Ballón</div>
+            <div class="persona-rol">Subcoordinador</div>
+          </div>
+        </div>
+        <div class="persona-card asesor-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar"><img src="../assets/images/Alan_Vilela.jpg" alt="Sacerdote Alan Vilela" onerror="this.style.display='none';this.parentElement.innerHTML='AV'"></div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Sacerdote Alan Vilela</div>
+            <div class="persona-rol">Asesor 2023-2024</div>
+          </div>
+        </div>
+        <div class="persona-card asesor-card">
+          <div class="persona-avatar-wrap">
+<div class="persona-avatar" style="background:var(--azul);color:white;">
+              <svg class="icon" style="width:36px;height:36px;" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            </div>
+          </div>
+          <div class="persona-info">
+            <div class="persona-nombre">Asesor Espiritual</div>
+            <div class="persona-rol">Asesor 2024-presente</div>
+          </div>
+        </div>
+      </div>
+      <div class="equipo-section">
+        <div class="equipo-label">Equipo de servidores por año</div>
+        <div class="equipo-grid" style="margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--naranja-dark);font-weight:700;align-self:center;">2023:</span>
+          <div class="equipo-persona"><span class="equipo-persona-initials">PA</span> Paolo Alfaro</div>
+          <div class="equipo-persona"><span class="equipo-persona-initials">GC</span> Gianfranco Camones</div>
+          <div class="equipo-persona"><img class="equipo-persona-avatar" src="../assets/images/Alvaro_Salazar.jpg" alt="Álvaro" onerror="this.style.display='none';this.style.width='0'"><span class="equipo-persona-initials" style="display:none">AS</span> Álvaro Salazar</div>
+        </div>
+        <div class="equipo-grid" style="margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--naranja-dark);font-weight:700;align-self:center;">2024:</span>
+          <div class="equipo-persona"><span class="equipo-persona-initials">PA</span> Paolo Alfaro (Subcoord.)</div>
+          <div class="equipo-persona"><span class="equipo-persona-initials">GC</span> Gianfranco Camones</div>
+          <div class="equipo-persona"><img class="equipo-persona-avatar" src="../assets/images/alex_vega.jpg" alt="Alex" onerror="this.style.display='none';this.style.width='0'"><span class="equipo-persona-initials" style="display:none">AV</span> Alex Vega</div>
+        </div>
+        <div class="equipo-grid">
+          <span style="font-size:12px;color:var(--naranja-dark);font-weight:700;align-self:center;">2025:</span>
+          <div class="equipo-persona"><span class="equipo-persona-initials">PA</span> Paolo Alfaro (Subcoord.)</div>
+          <div class="equipo-persona"><span class="equipo-persona-initials">GC</span> Gianfranco Camones</div>
+          <div class="equipo-persona"><span class="equipo-persona-initials">MC</span> Mariela Chero</div>
+          <div class="equipo-persona"><span class="equipo-persona-initials">RC</span> Roy Cruz</div>
+          <div class="equipo-persona"><img class="equipo-persona-avatar" src="../assets/images/Alvaro_Salazar.jpg" alt="Álvaro" onerror="this.style.display='none';this.style.width='0'"><span class="equipo-persona-initials" style="display:none">AS</span> Álvaro Salazar</div>
+          <div class="equipo-persona"><img class="equipo-persona-avatar" src="../assets/images/ricardo_Mantillo.jpg" alt="Ricardo" onerror="this.style.display='none';this.style.width='0'"><span class="equipo-persona-initials" style="display:none">RM</span> Ricardo Mantilla</div>
+          <div class="equipo-persona"><span class="equipo-persona-initials">DG</span> Diego García</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<section id="historia-coro">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:50px;" class="fade-in">
+      <p class="section-label">Servicio litúrgico</p>
+      <h2 class="section-title">Historia del <em>Coro</em></h2>
+      <p style="font-size:17px;color:var(--texto-suave);max-width:560px;margin:16px auto 0;line-height:1.7;">El Coro Parroquial Luz de Cristo nació del corazón del grupo juvenil como una forma concreta de servicio a la comunidad.</p>
+    </div>
+    <div class="coro-historia-grid">
+      <div class="coro-historia-content fade-in">
+        <p class="coro-historia-texto">El <strong>Coro Parroquial Luz de Cristo</strong> es pilar fundamental de nuestra comunidad. Desde su inicio ha acompañado las celebraciones más importantes de la Parroquia Nuestra Señora de la Piedad, elevando oraciones a Dios a través de la música.</p>
+        <p class="coro-historia-texto">Actualmente sirve en las <strong>misas dominicales</strong> y está disponible para acompañar los momentos más significativos de tu vida de fe.</p>
+        <div class="coro-servicios-grid">
+          <div class="coro-servicio-card"><div class="coro-servicio-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="15" r="6"/><circle cx="15" cy="9" r="6"/></svg></div><div><div class="coro-servicio-nombre">Matrimonios</div><div class="coro-servicio-desc">Acompañamos tu misa nupcial</div></div></div>
+          <div class="coro-servicio-card"><div class="coro-servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 14c.83.642 2.077 1.017 4 1 3.5-.014 6 0 9-1 4.5-1.5 7-5.5 7-9-3 .67-5 .5-7 0-3-.75-5.96-1.5-9 0C3.6 6.45 1.5 9.5 2 12c.5 2.5 2 4 4 5l1 1z"/><circle cx="14" cy="10" r="1" fill="currentColor" stroke="none"/></svg></div><div><div class="coro-servicio-nombre">Difuntos</div><div class="coro-servicio-desc">Misas con dignidad y fe</div></div></div>
+          <div class="coro-servicio-card"><div class="coro-servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M9 12h.01"/><path d="M15 12h.01"/><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1"/></svg></div><div><div class="coro-servicio-nombre">Bautizos</div><div class="coro-servicio-desc">Primer sacramento acompañado</div></div></div>
+          <div class="coro-servicio-card"><div class="coro-servicio-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M10 9h4"/><path d="M12 7v5"/><path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22"/></svg></div><div><div class="coro-servicio-nombre">Misas especiales</div><div class="coro-servicio-desc">Quinceañeros, primeras comuniones</div></div></div>
+        </div>
+        <div class="coro-contacto-card">
+          <div class="coro-contacto-titulo">¿Nos necesitas para tu celebración?</div>
+          <div class="coro-contacto-sub">Contáctanos con anticipación para coordinar la misa y el repertorio. Atendemos en toda Lima.</div>
+          <a href="https://wa.me/51982175495?text=Hola%20quisiera%20información%20sobre%20el%20coro%20Luz%20de%20Cristo" target="_blank" class="btn-whatsapp">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Escribir por WhatsApp
+          </a>
+        </div>
+      </div>
+      <div class="coro-foto-wrap fade-in fade-in-delay-1">
+        <div class="coro-foto">
+          <img src="../assets/images/coro_servicio.jpg" alt="Coro Parroquial Luz de Cristo">
+          <div class="coro-foto-badge">
+            <div class="coro-foto-badge-icon">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
+            <div>
+              <div class="coro-foto-badge-text">Desde 2011</div>
+              <div class="coro-foto-badge-sub">Al servicio de la parroquia</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-biblica">
+      <p class="footer-biblica-text">"Así brille la luz de ustedes delante de los hombres, para que vean sus buenas obras y glorifiquen al Padre que está en los cielos."</p>
+      <div class="footer-biblica-ref">Mateo 5:16</div>
+    </div>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <img src="../assets/images/logo_luxto.png" alt="Logo">
+          <div>
+            <div class="footer-logo-name">Grupo Juvenil<br>Luz de Cristo</div>
+            <a href="https://www.google.com/maps/search/Parroquia+Nuestra+Se%C3%B1ora+de+la+Piedad+Villa+Jard%C3%ADn+San+Luis+Lima" target="_blank" rel="noopener" class="footer-logo-sub" style="text-decoration:none;color:inherit">NSP · Villa Jardín · Lima</a>
+          </div>
+        </div>
+        <p class="footer-desc">Comunidad de jóvenes de la Parroquia Nuestra Señora de la Piedad que caminan juntos en la fe desde 2011.</p>
+        <span class="footer-lema">"Somos sal y luz del mundo"</span>
+      </div>
+      <div>
+        <div class="footer-col-title">Navegación</div>
+        <ul class="footer-links">
+          <li><a href="../index.html">Inicio</a></li>
+          <li><a href="../index.html#quienes">Quiénes somos</a></li>
+          <li><a href="historia.html">Nuestra historia</a></li>
+          <li><a href="../index.html#coro">Coro parroquial</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Síguenos</div>
+        <div class="footer-redes">
+          <a href="https://www.instagram.com/luxto_nsp" target="_blank" rel="noopener" class="footer-red footer-red-ig" title="Instagram">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="m16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          </a>
+          <a href="https://www.facebook.com/Luxto.nsp" target="_blank" rel="noopener" class="footer-red footer-red-fb" title="Facebook">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </a>
+          <a href="https://www.tiktok.com/@luxto_nsp" target="_blank" rel="noopener" class="footer-red footer-red-tt" title="TikTok">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+          </a>
+          <a href="https://www.youtube.com/@luxto_nsp" target="_blank" rel="noopener" class="footer-red footer-red-yt" title="YouTube">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>
+          </a>
+        </div>
+        <div style="margin-top:24px;">
+          <div class="footer-col-title">Portal</div>
+          <ul class="footer-links">
+            <li><a href="login.html">Ingresar</a></li>
+            <li><a href="registro.html">Crear cuenta</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Grupo Juvenil Luz de Cristo — Parroquia Nuestra Señora de la Piedad, Villa Jardín, San Luis</span>
+      <span>"Somos sal y luz del mundo" — Mt 5:13-16</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
+});
+function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
+function closeMenu() { document.getElementById('mobileMenu').classList.remove('open'); }
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('mobileMenu');
+  const hamburger = document.querySelector('.hamburger');
+  if (!menu.contains(e.target) && !hamburger.contains(e.target)) menu.classList.remove('open');
+});
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
