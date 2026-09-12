@@ -17,6 +17,8 @@ concurrency:
 jobs:
   produccion:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # push a gh-pages
     steps:
       - uses: actions/checkout@v4
         with:
