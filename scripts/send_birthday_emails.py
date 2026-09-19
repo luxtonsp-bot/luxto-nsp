@@ -3,6 +3,7 @@ import smtplib
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from zoneinfo import ZoneInfo
 import firebase_admin
 from firebase_admin import credentials, firestore
 
@@ -16,7 +17,9 @@ db = firestore.client()
 
 def send_birthday_emails():
     try:
-        today = datetime.now()
+        # Hora de Lima (es la fecha de cumpleaños que importa; UTC del runner
+        # cruzaría mal: a las 7pm Lima el UTC ya cambió de día)
+        today = datetime.now(ZoneInfo('America/Lima'))
         month = str(today.month).zfill(2)
         day = str(today.day).zfill(2)
         today_mmdd = f"{month}-{day}"
@@ -53,8 +56,8 @@ def send_birthday_emails():
                         dt = datetime.fromtimestamp(birthdate_field.seconds)
                     elif isinstance(birthdate_field, str):
                         # Try to parse the string
-                        # Try common formats
-                        for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d'):
+                        # Try common formats (ISO con hora incluida: migración guarda '1997-04-15T00:00:00')
+                        for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d'):
                             try:
                                 dt = datetime.strptime(birthdate_field, fmt)
                                 break
