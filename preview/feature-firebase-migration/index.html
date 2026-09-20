@@ -856,5 +856,30 @@ document.querySelectorAll('img').forEach(function(img) {
     updateMemberCount();
   }
 </script>
+<!-- Firebase integration for auth redirect (to preserve login flow) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+      authDomain: "luxto-nsp.firebaseapp.com",
+      projectId: "luxto-nsp",
+      storageBucket: "luxto-nsp.firebasestorage.app",
+      messagingSenderId: "3542836325",
+      appId: "1:3542836325:web:cf65cd50edcc431500d28c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Check auth state and redirect to dashboard if logged in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in, redirect to dashboard
+        window.location.href = "pages/dashboard.html";
+      }
+    });
+  </script>
 </body>
 </html>
