@@ -815,7 +815,7 @@ async function calcularYRenderizarEstadisticas(realUid, memberData) {
     const asambleasDesdeIngreso = asambleasValidas.filter(a => a.fecha >= fechaLimite && a.fecha <= new Date().toISOString().split('T')[0]);
     const totalAsambleas = asambleasDesdeIngreso.length;
 
-    // --- 4.3 Leer asistencias del miembro (getDoc por asamblea) ---
+    // --- 4.3 Leer asistencias del miembro (UNA SOLA QUERY: collectionGroup + filtro uid) ---
     let asistencias = 0;
     let tardanzas = 0;
     let sumRetraso = 0;
@@ -823,15 +823,29 @@ async function calcularYRenderizarEstadisticas(realUid, memberData) {
     let ultimaAsistencia = null;
     let ultimaFechaAsistencia = null;
 
+    // Query collectionGroup "asistencia" filtrando por uid
+    const asistenciasQuery = query(
+      collectionGroup(db, "asistencia"),
+      where("uid", "==", realUid)
+    );
+    const asistenciasSnap = await getDocs(asistenciasQuery);
+    
+    // Mapear por fecha para lookup rápido
+    const asistenciasMap = new Map();
+    asistenciasSnap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.fecha && data.presente === true) {
+        asistenciasMap.set(data.fecha, data);
+      }
+    });
+
     for (const a of asambleasDesdeIngreso) {
-      const aRef = doc(db, "asistencia", anioActual, a.fecha, realUid);
-      const aSnap = await getDoc(aRef);
-      if (aSnap.exists() && aSnap.data().presente === true) {
+      const aData = asistenciasMap.get(a.fecha);
+      if (aData) {
         asistencias++;
-        ultimaAsistencia = aSnap.data().fechaHora || aSnap.data().timestamp;
+        ultimaAsistencia = aData.fechaHora || aData.timestamp;
         ultimaFechaAsistencia = a.fecha;
-        // Leer tardanza DEL MISMO DOC de asistencia (campo tardanzaMinutos)
-        const mins = aSnap.data().tardanzaMinutos || 0;
+        const mins = aData.tardanzaMinutos || 0;
         if (mins > 0) {
           sumRetraso += mins;
           countRetraso++;
@@ -914,28 +928,31 @@ async function calcularYRenderizarEstadisticas(realUid, memberData) {
   }
 }
 
-/* ── Cargar y renderizar historial de tardanzas (colección correcta) ── */
+/* ── Cargar y renderizar historial de tardanzas (desde asistencia, NO attendance_log) ── */
 async function cargarHistorialTardanzas() {
   try {
     if (!usuarioActual) return;
-    // Query SIN orderBy (evita índice compuesto). Ordenamos en cliente.
-    const attendanceLogQuery = query(
-      collection(db, "attendance_log"),
-      where("uid", "==", usuarioActual.uid)
+    const anioActual = new Date().getFullYear().toString();
+    const realUid = memberData?.uid || usuarioActual.uid;
+
+    // UNA SOLA QUERY: todas las asistencias del miembro en el año
+    const q = query(
+      collection(db, "asistencia", anioActual),
+      where("uid", "==", realUid)
     );
-    const querySnapshot = await getDocs(attendanceLogQuery);
+    const querySnapshot = await getDocs(q);
     const docs = [];
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
       docs.push({ id: docSnap.id, ...data });
     });
-    // Ordenar en cliente por fecha DESC (YYYY-MM-DD string se ordena lexicográficamente)
+    // Ordenar en cliente por fecha DESC
     docs.sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
-    
+
     tardanzaHistorial = [];
     docs.forEach((data) => {
-      // data.fecha ya viene como "YYYY-MM-DD" del migrate_restructure
-      // Convertir a dd/MM para mostrar
+      if (!data.presente) return; // solo asistencias
+      const mins = data.tardanzaMinutos || 0;
       let fechaMostrar = data.fecha;
       if (data.fecha && data.fecha.includes('-')) {
         const [y,m,d] = data.fecha.split('-');
@@ -943,9 +960,9 @@ async function cargarHistorialTardanzas() {
       }
       tardanzaHistorial.push({
         fecha: fechaMostrar,
-        fechaISO: data.fecha, // guardar ISO para filtro trimestre
-        tardanza: data.lateness_minutes || data.retraso || 0,
-        presente: data.present || false
+        fechaISO: data.fecha,
+        tardanza: mins,
+        presente: true
       });
     });
     renderTardanzaChart();
