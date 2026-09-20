@@ -913,16 +913,22 @@ async function calcularYRenderizarEstadisticas(uid, memberData) {
 async function cargarHistorialTardanzas() {
   try {
     if (!usuarioActual) return;
-    // Usar UID y ordenar por fecha descendente (campo 'fecha' string YYYY-MM-DD)
+    // Query SIN orderBy (evita índice compuesto). Ordenamos en cliente.
     const attendanceLogQuery = query(
       collection(db, "attendance_log"),
-      where("uid", "==", usuarioActual.uid),
-      orderBy("fecha", "desc")
+      where("uid", "==", usuarioActual.uid)
     );
     const querySnapshot = await getDocs(attendanceLogQuery);
-    tardanzaHistorial = [];
+    const docs = [];
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
+      docs.push({ id: docSnap.id, ...data });
+    });
+    // Ordenar en cliente por fecha DESC (YYYY-MM-DD string se ordena lexicográficamente)
+    docs.sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
+    
+    tardanzaHistorial = [];
+    docs.forEach((data) => {
       // data.fecha ya viene como "YYYY-MM-DD" del migrate_restructure
       // Convertir a dd/MM para mostrar
       let fechaMostrar = data.fecha;
