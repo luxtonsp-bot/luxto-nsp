@@ -721,22 +721,33 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 /* ── Cargar dashboard desde Firestore (cálculo nativo) ── */
-async function cargarDashboard(uid) {
+async function cargarDashboard(authUid) {
   try {
-    // 1. Leer documento del miembro por UID (no query por email)
-    const memberRef = doc(db, "members", uid);
-    const memberSnap = await getDoc(memberRef);
+    // 1. Intentar leer por UID de Auth
+    let memberRef = doc(db, "members", authUid);
+    let memberSnap = await getDoc(memberRef);
+    
+    // 2. Fallback: buscar por email si no existe por UID
+    let data, realUid;
     if (!memberSnap.exists()) {
-      toast("No se encontraron datos del miembro.", "err");
-      return;
+      const q = query(collection(db, "members"), where("email", "==", usuarioActual.email), limit(1));
+      const qSnap = await getDocs(q);
+      if (qSnap.empty) {
+        toast("No se encontraron datos del miembro.", "err");
+        return;
+      }
+      memberSnap = qSnap.docs[0];
+      realUid = memberSnap.id;  // El Doc ID real es el UID correcto
+    } else {
+      realUid = authUid;
     }
-    const data = memberSnap.data();
+    data = memberSnap.data();
     memberData = data;
     nombreActual = data.nombre || data.name;
     document.getElementById("perfilNombre").textContent = nombreActual;
     document.getElementById("topbarNombre").textContent = (nombreActual || "").split(" ")[0];
 
-    // 2. Foto: prioridad fotoThumb (128px Firestore) -> fotoDriveId (Drive) -> logo
+    // 3. Foto: prioridad fotoThumb (128px Firestore) -> fotoDriveId (Drive) -> logo
     let photoUrl = data.fotoThumb;
     if (!photoUrl && data.fotoDriveId) {
       photoUrl = convertirUrlDrive(data.fotoDriveId);
@@ -770,7 +781,7 @@ async function cargarDashboard(uid) {
     }
 
     // 4. Calcular estadísticas completas (replicando Code.gs / Excel)
-    await calcularYRenderizarEstadisticas(uid, data);
+    await calcularYRenderizarEstadisticas(realUid, data);
   } catch(err) {
     console.error("Error cargarDashboard:", err);
     toast("Error de conexión con el servidor.", "err");
@@ -778,7 +789,7 @@ async function cargarDashboard(uid) {
 }
 
 /* ── Calcular y renderizar estadísticas (getDashboard nativo) ── */
-async function calcularYRenderizarEstadisticas(uid, memberData) {
+async function calcularYRenderizarEstadisticas(realUid, memberData) {
   try {
     // --- 4.1 Leer TODAS las asambleas del año actual ---
     const anioActual = new Date().getFullYear().toString();
@@ -813,7 +824,7 @@ async function calcularYRenderizarEstadisticas(uid, memberData) {
     let ultimaFechaAsistencia = null;
 
     for (const a of asambleasDesdeIngreso) {
-      const aRef = doc(db, "asistencia", anioActual, a.fecha, uid);
+      const aRef = doc(db, "asistencia", anioActual, a.fecha, realUid);
       const aSnap = await getDoc(aRef);
       if (aSnap.exists() && aSnap.data().presente === true) {
         asistencias++;
