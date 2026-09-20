@@ -970,13 +970,6 @@ async function cargarHistorialTardanzas() {
     toast("Error al cargar historial de tardanzas.", "err");
   }
 }
-    });
-    renderTardanzaChart();
-  } catch(err) {
-    console.error("Error cargarHistorialTardanzas:", err);
-    toast("Error al cargar historial de tardanzas.", "err");
-  }
-}
 
 /* ── Renderizar historial de tardanzas ───────────────── */
 function renderTardanzaChart() {
