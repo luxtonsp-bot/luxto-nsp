@@ -420,6 +420,8 @@ import { getAuth, onAuthStateChanged }
                                from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, onValue, set, serverTimestamp, onDisconnect }
                                from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getFirestore, doc, getDoc }
+                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
@@ -433,7 +435,7 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getDatabase(app);
-const API  = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
+const firestore = getFirestore(app);
 
 const ADMINS = [
   "henry.alfaro1@unmsm.edu.pe",
@@ -490,12 +492,14 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   try {
-    const res  = await fetch(API, { method:"POST", body: JSON.stringify({ accion:"getDashboard", email:user.email }) });
-    const data = await res.json();
-    if (data.ok) {
-      nombreActual = data.nombre;
+    const uid = user.uid;
+    const memberDoc = await getDoc(doc(firestore, "members", uid));
+    if (memberDoc.exists()) {
+      const data = memberDoc.data();
+      nombreActual = data.nombre || "";
       fotoOriginal = data.fotoUrl || "";
-      fotoActual   = fotoOriginal ? convertirUrlDrive(fotoOriginal) : "";
+      // Store as data URL in Firestore, so we can use it directly
+      fotoActual   = fotoOriginal || "";
       document.getElementById("topbarNombre").textContent = nombreActual.split(" ")[0];
       const avatarEl = document.getElementById("topbarFoto");
       if (fotoActual) {
@@ -504,8 +508,18 @@ onAuthStateChanged(auth, async (user) => {
         avatarEl.src = avatarFallback(nombreActual);
         avatarEl.style.display = "block";
       }
+    } else {
+      throw new Error("No se encontró documento de miembro");
     }
-  } catch(e) {}
+  } catch (error) {
+    console.error("Error al obtener dashboard:", error);
+    toast("Error al cargar perfil. Usando modo anonimo.", "err");
+    nombreActual = "Visitante";
+    fotoActual   = "";
+    document.getElementById("topbarNombre").textContent = nombreActual;
+    const avatarEl = document.getElementById("topbarFoto");
+    avatarEl.src = avatarFallback(nombreActual);
+  }
   iniciarEscucha();
 });
 
