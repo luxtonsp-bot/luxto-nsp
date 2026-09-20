@@ -736,8 +736,11 @@ async function cargarDashboard(uid) {
     document.getElementById("perfilNombre").textContent = nombreActual;
     document.getElementById("topbarNombre").textContent = (nombreActual || "").split(" ")[0];
 
-    // 2. Foto: prioridad fotoThumb (128px) -> fotoUrl antigua (Drive) -> logo
-    let photoUrl = data.fotoThumb || data.fotoUrl;
+    // 2. Foto: prioridad fotoThumb (128px Firestore) -> fotoDriveId (Drive) -> logo
+    let photoUrl = data.fotoThumb;
+    if (!photoUrl && data.fotoDriveId) {
+      photoUrl = convertirUrlDrive(data.fotoDriveId);
+    }
     if (photoUrl) {
       document.getElementById("perfilFoto").src = photoUrl;
       document.getElementById("topbarFoto").src = photoUrl;
@@ -746,7 +749,7 @@ async function cargarDashboard(uid) {
     // 3. Banner cumpleaños: calcular localmente desde fechaNacimiento
     const hoy = new Date();
     const mmdd = `${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
-    const fn = data.fechaNacimiento;
+    const fn = data.fechaNacimiento || data.birthDate;
     let esCumple = false, msgCumple = "";
     if (fn) {
       let fnStr = "";
@@ -801,11 +804,7 @@ async function calcularYRenderizarEstadisticas(uid, memberData) {
     const asambleasDesdeIngreso = asambleasValidas.filter(a => a.fecha >= fechaLimite && a.fecha <= new Date().toISOString().split('T')[0]);
     const totalAsambleas = asambleasDesdeIngreso.length;
 
-    // --- 4.3 Leer asistencias del miembro (batch para eficiencia) ---
-    const asistenciasRefs = asambleasDesdeIngreso.map(a => doc(db, "asistencia", anioActual, a.fecha, uid));
-    const asistenciasSnaps = await getDocs(query(collection(db, "asistencia", anioActual), where("__name__", "in", asistenciasRefs.map(r => r.id))));
-    // Nota: Firestore no permite 'in' con referencias, haremos getDoc individual o batch get
-    // Usamos getDoc en paralelo para simplicidad (máx 50 asambleas)
+    // --- 4.3 Leer asistencias del miembro (getDoc por asamblea) ---
     let asistencias = 0;
     let tardanzas = 0;
     let sumRetraso = 0;
@@ -820,18 +819,13 @@ async function calcularYRenderizarEstadisticas(uid, memberData) {
         asistencias++;
         ultimaAsistencia = aSnap.data().fechaHora || aSnap.data().timestamp;
         ultimaFechaAsistencia = a.fecha;
-        // Leer tardanza del log
-        const logQuery = query(collection(db, "attendance_log"), where("uid", "==", uid), where("fecha", "==", a.fecha), limit(1));
-        const logSnap = await getDocs(logQuery);
-        logSnap.forEach(logDoc => {
-          const ld = logDoc.data();
-          const mins = ld.lateness_minutes || ld.retraso || 0;
-          if (mins > 0) {
-            sumRetraso += mins;
-            countRetraso++;
-            if (mins > 10) tardanzas++;
-          }
-        });
+        // Leer tardanza DEL MISMO DOC de asistencia (campo tardanzaMinutos)
+        const mins = aSnap.data().tardanzaMinutos || 0;
+        if (mins > 0) {
+          sumRetraso += mins;
+          countRetraso++;
+          if (mins > 10) tardanzas++;
+        }
       }
     }
 
