@@ -971,7 +971,7 @@ async function cargarHistorialTardanzas() {
     const mapa = await leerAsistenciasMiembro(realUid);
     const docs = [...mapa.values()];
     // Ordenar en cliente por fecha DESC
-    docs.sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
+    docs.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
 
     tardanzaHistorial = [];
     docs.forEach((data) => {
@@ -1034,6 +1034,8 @@ function renderTardanzaChart() {
   ctx.style.display = "block";
   empty.style.display = "none";
 
+  // Ordenar ascendentemente por fechaISO (más antigua a la izquierda)
+  datos.sort((a,b)=> a.fechaISO.localeCompare(b.fechaISO));
   const labels = datos.map(d => d.fecha);
   const values = datos.map(d => d.tardanza);
 
