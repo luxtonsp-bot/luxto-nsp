@@ -75,6 +75,15 @@ body{
   text-decoration:none;transition:all var(--t);
 }
 .btn-admin:hover{background:rgba(245,197,24,.24);transform:translateY(-1px);}
+
+/* ── DROPDOWN ADMIN ── */
+.dropdown{position:relative;display:inline-block;}
+.dropdown-menu{position:absolute;right:0;top:110%;background:var(--paper);box-shadow:0 4px 12px rgba(0,0,0,.05);border:1px solid var(--border);border-radius:6px;padding:4px 0;display:none;z-index:999;}
+.dropdown:hover .dropdown-menu{display:block;}
+.dropdown-item{display:block;padding:8px 12px;font-size:13px;color:var(--ink);text-decoration:none;}
+.dropdown-item:hover{background:rgba(245,197,24,.08);}
+.caret{font-size:0.7em;margin-left:4px;}
+
 .btn-logout{
   display:flex;align-items:center;gap:6px;
   background:none;border:1.5px solid var(--border);
@@ -388,7 +397,17 @@ textarea:focus{border-color:var(--o);background:white;}
     </a>
     <div class="topbar-sep"></div>
     <div id="adminBtnWrap" style="display:none;">
-      <a href="admin.html" class="btn-admin">⚙️ Admin</a>
+      <div class="dropdown" id="adminDropdown">
+        <button class="btn-admin" id="adminDropdownBtn">⚙️ Admin<span class="caret">▼</span></button>
+        <div class="dropdown-menu" id="adminDropdownMenu">
+          <a href="admin.html" class="dropdown-item">Panel Admin</a>
+          <a href="planificacion.html" class="dropdown-item">Planificación</a>
+          <a href="tomar-asistencia.html" class="dropdown-item">Tomar Asistencia</a>
+          <a href="gestion-grupo.html" class="dropdown-item">Gestión de Grupo</a>
+          <a href="tablas.html" class="dropdown-item">Tablas Dinámicas</a>
+          <a href="historial.html" class="dropdown-item">Historial</a>
+        </div>
+      </div>
     </div>
     <div class="topbar-nombre">
       <span id="topbarNombre">Cargando...</span>
