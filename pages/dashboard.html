@@ -556,7 +556,7 @@ textarea:focus{border-color:var(--o);background:white;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, query, where, getDocs, collection, addDoc, writeBatch, orderBy, limit, collectionGroup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, query, where, getDocs, collection, addDoc, writeBatch, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -578,6 +578,7 @@ let usuarioActual = null;
 let nombreActual  = "";
 let calificacion  = 0;
 let memberData = null;
+let realUidActual = null;   // id real del doc members/{id} (== uid de Auth si todo está enlazado)
 let tardanzaHistorial = [];
 let tardanzaChart = null;
 
@@ -743,6 +744,8 @@ async function cargarDashboard(authUid) {
     }
     data = memberSnap.data();
     memberData = data;
+    realUidActual = realUid;
+    if (realUid !== authUid) console.warn("UID distinto: members/" + realUid + " vs Auth " + authUid + " (las reglas de asistencia comparan con el uid de Auth)");
     nombreActual = data.nombre || data.name;
     document.getElementById("perfilNombre").textContent = nombreActual;
     document.getElementById("topbarNombre").textContent = (nombreActual || "").split(" ")[0];
@@ -788,21 +791,61 @@ async function cargarDashboard(authUid) {
   }
 }
 
+/* ── Lectura de asistencia del miembro ─────────────────
+   Ruta real de los datos: asistencia/{anio}/{fecha}/{uid}. Cada doc vive en una
+   colección cuyo id es la FECHA, así que collectionGroup("asistencia") no puede
+   encontrarlos (y además exige una regla /{path=**}/asistencia/{doc}).
+   Se lee 1 getDoc por asamblea, en paralelo, y se cachea por uid. */
+let _asambleasPromise = null;
+function cargarAsambleas() {
+  if (!_asambleasPromise) {
+    _asambleasPromise = getDocs(collection(db, "asambleas")).then(snap => {
+      const out = [];
+      snap.forEach(d => {
+        const a = d.data();
+        if (a.hayAsamblea === true && a.fecha) out.push({ id: d.id, fecha: a.fecha, horaInicio: a.horaInicio });
+      });
+      out.sort((x, y) => x.fecha.localeCompare(y.fecha));
+      return out;
+    });
+    _asambleasPromise.catch(() => { _asambleasPromise = null; });
+  }
+  return _asambleasPromise;
+}
+
+let _asistCache = { uid: null, promise: null };
+function leerAsistenciasMiembro(uid) {
+  if (_asistCache.uid === uid && _asistCache.promise) return _asistCache.promise;
+  const promise = (async () => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const asambleas = (await cargarAsambleas()).filter(a => a.fecha <= hoy);
+    const mapa = new Map();               // fecha -> doc (solo presentes)
+    let denegados = 0;
+    await Promise.all(asambleas.map(async (a) => {
+      try {
+        const snap = await getDoc(doc(db, "asistencia", a.fecha.slice(0, 4), a.fecha, uid));
+        if (snap.exists() && snap.data().presente === true) mapa.set(a.fecha, { ...snap.data(), fecha: a.fecha });
+      } catch (e) {
+        if (e && e.code === "permission-denied") denegados++; else throw e;
+      }
+    }));
+    if (denegados > 0) {
+      const err = new Error("permission-denied en " + denegados + " lecturas de asistencia");
+      err.code = "permission-denied";
+      throw err;
+    }
+    return mapa;
+  })();
+  _asistCache = { uid, promise };
+  promise.catch(() => { _asistCache = { uid: null, promise: null }; });
+  return promise;
+}
+
 /* ── Calcular y renderizar estadísticas (getDashboard nativo) ── */
 async function calcularYRenderizarEstadisticas(realUid, memberData) {
   try {
-    // --- 4.1 Leer TODAS las asambleas del año actual ---
-    const anioActual = new Date().getFullYear().toString();
-    const asambleasSnap = await getDocs(collection(db, "asambleas"));
-    const asambleasValidas = [];
-    asambleasSnap.forEach(d => {
-      const ad = d.data();
-      if (ad.hayAsamblea === true && ad.fecha) {
-        asambleasValidas.push({ id: d.id, fecha: ad.fecha, horaInicio: ad.horaInicio });
-      }
-    });
-    // Ordenar por fecha ascendente
-    asambleasValidas.sort((a,b) => a.fecha.localeCompare(b.fecha));
+    // --- 4.1 Asambleas con reunión (cacheadas) ---
+    const asambleasValidas = await cargarAsambleas();
 
     // --- 4.2 Filtrar desde fechaIngresoGrupo del miembro ---
     let fechaIngreso = memberData.fechaIngresoGrupo;
@@ -815,7 +858,7 @@ async function calcularYRenderizarEstadisticas(realUid, memberData) {
     const asambleasDesdeIngreso = asambleasValidas.filter(a => a.fecha >= fechaLimite && a.fecha <= new Date().toISOString().split('T')[0]);
     const totalAsambleas = asambleasDesdeIngreso.length;
 
-    // --- 4.3 Leer asistencias del miembro (UNA SOLA QUERY: collectionGroup + filtro uid) ---
+    // --- 4.3 Leer asistencias del miembro (getDoc por asamblea, en paralelo) ---
     let asistencias = 0;
     let tardanzas = 0;
     let sumRetraso = 0;
@@ -823,21 +866,7 @@ async function calcularYRenderizarEstadisticas(realUid, memberData) {
     let ultimaAsistencia = null;
     let ultimaFechaAsistencia = null;
 
-    // Query collectionGroup "asistencia" filtrando por uid
-    const asistenciasQuery = query(
-      collectionGroup(db, "asistencia"),
-      where("uid", "==", realUid)
-    );
-    const asistenciasSnap = await getDocs(asistenciasQuery);
-    
-    // Mapear por fecha para lookup rápido
-    const asistenciasMap = new Map();
-    asistenciasSnap.forEach(docSnap => {
-      const data = docSnap.data();
-      if (data.fecha && data.presente === true) {
-        asistenciasMap.set(data.fecha, data);
-      }
-    });
+    const asistenciasMap = await leerAsistenciasMiembro(realUid);
 
     for (const a of asambleasDesdeIngreso) {
       const aData = asistenciasMap.get(a.fecha);
@@ -924,7 +953,11 @@ async function calcularYRenderizarEstadisticas(realUid, memberData) {
 
   } catch(err) {
     console.error("Error calcularYRenderizarEstadisticas:", err);
-    toast("Error calculando estadísticas.", "err");
+    if (err && err.code === "permission-denied") {
+      toast("No se pudo leer tu asistencia: tu cuenta no está enlazada a tu registro de miembro. Avisa a un líder.", "err");
+    } else {
+      toast("Error calculando estadísticas.", "err");
+    }
   }
 }
 
@@ -932,19 +965,11 @@ async function calcularYRenderizarEstadisticas(realUid, memberData) {
 async function cargarHistorialTardanzas() {
   try {
     if (!usuarioActual) return;
-    const realUid = memberData?.uid || usuarioActual.uid;
+    const realUid = realUidActual || usuarioActual.uid;
 
-    // UNA SOLA QUERY: collectionGroup "asistencia" filtrando por uid
-    const q = query(
-      collectionGroup(db, "asistencia"),
-      where("uid", "==", realUid)
-    );
-    const querySnapshot = await getDocs(q);
-    const docs = [];
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      docs.push({ id: docSnap.id, ...data });
-    });
+    // Mismo mapa que usa el resumen (cacheado): no repite lecturas
+    const mapa = await leerAsistenciasMiembro(realUid);
+    const docs = [...mapa.values()];
     // Ordenar en cliente por fecha DESC
     docs.sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
 
@@ -967,7 +992,7 @@ async function cargarHistorialTardanzas() {
     renderTardanzaChart();
   } catch(err) {
     console.error("Error cargarHistorialTardanzas:", err);
-    toast("Error al cargar historial de tardanzas.", "err");
+    if (!(err && err.code === "permission-denied")) toast("Error al cargar historial de tardanzas.", "err");
   }
 }
 
