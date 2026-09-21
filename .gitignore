@@ -20,3 +20,4 @@ __pycache__/
 # Node / entornos
 node_modules/
 .env
+migration/relink_report.json
