@@ -24,7 +24,7 @@
   --shadow:    0 8px 32px -8px rgba(0,0,0,.4);
   --shadow-lg: 0 24px 64px -16px rgba(0,0,0,.6);
   --t: .3s cubic-bezier(.4,0,.2,1);
-  --spring: .55s cubic-bezier(.34,1.4,.64,1);
+  --spring: .55s cubic-bezier(0.19,1,0.22,1);
 }
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html, body { height:100%; }
@@ -116,7 +116,7 @@ body {
   font-size:14px; font-weight:600; color:var(--muted);
 }
 .dot-anim { display:flex; gap:5px; align-items:center; }
-.dot-anim span { width:6px; height:6px; border-radius:50%; background:var(--y); animation: dotBounce 1.4s ease-in-out infinite; }
+.dot-anim span { width:6px; height:6px; border-radius:50%; background:var(--y); animation: none; }
 .dot-anim span:nth-child(2){animation-delay:.2s;}
 .dot-anim span:nth-child(3){animation-delay:.4s;}
 @keyframes dotBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
@@ -126,7 +126,7 @@ body {
     margin-top:24px; padding:16px 20px;
     background:rgba(255,255,255,.04); border:1px solid var(--border);
     border-radius:16px; max-width:360px; width:100%;
-    animation:fadeUp .5s .3s cubic-bezier(.34,1.4,.64,1) both;
+    animation:fadeUp .5s .3s cubic-bezier(0.19,1,0.22,1) both;
   }
   .conectados-header{
     display:flex; align-items:center; gap:10px; margin-bottom:12px;
@@ -149,7 +149,7 @@ body {
   .conectado-foto{width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.1); background:var(--bg3); flex-shrink:0}
   .conectado-nombre{flex:1; font-size:13px; font-weight:600; color:var(--cream); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .conectado-status{font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--ok); display:flex; align-items:center; gap:4px}
-  .conectado-status::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--ok); animation:blink 1.5s infinite}
+  .conectado-status::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--ok); opacity:1;}
 
   /* ── PANTALLA PREGUNTA ── */
 #screenPregunta { justify-content:flex-start; padding-top:72px; }
@@ -161,7 +161,7 @@ body {
 .timer-fill { fill:none; stroke:var(--y); stroke-width:4; stroke-linecap:round; stroke-dasharray:138.2; stroke-dashoffset:0; transition:stroke-dashoffset 1s linear, stroke .5s; }
 .timer-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:22px; color:white; letter-spacing:1px; }
 .tiempo-bar-wrap { width:100%; height:5px; background:rgba(255,255,255,.07); border-radius:5px; overflow:hidden; margin-bottom:20px; }
-.tiempo-bar { height:100%; background:var(--y); border-radius:5px; transition:width 1s linear, background .5s; }
+.tiempo-bar { height:100%; background:var(--y); border-radius:5px; transition:transform 1s linear, background .5s; transform-origin:left; }
 .pregunta-txt { font-family:'Lora',serif; font-size:clamp(18px,3.5vw,28px); font-weight:600; line-height:1.3; color:var(--cream); margin-bottom:10px; text-align:center; width:100%; }
 
 /* ── HINT "Mira el proyector" ── */
@@ -181,7 +181,7 @@ body {
 .opcion-btn {
   padding:0; border-radius:20px; border:2px solid transparent;
   cursor:pointer; text-align:center;
-  transition:all .2s cubic-bezier(.34,1.4,.64,1);
+  transition:all .2s cubic-bezier(0.19,1,0.22,1);
   position:relative; overflow:hidden;
   aspect-ratio:1;
   display:flex; flex-direction:column;
@@ -220,7 +220,7 @@ body {
 .opcion-btn.incorrecto .opcion-letra-big { color:rgba(255,255,255,.3)!important; }
 
 /* ── RESULTADO ── */
-.resultado-emoji { font-size:64px; margin-bottom:14px; animation:popIn .5s cubic-bezier(.34,1.4,.64,1) both; }
+.resultado-emoji { font-size:64px; margin-bottom:14px; animation:popIn .5s cubic-bezier(0.19,1,0.22,1) both; }
 @keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 .resultado-titulo { font-family:'Lora',serif; font-size:clamp(28px,6vw,46px); font-weight:600; letter-spacing:-.01em; margin-bottom:8px; }
 .resultado-sub { font-size:15px; color:var(--muted); margin-bottom:20px; }
@@ -322,7 +322,7 @@ body {
     <div class="topbar-sep"></div>
     <div class="topbar-user">
       <span id="topbarNombre">...</span>
-      <img src="" id="topbarFoto" class="topbar-avatar" onerror="this.onerror=null;this.style.display='none'">
+      <img id="topbarFoto" class="topbar-avatar" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" onerror="this.onerror=null;this.style.display='none'">
     </div>
     <!-- Botón proyector solo visible para admins (JS lo muestra) -->
     <a href="proyector.html" target="_blank" class="btn-proyector" id="btnProyector">🖥️ Proyector</a>

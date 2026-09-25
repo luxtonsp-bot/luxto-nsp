@@ -353,7 +353,7 @@ function mostrarRespuestasLive(resps, p) {
   const letras = ["A", "B", "C", "D"];
   lista.innerHTML = resps.map(r =>
     '<div class="resp-item">' +
-      '<img class="resp-item-foto" src="" alt="" onerror="this.onerror=null;this.src=' + "'" + avatarFallbackAdmin(r.nombre || "?") + "'" + '">' +
+      '<img class="resp-item-foto" src="' + avatarFallbackAdmin(r.nombre || "?") + '" alt="">' +
       '<div class="resp-item-nombre">' + escaparHTML(r.nombre || r.email || "Anónimo") + '</div>' +
       '<div class="resp-item-resp">' + (letras[r.respuesta] || "?") + '</div>' +
       '<div class="resp-item-pts">' + (r.correcta ? "+" + (r.pts || 1) : "0") + '</div>' +

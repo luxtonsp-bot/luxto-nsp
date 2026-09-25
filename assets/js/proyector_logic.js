@@ -383,7 +383,7 @@ function mostrarPregunta(p) {
       <div class="opcion-letra">${letras[i]}</div>
       <div class="opcion-sep"></div>
       <div class="opcion-txt">${op}</div>
-      <div class="resp-bar-wrap"><div class="resp-bar" id="bar${i}" style="width:0%"></div></div>
+      <div class="resp-bar-wrap"><div class="resp-bar" id="bar${i}" style="transform:scaleX(0)"></div></div>
       <div class="resp-count" id="cnt${i}">0</div>`;
     grid.appendChild(card);
   });
@@ -411,14 +411,14 @@ function iniciarTimer(duracion) {
   const barEl = document.getElementById("tiempoBar");
   const circleEl = document.getElementById("timerCircle");
   const numEl = document.getElementById("timerNum");
-  barEl.style.width = "100%";
+  barEl.style.transform = "scaleX(1)";
   circleEl.style.strokeDashoffset = "0";
   numEl.textContent = duracion;
 
   timerInterval = setInterval(() => {
     tiempoRestante--;
     const pct = Math.max(0, tiempoRestante / duracion);
-    barEl.style.width = (pct * 100) + "%";
+    barEl.style.transform = "scaleX(" + pct + ")";
     barEl.style.background = pct > .4 ? "var(--y)" : pct > .2 ? "var(--o)" : "var(--err)";
     circleEl.style.strokeDashoffset = circum * (1 - pct);
     circleEl.style.stroke = pct > .4 ? "#F5C518" : pct > .2 ? "#C4703A" : "#e03c3c";
@@ -449,7 +449,7 @@ function actualizarContadores(resps, p) {
   counts.forEach((c, i) => {
     const barEl = document.getElementById("bar" + i);
     const cntEl = document.getElementById("cnt" + i);
-    if (barEl) barEl.style.width = total > 0 ? (c / total * 100) + "%" : "0%";
+    if (barEl) barEl.style.transform = total > 0 ? "scaleX(" + (c / total) + ")" : "scaleX(0)";
     if (cntEl) { cntEl.textContent = c; if(c>0) cntEl.style.color="rgba(255,255,255,.6)"; }
   });
 }
@@ -689,7 +689,7 @@ function iniciarCountdown(n, cb) {
     } else {
       el.style.animation = "none";
       el.offsetHeight; // reflow
-      el.style.animation = "countPop .8s cubic-bezier(.34,1.6,.64,1) both";
+      el.style.animation = "countPop .8s cubic-bezier(0.19,1,0.22,1) both";
       el.textContent = num;
     }
   }, 1000);

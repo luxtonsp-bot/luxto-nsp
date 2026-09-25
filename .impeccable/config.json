@@ -1,0 +1,33 @@
+{
+  "detector": {
+    "enabled": true,
+    "designSystem": {
+      "enabled": true,
+      "path": "./.impeccable/design.json"
+    },
+    "ignoreRules": [
+      "cream-palette",
+      "overused-font",
+      "dark-glow",
+      "side-tab",
+      "nested-cards",
+      "em-dash-overuse"
+    ],
+    "ignoreFiles": [
+      "backup_before_reorg_20260911_130926/**",
+      "tools/audit/**",
+      "node_modules/**",
+      ".git/**"
+    ],
+    "ignoreValues": {}
+  },
+  "scope": ["type", "layout", "color", "motion", "image", "accessibility"],
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "mobileViewport": {
+    "width": 390,
+    "height": 844
+  }
+}

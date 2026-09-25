@@ -75,15 +75,6 @@ body{
   text-decoration:none;transition:all var(--t);
 }
 .btn-admin:hover{background:rgba(245,197,24,.24);transform:translateY(-1px);}
-
-/* ── DROPDOWN ADMIN ── */
-.dropdown{position:relative;display:inline-block;}
-.dropdown-menu{position:absolute;right:0;top:110%;background:var(--paper);box-shadow:0 4px 12px rgba(0,0,0,.05);border:1px solid var(--border);border-radius:6px;padding:4px 0;display:none;z-index:999;}
-.dropdown:hover .dropdown-menu{display:block;}
-.dropdown-item{display:block;padding:8px 12px;font-size:13px;color:var(--ink);text-decoration:none;}
-.dropdown-item:hover{background:rgba(245,197,24,.08);}
-.caret{font-size:0.7em;margin-left:4px;}
-
 .btn-logout{
   display:flex;align-items:center;gap:6px;
   background:none;border:1.5px solid var(--border);
@@ -238,9 +229,9 @@ body{
   height:6px;background:var(--border);border-radius:6px;overflow:hidden;
 }
 .fidelidad-bar-fill{
-  height:100%;border-radius:6px;transform:scaleX(0);transform-origin:left;
+  height:100%;border-radius:6px;width:0;
   background:var(--grad);
-  transition:transform 1.4s cubic-bezier(.22,1,.36,1);
+  transition:width 1.4s cubic-bezier(.22,1,.36,1);
 }
 
 /* ── SECCIONES ── */
@@ -397,21 +388,11 @@ textarea:focus{border-color:var(--o);background:white;}
     </a>
     <div class="topbar-sep"></div>
     <div id="adminBtnWrap" style="display:none;">
-      <div class="dropdown" id="adminDropdown">
-        <button class="btn-admin" id="adminDropdownBtn">⚙️ Admin<span class="caret">▼</span></button>
-        <div class="dropdown-menu" id="adminDropdownMenu">
-          <a href="admin.html" class="dropdown-item">Panel Admin</a>
-          <a href="planificacion.html" class="dropdown-item">Planificación</a>
-          <a href="tomar-asistencia.html" class="dropdown-item">Tomar Asistencia</a>
-          <a href="gestion-grupo.html" class="dropdown-item">Gestión de Grupo</a>
-          <a href="tablas.html" class="dropdown-item">Tablas Dinámicas</a>
-          <a href="historial.html" class="dropdown-item">Historial</a>
-        </div>
-      </div>
+      <a href="admin.html" class="btn-admin">⚙️ Admin</a>
     </div>
     <div class="topbar-nombre">
       <span id="topbarNombre">Cargando...</span>
-      <img id="topbarFoto" class="topbar-avatar" alt="" onerror="this.onerror=null;this.style.display='none'">
+      <img id="topbarFoto" class="topbar-avatar" src="" alt="" onerror="this.onerror=null;this.style.display='none'">
     </div>
     <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
   </div>
@@ -575,7 +556,6 @@ textarea:focus{border-color:var(--o);background:white;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, query, where, getDocs, collection, addDoc, writeBatch, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -587,19 +567,23 @@ const firebaseConfig = {
   appId:             "1:3542836325:web:cf65cd50edcc431500d28c",
   databaseURL:       "https://luxto-nsp-default-rtdb.firebaseio.com"
 };
+const API = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db   = getFirestore(app);
-const rtdb = getDatabase(app); // Realtime Database for asamblea module only
+const db   = getDatabase(app);
+
+const ADMINS = [
+  "henry.alfaro1@unmsm.edu.pe",
+  "paolosotil97@gmail.com",
+  "jorgediego.123.2002@gmail.com",
+  "gianfracamones@gmail.com",
+  "alvarorodrigosalazar.2001@gmail.com"
+];
 
 let usuarioActual = null;
 let nombreActual  = "";
 let calificacion  = 0;
-let memberData = null;
-let realUidActual = null;   // id real del doc members/{id} (== uid de Auth si todo está enlazado)
-let tardanzaHistorial = [];
-let tardanzaChart = null;
 
 /* ── Toast ───────────────────────────────────────────── */
 function toast(msg, tipo="") {
@@ -614,43 +598,9 @@ function convertirUrlDrive(url) {
   if (url.includes("drive.google.com/thumbnail")) return url;
   const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
          || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
-         || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/); // FIX: era [a-zA.Z0-9_-]
+         || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
   if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w400";
   return url;
-}
-
-/* ── Escape HTML para prevenir XSS ── */
-function escaparHTML(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-/* ── Comprimir imagen antes de subir ────────────────── */
-function comprimirImagen(file, maxPx, quality) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      let w = img.width, h = img.height;
-      if (w > maxPx || h > maxPx) {
-        if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
-        else       { w = Math.round(w * maxPx / h); h = maxPx; }
-      }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      canvas.toBlob(resolve, "image/jpeg", quality);
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  });
-}
-
-/* ── Parsear decimales en formato español ("19,69") ──── */
-function parseNum(v) {
-  if (v === null || v === undefined || v === "") return NaN;
-  return parseFloat(String(v).replace(",", "."));
 }
 
 /* ── Animación de conteo (números que suben de 0→valor) ── */
@@ -667,6 +617,12 @@ function animateCount(el, target, { decimals = 0, suffix = "", dur = 1200 } = {}
     else el.textContent = target.toFixed(decimals) + suffix;
   }
   requestAnimationFrame(tick);
+}
+
+/* ── Parsear decimales en formato español ("19,69") ──── */
+function parseNum(v) {
+  if (v === null || v === undefined || v === "") return NaN;
+  return parseFloat(String(v).replace(",", "."));
 }
 
 /* ── Reveal por scroll ──────────────────────────────── */
@@ -730,311 +686,150 @@ function renderNota(valor) {
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   usuarioActual = user;
-  await cargarDashboard(user.uid); // Cambio: pasamos UID, no email
-  // Admin check: use role from memberData
-  if (memberData && (memberData.rol === "coordinador" || memberData.rol === "lider")) {
+  if (ADMINS.includes(user.email)) {
     document.getElementById("adminBtnWrap").style.display = "block";
   }
   setupReveal();
+  cargarDashboard(user.email);
   cargarHistorialTardanzas();
   verificarModoAsamblea();
 });
 
-/* ── Cargar dashboard desde Firestore (cálculo nativo) ── */
-async function cargarDashboard(authUid) {
+/* ── Cargar dashboard desde Apps Script ─────────────── */
+async function cargarDashboard(email) {
   try {
-    // 1. Intentar leer por UID de Auth
-    let memberRef = doc(db, "members", authUid);
-    let memberSnap = await getDoc(memberRef);
-    
-    // 2. Fallback: buscar por email si no existe por UID
-    let data, realUid;
-    if (!memberSnap.exists()) {
-      const q = query(collection(db, "members"), where("email", "==", usuarioActual.email), limit(1));
-      const qSnap = await getDocs(q);
-      if (qSnap.empty) {
-        toast("No se encontraron datos del miembro.", "err");
-        return;
-      }
-      memberSnap = qSnap.docs[0];
-      realUid = memberSnap.id;  // El Doc ID real es el UID correcto
+    const res  = await fetch(API, {
+      method: "POST",
+      body:   JSON.stringify({ accion: "getDashboard", email })
+    });
+    const ct = res.headers.get("content-type") || "";
+    let data;
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn("API devolvería error HTTP", res.status, text.substr(0,200));
+      toast("Error al conectar con API (HTTP " + res.status + ").", "err");
+      return;
+    }
+    if (ct.includes("application/json")) {
+      data = await res.json();
     } else {
-      realUid = authUid;
+      const text = await res.text();
+      console.warn("Respuesta no JSON desde API:", text.substr(0,300));
+      toast("API no respondió JSON. Verifica el despliegue de Apps Script.", "err");
+      return;
     }
-    data = memberSnap.data();
-    memberData = data;
-    realUidActual = realUid;
-    if (realUid !== authUid) console.warn("UID distinto: members/" + realUid + " vs Auth " + authUid + " (las reglas de asistencia comparan con el uid de Auth)");
-    nombreActual = data.nombre || data.name;
-    document.getElementById("perfilNombre").textContent = nombreActual;
-    document.getElementById("topbarNombre").textContent = (nombreActual || "").split(" ")[0];
+    if (!data.ok) { toast("Error al cargar datos: " + data.error, "err"); return; }
 
-    // 3. Foto: prioridad fotoThumb (128px Firestore) -> fotoDriveId (Drive) -> logo
-    let photoUrl = data.fotoThumb;
-    if (!photoUrl && data.fotoDriveId) {
-      photoUrl = convertirUrlDrive(data.fotoDriveId);
-    }
-    if (photoUrl) {
-      document.getElementById("perfilFoto").src = photoUrl;
-      document.getElementById("topbarFoto").src = photoUrl;
+    nombreActual = data.nombre;
+    document.getElementById("perfilNombre").textContent = data.nombre;
+    document.getElementById("topbarNombre").textContent = (data.nombre || "").split(" ")[0];
+
+    if (data.fotoUrl) {
+      const urlMostrar = convertirUrlDrive(data.fotoUrl);
+      document.getElementById("perfilFoto").src = urlMostrar;
+      document.getElementById("topbarFoto").src  = urlMostrar;
     }
 
-    // 3. Banner cumpleaños: calcular localmente desde fechaNacimiento
-    const hoy = new Date();
-    const mmdd = `${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
-    const fn = data.fechaNacimiento || data.birthDate;
-    let esCumple = false, msgCumple = "";
-    if (fn) {
-      let fnStr = "";
-      if (typeof fn === 'string') fnStr = fn;
-      else if (fn.toDate) fnStr = fn.toDate().toISOString().split('T')[0];
-      if (fnStr && fnStr.length >= 10) {
-        const fnMMdd = fnStr.slice(5,10); // MM-DD
-        if (fnMMdd === mmdd) {
-          esCumple = true;
-          msgCumple = `¡Feliz cumpleaños, ${(nombreActual||"").split(" ")[0]}! 🎂🎉`;
-        }
-      }
-    }
-    if (esCumple) {
-      document.getElementById("cumpleMsg").textContent = msgCumple;
+    if (data.esCumple) {
+      document.getElementById("cumpleMsg").textContent = data.msgCumple;
       document.getElementById("bannerCumple").classList.add("visible");
       setTimeout(lanzarConfetti, 500);
     }
 
-    // 4. Calcular estadísticas completas (replicando Code.gs / Excel)
-    await calcularYRenderizarEstadisticas(realUid, data);
+    const e = data.estadisticas;
+    if (e) {
+      animateCount(document.getElementById("statAsist"),  parseNum(e.asistencias) || 0);
+      animateCount(document.getElementById("statTard"),   parseNum(e.tardanzas)   || 0);
+      animateCount(document.getElementById("statFaltas"), parseNum(e.faltas)      || 0);
+
+      const pct = parseNum(e.porcentaje) || 0;
+      animateCount(document.getElementById("statFidel"), Math.round(pct), { suffix: "%" });
+      setTimeout(() => {
+        document.getElementById("fidelBarFill").style.width = Math.min(pct, 100) + "%";
+      }, 300);
+
+      // ⭐ Nota de rendimiento (columna G de "Estadistica")
+      renderNota(e.notaRendimiento);
+
+      document.getElementById("rTotal").textContent     = e.totalAsambleas;
+      document.getElementById("rAsist").textContent     = e.asistencias;
+      document.getElementById("rTardanzas").textContent = e.tardanzas;
+      document.getElementById("rRetraso").textContent   = e.promedioRetraso
+        ? (Math.round(parseNum(e.promedioRetraso) * 10) / 10) + " min" : "0 min";
+      document.getElementById("rUltima").textContent    = e.ultimaAsistencia;
+
+      const estadoEl  = document.getElementById("rEstado");
+      const badgesEl  = document.getElementById("perfilBadges");
+      const estadoStr = (e.estado || "").toString();
+
+      let estadoClass = "badge-estado-activo";
+      let estadoText  = "🟢 Activo";
+      if (estadoStr.includes("riesgo") || estadoStr.includes("🟡")) {
+        estadoClass = "badge-estado-riesgo"; estadoText = "🟡 En riesgo";
+      }
+      if (estadoStr.includes("nactivo") || estadoStr.includes("🔴")) {
+        estadoClass = "badge-estado-inactivo"; estadoText = "🔴 Inactivo";
+      }
+      estadoEl.textContent = estadoText;
+
+      badgesEl.innerHTML = "";
+      const badgeEstado = document.createElement("span");
+      badgeEstado.className = "badge-pill " + estadoClass;
+      badgeEstado.textContent = estadoText;
+      const badgeGen = document.createElement("span");
+      badgeGen.className = "badge-pill badge-generacion";
+      badgeGen.textContent = "@luxto_nsp";
+      badgesEl.appendChild(badgeEstado);
+      badgesEl.appendChild(badgeGen);
+    }
   } catch(err) {
-    console.error("Error cargarDashboard:", err);
     toast("Error de conexión con el servidor.", "err");
   }
 }
 
-/* ── Lectura de asistencia del miembro ─────────────────
-   Ruta real de los datos: asistencia/{anio}/{fecha}/{uid}. Cada doc vive en una
-   colección cuyo id es la FECHA, así que collectionGroup("asistencia") no puede
-   encontrarlos (y además exige una regla /{path=**}/asistencia/{doc}).
-   Se lee 1 getDoc por asamblea, en paralelo, y se cachea por uid. */
-let _asambleasPromise = null;
-function cargarAsambleas() {
-  if (!_asambleasPromise) {
-    _asambleasPromise = getDocs(collection(db, "asambleas")).then(snap => {
-      const out = [];
-      snap.forEach(d => {
-        const a = d.data();
-        if (a.hayAsamblea === true && a.fecha) out.push({ id: d.id, fecha: a.fecha, horaInicio: a.horaInicio });
-      });
-      out.sort((x, y) => x.fecha.localeCompare(y.fecha));
-      return out;
-    });
-    _asambleasPromise.catch(() => { _asambleasPromise = null; });
-  }
-  return _asambleasPromise;
-}
-
-let _asistCache = { uid: null, promise: null };
-function leerAsistenciasMiembro(uid) {
-  if (_asistCache.uid === uid && _asistCache.promise) return _asistCache.promise;
-  const promise = (async () => {
-    const hoy = new Date().toISOString().slice(0, 10);
-    const asambleas = (await cargarAsambleas()).filter(a => a.fecha <= hoy);
-    const mapa = new Map();               // fecha -> doc (solo presentes)
-    let denegados = 0;
-    await Promise.all(asambleas.map(async (a) => {
-      try {
-        const snap = await getDoc(doc(db, "asistencia", a.fecha.slice(0, 4), a.fecha, uid));
-        if (snap.exists() && snap.data().presente === true) mapa.set(a.fecha, { ...snap.data(), fecha: a.fecha });
-      } catch (e) {
-        if (e && e.code === "permission-denied") denegados++; else throw e;
-      }
-    }));
-    if (denegados > 0) {
-      const err = new Error("permission-denied en " + denegados + " lecturas de asistencia");
-      err.code = "permission-denied";
-      throw err;
-    }
-    return mapa;
-  })();
-  _asistCache = { uid, promise };
-  promise.catch(() => { _asistCache = { uid: null, promise: null }; });
-  return promise;
-}
-
-/* ── Calcular y renderizar estadísticas (getDashboard nativo) ── */
-async function calcularYRenderizarEstadisticas(realUid, memberData) {
-  try {
-    // --- 4.1 Asambleas con reunión (cacheadas) ---
-    const asambleasValidas = await cargarAsambleas();
-
-    // --- 4.2 Filtrar desde fechaIngresoGrupo del miembro ---
-    let fechaIngreso = memberData.fechaIngresoGrupo;
-    if (fechaIngreso && fechaIngreso.toDate) fechaIngreso = fechaIngreso.toDate().toISOString().split('T')[0];
-    else if (typeof fechaIngreso === 'object' && fechaIngreso.seconds) fechaIngreso = new Date(fechaIngreso.seconds*1000).toISOString().split('T')[0];
-    else if (typeof fechaIngreso === 'string' && fechaIngreso.length >= 10) fechaIngreso = fechaIngreso.slice(0,10);
-    // Si no hay fechaIngreso, usar la primera asamblea del año
-    const fechaLimite = fechaIngreso || asambleasValidas[0]?.fecha || "";
-
-    const asambleasDesdeIngreso = asambleasValidas.filter(a => a.fecha >= fechaLimite && a.fecha <= new Date().toISOString().split('T')[0]);
-    const totalAsambleas = asambleasDesdeIngreso.length;
-
-    // --- 4.3 Leer asistencias del miembro (getDoc por asamblea, en paralelo) ---
-    let asistencias = 0;
-    let tardanzas = 0;
-    let sumRetraso = 0;
-    let countRetraso = 0;
-    let ultimaAsistencia = null;
-    let ultimaFechaAsistencia = null;
-
-    const asistenciasMap = await leerAsistenciasMiembro(realUid);
-
-    for (const a of asambleasDesdeIngreso) {
-      const aData = asistenciasMap.get(a.fecha);
-      if (aData) {
-        asistencias++;
-        ultimaAsistencia = aData.fechaHora || aData.timestamp;
-        ultimaFechaAsistencia = a.fecha;
-        const mins = aData.tardanzaMinutos || 0;
-        if (mins > 0) {
-          sumRetraso += mins;
-          countRetraso++;
-          if (mins > 10) tardanzas++;
-        }
-      }
-    }
-
-    const faltas = Math.max(0, totalAsambleas - asistencias);
-    const porcentaje = totalAsambleas > 0 ? (asistencias / totalAsambleas) * 100 : 0;
-    const promedioRetraso = countRetraso > 0 ? sumRetraso / countRetraso : 0;
-
-    // Última asistencia formateada dd/MM/yyyy
-    let ultimaAsistenciaStr = "—";
-    if (ultimaFechaAsistencia) {
-      const [y,m,d] = ultimaFechaAsistencia.split('-');
-      ultimaAsistenciaStr = `${d}/${m}/${y}`;
-    }
-
-    // --- 4.4 Nota de rendimiento (fórmula corregida del plan) ---
-    // Nota = 12 * (%asistencia/100) + 8 * (1 - promedioRetraso/120) si hay registros de retraso
-    // Si no hay registros de retraso, excluir componente puntualidad
-    let notaRendimiento = 0;
-    if (countRetraso > 0) {
-      const compAsistencia = 12 * (porcentaje / 100);
-      const compPuntualidad = 8 * Math.max(0, (120 - promedioRetraso) / 120);
-      notaRendimiento = compAsistencia + compPuntualidad;
-    } else {
-      // Solo componente asistencia (plan: excluir puntualidad si no hay registros)
-      notaRendimiento = 12 * (porcentaje / 100);
-    }
-    notaRendimiento = Math.round(notaRendimiento * 10) / 10; // 1 decimal
-
-    // --- 4.5 Estado (fórmula exacta del Excel diagnosticada) ---
-    // Inactivo: 0 asistencias O última asistencia > 60 días
-    // Activo: % >= 75 Y última asistencia <= 30 días
-    // En riesgo: resto
-    let estado = "En riesgo";
-    let estadoClass = "badge-estado-riesgo";
-    let estadoText = "🟡 En riesgo";
-    const diasDesdeUltima = ultimaFechaAsistencia ? Math.floor((new Date() - new Date(ultimaFechaAsistencia)) / (1000*60*60*24)) : 999;
-    if (asistencias === 0 || diasDesdeUltima > 60) {
-      estado = "Inactivo"; estadoClass = "badge-estado-inactivo"; estadoText = "🔴 Inactivo";
-    } else if (porcentaje >= 75 && diasDesdeUltima <= 30) {
-      estado = "Activo"; estadoClass = "badge-estado-activo"; estadoText = "🟢 Activo";
-    }
-
-    // --- 4.6 Renderizar todo ---
-    animateCount(document.getElementById("statAsist"), asistencias);
-    animateCount(document.getElementById("statTard"), tardanzas);
-    animateCount(document.getElementById("statFaltas"), faltas);
-    animateCount(document.getElementById("statFidel"), Math.round(porcentaje), { suffix: "%" });
-    setTimeout(() => {
-      document.getElementById("fidelBarFill").style.transform = "scaleX(" + (Math.min(porcentaje, 100) / 100) + ")";
-    }, 300);
-    renderNota(notaRendimiento);
-
-    document.getElementById("rTotal").textContent     = totalAsambleas;
-    document.getElementById("rAsist").textContent     = asistencias;
-    document.getElementById("rTardanzas").textContent = tardanzas;
-    document.getElementById("rRetraso").textContent   = promedioRetraso > 0 ? (Math.round(promedioRetraso * 10) / 10) + " min" : "0 min";
-    document.getElementById("rUltima").textContent    = ultimaAsistenciaStr;
-
-    const estadoEl  = document.getElementById("rEstado");
-    const badgesEl  = document.getElementById("perfilBadges");
-    estadoEl.textContent = estadoText;
-    badgesEl.innerHTML = "";
-    const badgeEstado = document.createElement("span");
-    badgeEstado.className = "badge-pill " + estadoClass;
-    badgeEstado.textContent = estadoText;
-    const badgeGen = document.createElement("span");
-    badgeGen.className = "badge-pill badge-generacion";
-    badgeGen.textContent = "@luxto_nsp";
-    badgesEl.appendChild(badgeEstado);
-    badgesEl.appendChild(badgeGen);
-
-  } catch(err) {
-    console.error("Error calcularYRenderizarEstadisticas:", err);
-    if (err && err.code === "permission-denied") {
-      toast("No se pudo leer tu asistencia: tu cuenta no está enlazada a tu registro de miembro. Avisa a un líder.", "err");
-    } else {
-      toast("Error calculando estadísticas.", "err");
-    }
-  }
-}
-
-/* ── Cargar y renderizar historial de tardanzas (desde asistencia, NO attendance_log) ── */
+/* ── Cargar y renderizar historial de tardanzas ───────── */
+let tardanzaHistorial = [];
 async function cargarHistorialTardanzas() {
   try {
-    if (!usuarioActual) return;
-    const realUid = realUidActual || usuarioActual.uid;
-
-    // Mismo mapa que usa el resumen (cacheado): no repite lecturas
-    const mapa = await leerAsistenciasMiembro(realUid);
-    const docs = [...mapa.values()];
-    // Ordenar en cliente por fecha DESC
-    docs.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
-
-    tardanzaHistorial = [];
-    docs.forEach((data) => {
-      if (!data.presente) return; // solo asistencias
-      const mins = data.tardanzaMinutos || 0;
-      let fechaMostrar = data.fecha;
-      if (data.fecha && data.fecha.includes('-')) {
-        const [y,m,d] = data.fecha.split('-');
-        fechaMostrar = `${d}/${m}`;
-      }
-      tardanzaHistorial.push({
-        fecha: fechaMostrar,
-        fechaISO: data.fecha,
-        tardanza: mins,
-        presente: true
-      });
+    const res  = await fetch(API, {
+      method: "POST",
+      body:   JSON.stringify({ accion: "getHistorialAsistencia", email: usuarioActual.email })
     });
+    const ct = res.headers.get("content-type") || "";
+    let data;
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn("API HTTP error:", res.status, text.substr(0,200));
+      console.error("Error cargando historial: HTTP ", res.status);
+      return;
+    }
+    if (ct.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      console.error("Error cargando historial: respuesta no JSON", text.substr(0,300));
+      return;
+    }
+    if (!data.ok) { console.warn("Historial tardanzas:", data.error); return; }
+    tardanzaHistorial = data.historial || [];
     renderTardanzaChart();
-  } catch(err) {
-    console.error("Error cargarHistorialTardanzas:", err);
-    if (!(err && err.code === "permission-denied")) toast("Error al cargar historial de tardanzas.", "err");
-  }
+  } catch(e) { console.error("Error cargando historial:", e); }
 }
 
-/* ── Renderizar historial de tardanzas ───────────────── */
+let tardanzaChart = null;
 function renderTardanzaChart() {
   const ctx = document.getElementById("tardanzaChart");
   const empty = document.getElementById("tardanzaEmpty");
   const trimSel = document.getElementById("tardanzaTrimSelect").value;
 
-  if (tardanzaHistorial.length === 0) {
-    ctx.style.display = "none";
-    empty.style.display = "flex";
-    if (tardanzaChart) { tardanzaChart.destroy(); tardanzaChart = null; }
-    return;
-  }
-
   // Filtrar por trimestre si se seleccionó
   let datos = tardanzaHistorial;
   if (trimSel) {
-    // Usar fechaISO (YYYY-MM-DD) para filtro robusto
+    // El trimestre viene en el nombre de la celda (ej: D3 = T1, E3 = T1, etc.)
+    // Pero el histórico no trae el trimestre directo, usamos la fecha
+    // Asumimos T1=ene-mar, T2=abr-jun, T3=jul-sep, T4=oct-dic
     datos = datos.filter(d => {
-      if (!d.fechaISO) return true;
-      const mes = parseInt(d.fechaISO.split("-")[1], 10);
+      const mes = parseInt(d.fecha.split("/")[1], 10);
       if (trimSel === "T1") return mes >= 1 && mes <= 3;
       if (trimSel === "T2") return mes >= 4 && mes <= 6;
       if (trimSel === "T3") return mes >= 7 && mes <= 9;
@@ -1053,8 +848,6 @@ function renderTardanzaChart() {
   ctx.style.display = "block";
   empty.style.display = "none";
 
-  // Ordenar ascendentemente por fechaISO (más antigua a la izquierda)
-  datos.sort((a,b)=> a.fechaISO.localeCompare(b.fechaISO));
   const labels = datos.map(d => d.fecha);
   const values = datos.map(d => d.tardanza);
 
@@ -1096,87 +889,90 @@ function renderTardanzaChart() {
         },
         y: {
           beginAtZero: true,
-          ticks: { font: { family: "Inter", size: 11 }, color: "#5e554a" }
+          grid: { color: "rgba(232,226,212,0.4)" },
+          ticks: { font: { family: "Inter", size: 11 }, color: "#5e554a", stepSize: 5 },
+          title: { display: true, text: "Minutos de retraso", font: { family: "Inter", size: 12, weight: 600 }, color: "#5e554a" }
         }
-      }
+      },
+      animation: { duration: 800, easing: "easeOutQuart" }
     }
   });
 }
 
-/* ── Verificar modo asamblea ────────────────────────── */
+/* ── Modo asamblea vía Firebase RTDB ────────────────── */
 function verificarModoAsamblea() {
-  onValue(ref(rtdb, "asamblea/activa"), (snap) => {
+  onValue(ref(db, "asamblea/activa"), (snap) => {
     const activa = snap.val() === true;
     document.getElementById("modoAsamblea").classList.toggle("visible", activa);
   });
 }
 
-/* ── Subir foto a Firestore (2 tamaños: thumb 128px ≤8KB + grande 400px ≤150KB) ── */
+/* ── Subir foto → Drive vía Apps Script ─────────────── */
 window.subirFoto = async function(input) {
   if (!input.files[0]) return;
   toast("Subiendo foto...");
   const file = input.files[0];
   try {
-    // Crear miniatura 128px (calidad inicial 0.75) y foto grande 400px (calidad 0.82)
-    let thumbBlob = await comprimirImagen(file, 128, 0.75);
-    let displayBlob = await comprimirImagen(file, 400, 0.82);
-
-    // Recomprimir si excede límites: thumb ≤8KB (≈12000 chars base64), grande ≤150KB (≈200000 chars)
-    const MAX_THUMB_B64 = 12000;
-    const MAX_DISPLAY_B64 = 200000;
-
-    let thumbBase64 = await blobToBase64(thumbBlob);
-    let displayBase64 = await blobToBase64(displayBlob);
-
-    // Recomprimir thumb si pasa de 8KB
-    let qualityThumb = 0.75;
-    let sizeThumb = 128;
-    while (thumbBase64.length > MAX_THUMB_B64 && (qualityThumb > 0.3 || sizeThumb > 64)) {
-      if (qualityThumb > 0.3) qualityThumb -= 0.05;
-      else { sizeThumb = Math.max(64, sizeThumb - 16); qualityThumb = 0.75; }
-      thumbBlob = await comprimirImagen(file, sizeThumb, qualityThumb);
-      thumbBase64 = await blobToBase64(thumbBlob);
+    const compressed = await comprimirImagen(file, 400, 0.82);
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = (ev) => resolve(ev.target.result);
+      reader.onerror = ()  => reject(new Error("No se pudo leer el archivo"));
+      reader.readAsDataURL(compressed);
+    });
+    document.getElementById("perfilFoto").src = base64;
+    document.getElementById("topbarFoto").src  = base64;
+    const res  = await fetch(API, {
+      method: "POST",
+      body:   JSON.stringify({ accion: "guardarFotoUrl", email: usuarioActual.email, base64 })
+    });
+    const ct = res.headers.get("content-type") || "";
+    let data;
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn("guardarFotoUrl HTTP", res.status, text.substr(0,200));
+      toast("Error subiendo foto (HTTP " + res.status + ")", "err");
+      return;
     }
-
-    // Recomprimir display si pasa de 150KB
-    let qualityDisplay = 0.82;
-    let sizeDisplay = 400;
-    while (displayBase64.length > MAX_DISPLAY_B64 && (qualityDisplay > 0.4 || sizeDisplay > 200)) {
-      if (qualityDisplay > 0.4) qualityDisplay -= 0.05;
-      else { sizeDisplay = Math.max(200, sizeDisplay - 50); qualityDisplay = 0.82; }
-      displayBlob = await comprimirImagen(file, sizeDisplay, qualityDisplay);
-      displayBase64 = await blobToBase64(displayBlob);
+    if (ct.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      console.warn("guardarFotoUrl: respuesta no JSON:", text.substr(0,300));
+      toast("Foto subida, pero API no devolvió JSON.", "err");
+      return;
     }
-
-    // Batch write: members/{uid}.fotoThumb + fotos/{uid} = {data, actualizado}
-    if (usuarioActual) {
-      const batch = writeBatch(db);
-      const memberRef = doc(db, "members", usuarioActual.uid);
-      const fotoRef = doc(db, "fotos", usuarioActual.uid);
-      batch.update(memberRef, { fotoThumb: thumbBase64 });
-      batch.set(fotoRef, { data: displayBase64, actualizado: new Date().toISOString() });
-      await batch.commit();
+    if (data.ok) {
+      const urlMostrar = convertirUrlDrive(data.fotoUrl);
+      document.getElementById("perfilFoto").src = urlMostrar;
+      document.getElementById("topbarFoto").src  = urlMostrar;
+      toast("¡Foto guardada! ✓", "ok");
+    } else {
+      toast("Foto visible solo en esta sesión. Error: " + data.error, "");
     }
-
-    // Actualizar UI: perfil usa grande, topbar usa thumb
-    document.getElementById("perfilFoto").src = displayBase64;
-    document.getElementById("topbarFoto").src  = thumbBase64;
-    toast("¡Foto guardada! ✓", "ok");
   } catch(e) {
-    console.error("Error subirFoto:", e);
     toast("No se pudo subir la foto. Intenta de nuevo.", "err");
-  } finally {
-    input.value = "";
   }
 };
 
-/* ── Convierte Blob a Base64 (CON prefijo data:image/jpeg;base64,) ── */
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result); // NO split: mantener prefijo completo
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+/* ── Comprimir imagen antes de subir ────────────────── */
+function comprimirImagen(file, maxPx, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let w = img.width, h = img.height;
+      if (w > maxPx || h > maxPx) {
+        if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+        else       { w = Math.round(w * maxPx / h); h = maxPx; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      canvas.toBlob(resolve, "image/jpeg", quality);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
   });
 }
 
@@ -1186,33 +982,27 @@ window.cerrarSesion = async () => {
   window.location.href = "index.html";
 };
 
-/* ── Sugerencias (colección: sugerencias, campos exactos del Excel + uid) ── */
+/* ── Sugerencias ────────────────────────────────────── */
 window.enviarSugerencia = async () => {
   const txt = document.getElementById("txtSugerencia").value.trim();
   if (!txt) { toast("Escribe tu sugerencia primero", "err"); return; }
   const btn = document.querySelector("#txtSugerencia ~ .btn-enviar");
   btn.disabled = true; btn.textContent = "Enviando...";
   try {
-    if (usuarioActual) {
-      await addDoc(collection(db, "sugerencias"), {
-        nombre: nombreActual,
-        email: usuarioActual.email,
-        texto: txt,
-        fecha: new Date().toISOString(),
-        uid: usuarioActual.uid
-      });
-    }
+    await fetch(API, {
+      method: "POST",
+      body:   JSON.stringify({ accion: "guardarSugerencia", nombre: nombreActual, email: usuarioActual.email, sugerencia: txt })
+    });
     document.getElementById("txtSugerencia").value = "";
     toast("¡Sugerencia enviada! Gracias 🙏", "ok");
   } catch(e) {
-    console.error("Error enviarSugerencia:", e);
     toast("Error al enviar. Intenta de nuevo.", "err");
   } finally {
     btn.disabled = false; btn.textContent = "Enviar sugerencia →";
   }
 };
 
-/* ── Feedback estrellas (colección: feedback, campos exactos del Excel + uid + fechaAsamblea) ── */
+/* ── Feedback estrellas ─────────────────────────────── */
 window.selectStar = (val) => {
   calificacion = val;
   document.querySelectorAll(".star").forEach((s, i) => {
@@ -1227,32 +1017,14 @@ window.enviarFeedback = async () => {
   const btn = document.querySelector("#txtFeedback ~ .btn-enviar");
   btn.disabled = true; btn.textContent = "Enviando...";
   try {
-    if (usuarioActual) {
-      // Calcular fecha de asamblea: última con hayAsamblea=true <= hoy
-      const asambleasSnap = await getDocs(collection(db, "asambleas"));
-      let fechaAsamblea = null;
-      const hoyISO = new Date().toISOString().split('T')[0];
-      asambleasSnap.forEach(d => {
-        const ad = d.data();
-        if (ad.hayAsamblea === true && ad.fecha && ad.fecha <= hoyISO) {
-          if (!fechaAsamblea || ad.fecha > fechaAsamblea) fechaAsamblea = ad.fecha;
-        }
-      });
-      await addDoc(collection(db, "feedback"), {
-        nombre: nombreActual,
-        email: usuarioActual.email,
-        calificacion: calificacion,
-        comentario: txt,
-        fechaAsamblea: fechaAsamblea, // última asamblea con hayAsamblea <= hoy
-        fecha: new Date().toISOString(),
-        uid: usuarioActual.uid
-      });
-    }
+    await fetch(API, {
+      method: "POST",
+      body:   JSON.stringify({ accion: "guardarFeedback", nombre: nombreActual, email: usuarioActual.email, calificacion, comentario: txt })
+    });
     document.getElementById("txtFeedback").value = "";
     window.selectStar(0); calificacion = 0;
     toast("¡Feedback enviado! Gracias por tu opinión 🙏", "ok");
   } catch(e) {
-    console.error("Error enviarFeedback:", e);
     toast("Error al enviar. Intenta de nuevo.", "err");
   } finally {
     btn.disabled = false; btn.textContent = "Enviar feedback →";
