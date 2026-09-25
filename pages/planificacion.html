@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planificación — Luz de Cristo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/portal.css">
     <!-- Firebase imports (same as other pages) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -12,204 +14,246 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Planificación de la Próxima Asamblea</h1>
+
+<header id="topbar">
+  <div class="topbar-inner">
+    <a href="dashboard.html" class="topbar-logo">
+      <img src="../assets/images/logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
+      <span class="topbar-logo-name">Luz de Cristo</span>
+    </a>
+    <span class="topbar-badge">📅 Planificación</span>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+  </div>
+</header>
+
+<main class="container">
+
+    <div class="section-eyebrow">Planificación</div>
+    <h1>Próxima Asamblea</h1>
+    <p class="section-desc">Activa la asamblea del sábado, define hora, tema, objetivo y ponentes. Al guardar puedes descargar el esquema como imagen para compartir.</p>
+
+    <div class="card">
+        <div class="card-title">📋 Datos de la asamblea</div>
         <form id="planForm">
-            <div>
-                <label for="activar">Asamblea activa:</label>
-                <select id="activar" name="activar">
-                    <option value="false">No</option>
-                    <option value="true">Sí</option>
-                </select>
+            <div class="form-grid">
+                <div>
+                    <label for="activar">Asamblea activa:</label>
+                    <select id="activar" name="activar">
+                        <option value="false">No</option>
+                        <option value="true">Sí</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="hora">Hora de inicio (HH:MM):</label>
+                    <input type="time" id="hora" name="hora">
+                </div>
             </div>
-            <div>
-                <label for="hora">Hora de inicio (HH:MM):</label>
-                <input type="time" id="hora" name="hora">
-            </div>
-            <div>
+            <div style="margin-top:14px;">
                 <label for="tema">Tema:</label>
-                <input type="text" id="tema" name="tema" placeholder="Ej. Amor al prójivo">
+                <input type="text" id="tema" name="tema" placeholder="Ej. Amor al prójimo">
             </div>
-            <div>
+            <div style="margin-top:14px;">
                 <label for="objetivo">Objetivo:</label>
-                <input type="text" id="objetivo" name="objetivo">
+                <input type="text" id="objetivo" name="objetivo" placeholder="Ej. Reflexionar sobre el servicio">
             </div>
-            <div>
-                <label for="ponente">Ponente(s) (separados por coma):</label>
-                <input type="text" id="ponente" name="ponente">
+            <div style="margin-top:14px;">
+                <label for="ponente">Ponente(s):</label>
+                <input type="text" id="ponente" name="ponente" placeholder="Separados por coma. Ej. Juan Pérez, María García">
             </div>
-            <button type="submit">Guardar planificación</button>
-            <button type="button" id="generateImageBtn" style="margin-left: 10px; padding: 8px 16px; background-color: #15803d; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                Descargar esquema
-            </button>
+            <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="submit" class="btn btn-primary">💾 Guardar planificación</button>
+                <button type="button" id="generateImageBtn" class="btn btn-ok">
+                    ⬇️ Descargar esquema
+                </button>
+            </div>
         </form>
-        <div id="preview" style="margin-top:20px; text-align: center;">
-            <!-- Aquí se mostrará la imagen generada -->
-            <div id="imagePreview"></div>
-        </div>
     </div>
-    <script>
-        // Initialize Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
-            authDomain: "luxto-nsp.firebaseapp.com",
-            projectId: "luxto-nsp",
-            storageBucket: "luxto-nsp.firebasestorage.app",
-            messagingSenderId: "3542836325",
-            appId: "1:3542836325:web:cf65cd50edcc431500d28c",
-            databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
-        };
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.firestore();
-        const auth = firebase.auth();
 
-        // Handle form submission
-        document.getElementById('planForm').addEventListener('submit', async e => {
-            e.preventDefault();
-            const activar = document.getElementById('activar').value === 'true';
-            const hora = document.getElementById('hora').value;
-            const tema = document.getElementById('tema').value;
-            const objetivo = document.getElementById('objetivo').value;
-            const ponenteStr = document.getElementById('ponente').value;
-            const ponentes = ponenteStr.split(',').map(p => p.trim()).filter(p => p);
-            // Determine next Saturday date (simplistic: we could let user pick date)
-            // For now, we'll store under a placeholder date; later we can add date picker.
-            const fecha = new Date(); // placeholder
-            const fechaStr = fecha.toISOString().split('T')[0];
-            try {
-                await db.collection('asambleas').doc(fechaStr).set({
-                    hayAsamblea: activar,
-                    horaInicio: hora,
-                    tema: { titulo: tema, objetivo: objetivo },
-                    ponentes: ponentes.map(n => ({ nombre: n }))
-                }, { merge: true });
-                alert('Planificación guardada');
-                // Generate preview image after saving
-                await generateAndDisplayPreview();
-            } catch (err) {
-                console.error(err);
-                alert('Error al guardar planificación');
-            }
-        });
+    <div class="card" id="preview" style="display:none;">
+        <div class="card-title">🖼️ Vista previa del esquema</div>
+        <div id="imagePreview"></div>
+    </div>
 
-        // Generate image preview
-        document.getElementById('generateImageBtn').addEventListener('click', async () => {
+</main>
+
+<div id="toast"></div>
+
+<script>
+    // Initialize Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+        authDomain: "luxto-nsp.firebaseapp.com",
+        projectId: "luxto-nsp",
+        storageBucket: "luxto-nsp.firebasestorage.app",
+        messagingSenderId: "3542836325",
+        appId: "1:3542836325:web:cf65cd50edcc431500d28c",
+        databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+    };
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // ── Toast (mismo estilo que el resto del proyecto) ──
+    function toast(msg, tipo = "") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "show " + tipo;
+        setTimeout(() => t.className = "", 3200);
+    }
+
+    function cerrarSesion() {
+        firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
+    }
+
+    // Handle form submission
+    document.getElementById('planForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const activar = document.getElementById('activar').value === 'true';
+        const hora = document.getElementById('hora').value;
+        const tema = document.getElementById('tema').value;
+        const objetivo = document.getElementById('objetivo').value;
+        const ponenteStr = document.getElementById('ponente').value;
+        const ponentes = ponenteStr.split(',').map(p => p.trim()).filter(p => p);
+        // Determine next Saturday date (simplistic: we could let user pick date)
+        // For now, we'll store under a placeholder date; later we can add date picker.
+        const fecha = new Date(); // placeholder
+        const fechaStr = fecha.toISOString().split('T')[0];
+        try {
+            await db.collection('asambleas').doc(fechaStr).set({
+                hayAsamblea: activar,
+                horaInicio: hora,
+                tema: { titulo: tema, objetivo: objetivo },
+                ponentes: ponentes.map(n => ({ nombre: n }))
+            }, { merge: true });
+            toast('Planificación guardada ✓', 'ok');
+            // Generate preview image after saving
             await generateAndDisplayPreview();
-        });
+        } catch (err) {
+            console.error(err);
+            toast('Error al guardar planificación', 'err');
+        }
+    });
 
-        async function generateAndDisplayPreview() {
-            try {
-                // Show loading state
-                const imagePreviewDiv = document.getElementById('imagePreview');
-                imagePreviewDiv.innerHTML = '<p>Generando imagen...</p>';
+    // Generate image preview
+    document.getElementById('generateImageBtn').addEventListener('click', async () => {
+        await generateAndDisplayPreview();
+    });
 
-                // Create a temporary element for the image
-                const templateElement = document.createElement('div');
-                templateElement.style.padding = '20px';
-                templateElement.style.fontFamily = 'Arial, sans-serif';
-                templateElement.style.backgroundColor = '#f8f9fa';
-                templateElement.style.border = '1px solid #dee2e6';
-                templateElement.style.borderRadius = '8px';
-                templateElement.style.maxWidth = '400px';
-                templateElement.style.margin = '0 auto';
+    async function generateAndDisplayPreview() {
+        try {
+            // Show loading state
+            const imagePreviewDiv = document.getElementById('imagePreview');
+            const previewCard = document.getElementById('preview');
+            previewCard.style.display = 'block';
+            imagePreviewDiv.innerHTML = '<p style="color:var(--muted);">Generando imagen...</p>';
 
-                // Add content
-                const ahora = new Date();
-                const fechaFormateada = ahora.toLocaleDateString('es-ES', {
-                    year: 'numeric', month: 'long', day: 'numeric'
-                });
+            // Create a temporary element for the image
+            const templateElement = document.createElement('div');
+            templateElement.style.padding = '28px';
+            templateElement.style.fontFamily = 'Outfit, Arial, sans-serif';
+            templateElement.style.backgroundColor = '#FBF7EE';
+            templateElement.style.border = '1px solid #e8e2d4';
+            templateElement.style.borderRadius = '16px';
+            templateElement.style.maxWidth = '420px';
+            templateElement.style.margin = '0 auto';
 
-                templateElement.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <h2 style="color: #2c3e50; margin-bottom: 10px;">Luxto NSP</h2>
-                        <p style="color: #7f8c8d; font-size: 14px;">Asamblea Juvenil</p>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <h3 style="color: #3498db; margin-bottom: 8px;">Próxima Asamblea</h3>
-                        <p><strong>Fecha:</strong> ${fechaFormateada}</p>
-                        <p><strong>Hora:</strong> ${document.getElementById('hora').value || 'Por definir'}</p>
-                        <p><strong>Tema:</strong> ${document.getElementById('tema').value || 'Por definir'}</p>
-                        <p><strong>Objetivo:</strong> ${document.getElementById('objetivo').value || 'Por definir'}</p>
-                        <p><strong>Ponente(s):</strong> ${document.getElementById('ponente').value || 'Por definir'}</p>
-                        <p><strong>Estado:</strong> ${document.getElementById('activar').value === 'true' ? 'Activa' : 'No activa'}</p>
-                    </div>
-                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; font-size: 12px; color: #95a5a6;">
-                        Luz de Cristo - Parroquia Nuestra Señora de la Piedad
-                    </div>
-                `;
+            // Add content
+            const ahora = new Date();
+            const fechaFormateada = ahora.toLocaleDateString('es-ES', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
 
-                // Generate image using html2canvas
-                const canvas = await html2canvas(templateElement, {
-                    scale: 2, // Increase scale for better quality
-                    useCORS: true
-                });
+            templateElement.innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="color: #1c1814; margin-bottom: 6px; font-family: Lora, serif;">Luz de Cristo</h2>
+                    <p style="color: #4a443c; font-size: 14px;">Asamblea Juvenil — #SábadoDeLuxto</p>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <h3 style="color: #a35a28; margin-bottom: 8px;">Próxima Asamblea</h3>
+                    <p><strong>Fecha:</strong> ${fechaFormateada}</p>
+                    <p><strong>Hora:</strong> ${document.getElementById('hora').value || 'Por definir'}</p>
+                    <p><strong>Tema:</strong> ${document.getElementById('tema').value || 'Por definir'}</p>
+                    <p><strong>Objetivo:</strong> ${document.getElementById('objetivo').value || 'Por definir'}</p>
+                    <p><strong>Ponente(s):</strong> ${document.getElementById('ponente').value || 'Por definir'}</p>
+                    <p><strong>Estado:</strong> ${document.getElementById('activar').value === 'true' ? '🟢 Activa' : '⚫ No activa'}</p>
+                </div>
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e8e2d4; font-size: 12px; color: #4a443c;">
+                    Luz de Cristo - Parroquia Nuestra Señora de la Piedad
+                </div>
+            `;
 
-                // Convert to image and display
-                const imageDataUrl = canvas.toDataURL('image/png');
-                imagePreviewDiv.innerHTML = `
-                    <p>Vista previa del esquema:</p>
-                    <img src="${imageDataUrl}" alt="Esquema de asamblea" style="max-width: 100%; border: 1px solid #ddd; border-radius: 4px;">
-                    <br>
-                    <button onclick="downloadImage('${imageDataUrl}', 'esquema-asamblea-${fechaFormateada.replace(/\s+/g, '-').toLowerCase()}.png')"
-                            style="margin-top: 10px; padding: 8px 16px; background-color: #0b5ed7; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        Descargar imagen
+            // Generate image using html2canvas
+            const canvas = await html2canvas(templateElement, {
+                scale: 2, // Increase scale for better quality
+                useCORS: true
+            });
+
+            // Convert to image and display
+            const imageDataUrl = canvas.toDataURL('image/png');
+            imagePreviewDiv.innerHTML = `
+                <img src="${imageDataUrl}" alt="Esquema de asamblea" style="max-width: 100%; border: 1px solid var(--border); border-radius: 12px;">
+                <div style="margin-top: 12px;">
+                    <button onclick="downloadImage('${imageDataUrl}', 'esquema-asamblea-${fechaFormateada.replace(/\s+/g, '-').toLowerCase()}.png')" class="btn btn-primary">
+                        ⬇️ Descargar imagen
                     </button>
-                `;
+                </div>
+            `;
 
-            } catch (error) {
-                console.error("Error generating image:", error);
-                document.getElementById('imagePreview').innerHTML =
-                    '<p style="color: red;">Error al generar la imagen. Por favor, inténtelo de nuevo.</p>';
-            }
+        } catch (error) {
+            console.error("Error generating image:", error);
+            document.getElementById('imagePreview').innerHTML =
+                '<p style="color: var(--err);">Error al generar la imagen. Por favor, inténtelo de nuevo.</p>';
         }
+    }
 
-        // Function to download image
-        function downloadImage(dataUrl, filename) {
-            const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+    // Function to download image
+    function downloadImage(dataUrl, filename) {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 
-        // Load current assembly data on page load
-        async function loadCurrentAssembly() {
-            try {
-                // Get current date or next Saturday - simplified approach
-                // In a real app, we would have a proper date selector
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                const dateStr = `${year}-${month}-${day}`;
+    // Load current assembly data on page load
+    async function loadCurrentAssembly() {
+        try {
+            // Get current date or next Saturday - simplified approach
+            // In a real app, we would have a proper date selector
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
 
-                const assemblyDoc = await db.collection('asambleas').doc(dateStr).get();
-                if (assemblyDoc.exists) {
-                    const data = assemblyDoc.data();
-                    document.getElementById('activar').value = data.hayAsamblea ? 'true' : 'false';
-                    document.getElementById('hora').value = data.horaInicio || '';
-                    document.getElementById('tema').value = data.tema?.titulo || '';
-                    document.getElementById('objetivo').value = data.tema?.objetivo || '';
-                    const ponentes = data.ponentes || [];
-                    document.getElementById('ponente').value = ponentes.map(p => p.nombre).join(', ');
-                }
-            } catch (error) {
-                console.error("Error loading assembly data:", error);
-                // Continue with empty form
+            const assemblyDoc = await db.collection('asambleas').doc(dateStr).get();
+            if (assemblyDoc.exists) {
+                const data = assemblyDoc.data();
+                document.getElementById('activar').value = data.hayAsamblea ? 'true' : 'false';
+                document.getElementById('hora').value = data.horaInicio || '';
+                document.getElementById('tema').value = data.tema?.titulo || '';
+                document.getElementById('objetivo').value = data.tema?.objetivo || '';
+                const ponentes = data.ponentes || [];
+                document.getElementById('ponente').value = ponentes.map(p => p.nombre).join(', ');
             }
+        } catch (error) {
+            console.error("Error loading assembly data:", error);
+            // Continue with empty form
         }
+    }
 
-        // Initialize
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                await loadCurrentAssembly();
-            } else {
-                window.location.href = 'login.html';
-            }
-        });
-    </script>
+    // Initialize
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            await loadCurrentAssembly();
+        } else {
+            window.location.href = 'login.html';
+        }
+    });
+</script>
 </body>
 </html>
