@@ -219,24 +219,66 @@
         try {
             yearSelect.innerHTML = '<option value="">-- Seleccione un año --</option>';
 
-            // Get all historical years from the historico collection group
-            const historicoCollections = await db.collectionGroup('historico').get();
+            let sortedYears = [];
 
-            // Extract unique years
-            const years = new Set();
-            historicoCollections.forEach(doc => {
-                // The year is part of the path: historico/{year}/collection/{doc}
-                const pathParts = doc.ref.path.split('/');
-                if (pathParts.length >= 2 && pathParts[0] === 'historico') {
-                    const year = pathParts[1];
-                    if (!isNaN(year) && year.length === 4) {
-                        years.add(parseInt(year));
+            try {
+                // Estrategia 1: docs de año vía collectionGroup('historico')
+                // (requiere que exista historico/{anio} como doc y rules de lectura)
+                const historicoCollections = await db.collectionGroup('historico').get();
+                const years = new Set();
+                historicoCollections.forEach(doc => {
+                    // The year is part of the path: historico/{year}/collection/{doc}
+                    const pathParts = doc.ref.path.split('/');
+                    if (pathParts.length >= 2 && pathParts[0] === 'historico') {
+                        const year = pathParts[1];
+                        if (!isNaN(year) && year.length === 4) {
+                            years.add(parseInt(year));
+                        }
                     }
-                }
-            });
+                });
+                sortedYears = Array.from(years).sort((a, b) => b - a);
+            } catch (e1) {
+                console.warn("collectionGroup('historico') falló, usando fallback:", e1.code || e1.message);
+            }
 
-            // Sort years descending (most recent first)
-            const sortedYears = Array.from(years).sort((a, b) => b - a);
+            if (sortedYears.length === 0) {
+                // Estrategia 2 (fallback): derivar años de las subcolecciones conocidas
+                // leyendo 1 doc de cada ruta historico/{anio}/{collection}
+                const years = new Set();
+                // Años candidatos: desde 2020 hasta el año actual + 1
+                const anioActual = new Date().getFullYear();
+                const candidatos = [];
+                for (let a = 2020; a <= anioActual + 1; a++) candidatos.push(String(a));
+
+                // Probar en paralelo: cada candidato x members (la más poblada)
+                const resultados = await Promise.allSettled(
+                    candidatos.map(a =>
+                        db.collection('historico').doc(a).collection('members').limit(1).get()
+                    )
+                );
+
+                resultados.forEach((res, i) => {
+                    if (res.status === 'fulfilled' && !res.value.empty) {
+                        years.add(parseInt(candidatos[i]));
+                    }
+                });
+
+                // Además probar sugerencias/feedback (pueden existir sin members)
+                const resultados2 = await Promise.allSettled(
+                    candidatos.map(a => Promise.all([
+                        db.collection('historico').doc(a).collection('sugerencias').limit(1).get(),
+                        db.collection('historico').doc(a).collection('feedback').limit(1).get()
+                    ]))
+                );
+                resultados2.forEach((res, i) => {
+                    if (res.status === 'fulfilled') {
+                        const [sug, fee] = res.value;
+                        if (!sug.empty || !fee.empty) years.add(parseInt(candidatos[i]));
+                    }
+                });
+
+                sortedYears = Array.from(years).sort((a, b) => b - a);
+            }
 
             // Populate dropdown
             sortedYears.forEach(year => {
