@@ -1,533 +1,632 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tablas Dinámicas — Luz de Cristo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/portal.css">
+    <style>
+        /* Estilos específicos de tablas dinámicas */
+        .column-definition {
+            display:flex; gap:14px; align-items:flex-end;
+            background:rgba(255,255,255,.04);
+            border:1px solid var(--border);
+            border-radius:14px; padding:16px;
+            margin-bottom:10px;
+        }
+        .column-definition > div { flex:1; }
+        .remove-column-button {
+            background:rgba(224,60,60,.15); color:#f08080;
+            border:1px solid rgba(224,60,60,.3); padding:11px 16px;
+            border-radius:100px; cursor:pointer; font-size:13px; font-weight:700;
+            font-family:'Outfit',sans-serif; transition:background var(--t);
+            flex-shrink:0;
+        }
+        .remove-column-button:hover { background:rgba(224,60,60,.28); }
+
+        .table-card {
+            background:var(--bg2);
+            border:1px solid var(--border);
+            border-radius:18px; padding:24px;
+            margin-bottom:16px;
+        }
+        .table-header {
+            display:flex; justify-content:space-between; align-items:center;
+            margin-bottom:14px; flex-wrap:wrap; gap:8px;
+        }
+        .table-header h3 {
+            font-family:'Lora',serif; font-size:19px; font-weight:600; color:var(--cream);
+        }
+        .table-year {
+            background:rgba(245,197,24,.14); border:1px solid rgba(245,197,24,.35);
+            color:var(--y); font-size:12px; font-weight:700;
+            padding:4px 12px; border-radius:100px;
+        }
+        .table-body p { font-size:14px; color:var(--muted); margin-bottom:6px; }
+        .table-body strong { color:var(--cream); font-weight:600; }
+        .table-footer {
+            display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;
+        }
+        .table-footer .btn { padding:9px 18px; font-size:13px; }
+
+        .data-row {
+            background:rgba(255,255,255,.04);
+            border:1px solid var(--border);
+            border-radius:14px; padding:18px;
+            margin-bottom:12px;
+        }
+        .data-row h3 {
+            font-size:12px; font-weight:700; letter-spacing:1.5px;
+            text-transform:uppercase; color:var(--y);
+            margin-bottom:12px;
+        }
+        .row-columns { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; }
+        .row-column label { font-size:11px; }
+    </style>
     <!-- Firebase imports (same as other pages) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Creador de Tablas Dinámicas</h1>
-        <p>Cree y administre tablas personalizadas para seguimiento de grupos especiales (Caporales, EJUTOR, polladas, etc.)</p>
 
-        <div class="tabs">
-            <button class="tab-button active" onclick="openTab(event, 'crear-tabla')">Crear Nueva Tabla</button>
-            <button class="tab-button" onclick="openTab(event, 'mis-tablas')">Mis Tablas</button>
-        </div>
+<header id="topbar">
+  <div class="topbar-inner">
+    <a href="dashboard.html" class="topbar-logo">
+      <img src="../assets/images/logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
+      <span class="topbar-logo-name">Luz de Cristo</span>
+    </a>
+    <span class="topbar-badge">📊 Tablas</span>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+  </div>
+</header>
 
-        <div id="crear-tabla" class="tab-content active">
-            <h2>Crear Nueva Tabla Dinámica</h2>
+<main class="container">
 
-            <div class="section">
-                <h3>Información Básica</h3>
-                <form id="table-info-form">
-                    <div>
-                        <label for="table-name">Nombre de la tabla:</label>
-                        <input type="text" id="table-name" placeholder="Ej. Caporales 2026, EJUTOR 2027" required>
-                    </div>
-                    <div>
-                        <label for="table-description">Descripción (opcional):</label>
-                        <input type="text" id="table-description" placeholder="Breve descripción de qué rastrea esta tabla">
-                    </div>
-                    <div>
-                        <label for="table-year">Año:</label>
-                        <input type="number" id="table-year" min="2020" max="2030" value="2026" required>
-                    </div>
-                    <button type="submit" id="create-table-definition">Definir Columnas</button>
-                </form>
-            </div>
+    <div class="section-eyebrow">Seguimiento</div>
+    <h1>Creador de Tablas Dinámicas</h1>
+    <p class="section-desc">Cree y administre tablas personalizadas para seguimiento de grupos especiales (Caporales, EJUTOR, polladas, etc.)</p>
 
-            <div id="column-definition" style="display: none; margin-top: 20px;">
-                <h3>Definir Columnas</h3>
-                <p>Agregue las columnas que tendrá su tabla. Cada columna necesita un nombre y un tipo de dato.</p>
-                <div id="columns-container">
-                    <!-- Column inputs will be added dynamically -->
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'crear-tabla')">Crear Nueva Tabla</button>
+        <button class="tab-button" onclick="openTab(event, 'mis-tablas')">Mis Tablas</button>
+    </div>
+
+    <div id="crear-tabla" class="tab-content active">
+
+        <div class="card">
+            <div class="card-title">📋 Información Básica</div>
+            <form id="table-info-form">
+                <div>
+                    <label for="table-name">Nombre de la tabla:</label>
+                    <input type="text" id="table-name" placeholder="Ej. Caporales 2026, EJUTOR 2027" required>
                 </div>
-                <button type="button" id="add-column-button" style="margin-bottom: 10px;">+ Agregar Columna</button>
-                <button type="submit" form="column-data-form" id="save-table-button" style="margin-top: 15px; background-color: #15803d; color: white; padding: 12px 24px; font-size: 16px; display: none;">
-                    Guardar Tabla
-                </button>
-            </div>
-
-            <form id="column-data-form">
-                <input type="hidden" id="table-id">
+                <div style="margin-top:14px;">
+                    <label for="table-description">Descripción (opcional):</label>
+                    <input type="text" id="table-description" placeholder="Breve descripción de qué rastrea esta tabla">
+                </div>
+                <div style="margin-top:14px; max-width:240px;">
+                    <label for="table-year">Año:</label>
+                    <input type="number" id="table-year" min="2020" max="2030" value="2026" required>
+                </div>
+                <div style="margin-top:18px;">
+                    <button type="submit" id="create-table-definition" class="btn btn-primary">→ Definir Columnas</button>
+                </div>
             </form>
         </div>
 
-        <div id="mis-tablas" class="tab-content">
-            <h2>Mis Tablas Dinámicas</h2>
-            <div id="tables-list">
-                <!-- Lista de tablas se mostrará aquí -->
-                <p>Cargando tablas...</p>
+        <div class="card" id="column-definition-wrap" style="display: none;">
+            <div class="card-title">🗂️ Definir Columnas</div>
+            <p style="font-size:14px; color:var(--muted); margin-bottom:16px;">Agregue las columnas que tendrá su tabla. Cada columna necesita un nombre y un tipo de dato.</p>
+            <div id="columns-container" class="item-list">
+                <!-- Column inputs will be added dynamically -->
+            </div>
+            <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="button" id="add-column-button" class="btn btn-secondary">+ Agregar Columna</button>
+                <button type="submit" form="column-data-form" id="save-table-button" class="btn btn-ok" style="display: none;">
+                    💾 Guardar Tabla
+                </button>
+            </div>
+        </div>
+
+        <form id="column-data-form">
+            <input type="hidden" id="table-id">
+        </form>
+    </div>
+
+    <div id="mis-tablas" class="tab-content">
+        <div class="card">
+            <div class="card-title">📚 Mis Tablas Dinámicas</div>
+            <div id="tables-list" class="item-list">
+                <div class="empty-state">Cargando tablas...</div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Initialize Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
-            authDomain: "luxto-nsp.firebaseapp.com",
-            projectId: "luxto-nsp",
-            storageBucket: "luxto-nsp.firebasestorage.app",
-            messagingSenderId: "3542836325",
-            appId: "1:3542836325:web:cf65cd50edcc431500d28c",
-            databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
-        };
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+</main>
 
-        let currentYear = new Date().getFullYear();
-        let tableColumns = []; // Stores column definitions for the current table being created
+<div id="toast"></div>
 
-        // DOM Elements
-        const tableInfoForm = document.getElementById('table-info-form');
-        const columnDefinitionDiv = document.getElementById('column-definition');
-        const columnsContainer = document.getElementById('columns-container');
-        const addColumnButton = document.getElementById('add-column-button');
-        const saveTableButton = document.getElementById('save-table-button');
-        const columnDataForm = document.getElementById('column-data-form');
-        const tablesListDiv = document.getElementById('tables-list');
+<script>
+    // Initialize Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+        authDomain: "luxto-nsp.firebaseapp.com",
+        projectId: "luxto-nsp",
+        storageBucket: "luxto-nsp.firebasestorage.app",
+        messagingSenderId: "3542836325",
+        appId: "1:3542836325:web:cf65cd50edcc431500d28c",
+        databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+    };
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+    const auth = firebase.auth();
 
-        // Initialize
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                // Check if user is coordinator or leader (leaders can create tables, coordinators can manage all)
-                const userDoc = await db.collection('members').doc(user.uid).get();
-                if (!userDoc.exists) {
-                    alert('Error al verificar permisos');
-                    window.location.href = 'login.html';
-                    return;
-                }
+    let currentYear = new Date().getFullYear();
+    let tableColumns = []; // Stores column definitions for the current table being created
 
-                const userRole = userDoc.data().rol;
-                if (userRole !== 'lider' && userRole !== 'coordinador') {
-                    alert('Solo líderes y coordinadores pueden crear y gestionar tablas dinámicas');
-                    window.location.href = 'dashboard.html';
-                    return;
-                }
+    // DOM Elements
+    const tableInfoForm = document.getElementById('table-info-form');
+    const columnDefinitionDiv = document.getElementById('column-definition-wrap');
+    const columnsContainer = document.getElementById('columns-container');
+    const addColumnButton = document.getElementById('add-column-button');
+    const saveTableButton = document.getElementById('save-table-button');
+    const columnDataForm = document.getElementById('column-data-form');
+    const tablesListDiv = document.getElementById('tables-list');
 
-                loadUserTables();
-            } else {
+    // ── Toast ──
+    function toast(msg, tipo = "") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "show " + tipo;
+        setTimeout(() => t.className = "", 3200);
+    }
+
+    function cerrarSesion() {
+        firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
+    }
+
+    // Initialize
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            // Check if user is coordinator or leader (leaders can create tables, coordinators can manage all)
+            const userDoc = await db.collection('members').doc(user.uid).get();
+            if (!userDoc.exists) {
+                toast('Error al verificar permisos', 'err');
                 window.location.href = 'login.html';
-            }
-        });
-
-        // Tab functionality
-        function openTab(evt, tabName) {
-            // Hide all tab content
-            const tabContents = document.getElementsByClassName('tab-content');
-            for (let i = 0; i < tabContents.length; i++) {
-                tabContents[i].classList.remove('active');
-            }
-
-            // Deactivate all tab buttons
-            const tabButtons = document.getElementsByClassName('tab-button');
-            for (let i = 0; i < tabButtons.length; i++) {
-                tabButtons[i].classList.remove('active');
-            }
-
-            // Show selected tab content and activate button
-            document.getElementById(tabName).classList.add('active');
-            evt.currentTarget.classList.add('active');
-        }
-
-        // Add column button
-        addColumnButton.addEventListener('click', () => {
-            const columnIndex = tableColumns.length;
-            const columnHTML = `
-                <div class="column-definition" data-index="${columnIndex}">
-                    <div>
-                        <label>Nombre de la columna ${columnIndex + 1}:</label>
-                        <input type="text" class="column-name" placeholder="Ej. Asistencia, Puntuación, Monto" required>
-                    </div>
-                    <div>
-                        <label>Tipo de dato:</label>
-                        <select class="column-type" required>
-                            <option value="">Seleccione tipo...</option>
-                            <option value="texto">Texto</option>
-                            <option value="numero">Número</option>
-                            <option value="booleano">Sí/No</option>
-                            <option value="fecha">Fecha</option>
-                            <option value="monto">Monto (con símbolo de moneda)</option>
-                        </select>
-                    </div>
-                    <button type="button" class="remove-column-button" style="margin-left: 10px; background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Eliminar</button>
-                </div>
-            `;
-
-            columnsContainer.insertAdjacentHTML('beforeend', columnHTML);
-            tableColumns.push({ name: '', type: '' });
-
-            // Add event listeners to new inputs
-            const newColumnDiv = columnsContainer.lastElementChild;
-            const nameInput = newColumnDiv.querySelector('.column-name');
-            const typeSelect = newColumnDiv.querySelector('.column-type');
-            const removeButton = newColumnDiv.querySelector('.remove-column-button');
-
-            nameInput.addEventListener('input', (e) => {
-                tableColumns[columnIndex].name = e.target.value;
-                updateSaveButtonState();
-            });
-
-            typeSelect.addEventListener('change', (e) => {
-                tableColumns[columnIndex].type = e.target.value;
-                updateSaveButtonState();
-            });
-
-            removeButton.addEventListener('click', () => {
-                newColumnDiv.remove();
-                tableColumns.splice(columnIndex, 1);
-                // Re-index remaining columns
-                document.querySelectorAll('.column-definition').forEach((div, index) => {
-                    div.dataset.index = index;
-                    const nameInput = div.querySelector('.column-name');
-                    const typeSelect = div.querySelector('.column-type');
-                    const removeButton = div.querySelector('.remove-column-button');
-
-                    nameInput.addEventListener('input', (e) => {
-                        tableColumns[index].name = e.target.value;
-                        updateSaveButtonState();
-                    });
-
-                    typeSelect.addEventListener('change', (e) => {
-                        tableColumns[index].type = e.target.value;
-                        updateSaveButtonState();
-                    });
-
-                    removeButton.addEventListener('click', () => {
-                        div.remove();
-                        tableColumns.splice(index, 1);
-                        // Re-index again
-                        document.querySelectorAll('.column-definition').forEach((d, idx) => {
-                            d.dataset.index = idx;
-                        });
-                        updateSaveButtonState();
-                    });
-                });
-                updateSaveButtonState();
-            });
-
-            updateSaveButtonState();
-        });
-
-        // Update save button state based on form validity
-        function updateSaveButtonState() {
-            const tableName = document.getElementById('table-name').value.trim();
-            const tableYear = document.getElementById('table-year').value;
-            const validColumns = tableColumns.filter(col => col.name && col.type);
-
-            const isValid = tableName && tableYear && validColumns.length > 0 && validColumns.length === tableColumns.length;
-
-            saveTableButton.style.display = isValid ? 'inline-block' : 'none';
-            saveTableButton.disabled = !isValid;
-        }
-
-        // Create table definition
-        tableInfoForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const tableName = document.getElementById('table-name').value.trim();
-            const tableDescription = document.getElementById('table-description').value.trim();
-            const tableYear = parseInt(document.getElementById('table-year').value);
-
-            if (!tableName || isNaN(tableYear)) {
-                alert('Por favor, complete el nombre y año de la tabla');
                 return;
             }
 
-            try {
-                // Create table definition document
-                const tableRef = await db.collection('tablas_definiciones').add({
-                    nombre: tableName,
-                    descripcion: tableDescription,
-                    año: tableYear,
-                    columnas: tableColumns,
-                    fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
-                    creadorUID: auth.currentUser.uid
+            const userRole = userDoc.data().rol;
+            if (userRole !== 'lider' && userRole !== 'coordinador') {
+                toast('Solo líderes y coordinadores pueden crear y gestionar tablas dinámicas', 'err');
+                setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
+                return;
+            }
+
+            loadUserTables();
+        } else {
+            window.location.href = 'login.html';
+        }
+    });
+
+    // Tab functionality
+    function openTab(evt, tabName) {
+        // Hide all tab content
+        const tabContents = document.getElementsByClassName('tab-content');
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove('active');
+        }
+
+        // Deactivate all tab buttons
+        const tabButtons = document.getElementsByClassName('tab-button');
+        for (let i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove('active');
+        }
+
+        // Show selected tab content and activate button
+        document.getElementById(tabName).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    }
+
+    // Add column button
+    addColumnButton.addEventListener('click', () => {
+        const columnIndex = tableColumns.length;
+        const columnHTML = `
+            <div class="column-definition" data-index="${columnIndex}">
+                <div>
+                    <label>Nombre de la columna ${columnIndex + 1}:</label>
+                    <input type="text" class="column-name" placeholder="Ej. Asistencia, Puntuación, Monto" required>
+                </div>
+                <div>
+                    <label>Tipo de dato:</label>
+                    <select class="column-type" required>
+                        <option value="">Seleccione tipo...</option>
+                        <option value="texto">Texto</option>
+                        <option value="numero">Número</option>
+                        <option value="booleano">Sí/No</option>
+                        <option value="fecha">Fecha</option>
+                        <option value="monto">Monto (con símbolo de moneda)</option>
+                    </select>
+                </div>
+                <button type="button" class="remove-column-button">Eliminar</button>
+            </div>
+        `;
+
+        columnsContainer.insertAdjacentHTML('beforeend', columnHTML);
+        tableColumns.push({ name: '', type: '' });
+
+        // Add event listeners to new inputs
+        const newColumnDiv = columnsContainer.lastElementChild;
+        const nameInput = newColumnDiv.querySelector('.column-name');
+        const typeSelect = newColumnDiv.querySelector('.column-type');
+        const removeButton = newColumnDiv.querySelector('.remove-column-button');
+
+        nameInput.addEventListener('input', (e) => {
+            tableColumns[columnIndex].name = e.target.value;
+            updateSaveButtonState();
+        });
+
+        typeSelect.addEventListener('change', (e) => {
+            tableColumns[columnIndex].type = e.target.value;
+            updateSaveButtonState();
+        });
+
+        removeButton.addEventListener('click', () => {
+            newColumnDiv.remove();
+            tableColumns.splice(columnIndex, 1);
+            // Re-index remaining columns
+            document.querySelectorAll('.column-definition').forEach((div, index) => {
+                div.dataset.index = index;
+                const nameInput = div.querySelector('.column-name');
+                const typeSelect = div.querySelector('.column-type');
+                const removeButton = div.querySelector('.remove-column-button');
+
+                nameInput.addEventListener('input', (e) => {
+                    tableColumns[index].name = e.target.value;
+                    updateSaveButtonState();
                 });
 
-                // Show success message and switch to data entry
-                document.getElementById('table-id').value = tableRef.id;
-                tableInfoForm.style.display = 'none';
-                columnDefinitionDiv.style.display = 'none';
+                typeSelect.addEventListener('change', (e) => {
+                    tableColumns[index].type = e.target.value;
+                    updateSaveButtonState();
+                });
 
-                // Show data entry form
-                const dataEntryHTML = `
-                    <h2>Ingresar Datos para "${tableName}"</h2>
-                    <p>Ahora puede agregar filas de datos a su tabla:</p>
+                removeButton.addEventListener('click', () => {
+                    div.remove();
+                    tableColumns.splice(index, 1);
+                    // Re-index again
+                    document.querySelectorAll('.column-definition').forEach((d, idx) => {
+                        d.dataset.index = idx;
+                    });
+                    updateSaveButtonState();
+                });
+            });
+            updateSaveButtonState();
+        });
+
+        updateSaveButtonState();
+    });
+
+    // Update save button state based on form validity
+    function updateSaveButtonState() {
+        const tableName = document.getElementById('table-name').value.trim();
+        const tableYear = document.getElementById('table-year').value;
+        const validColumns = tableColumns.filter(col => col.name && col.type);
+
+        const isValid = tableName && tableYear && validColumns.length > 0 && validColumns.length === tableColumns.length;
+
+        saveTableButton.style.display = isValid ? 'inline-flex' : 'none';
+        saveTableButton.disabled = !isValid;
+    }
+
+    // Create table definition
+    tableInfoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const tableName = document.getElementById('table-name').value.trim();
+        const tableDescription = document.getElementById('table-description').value.trim();
+        const tableYear = parseInt(document.getElementById('table-year').value);
+
+        if (!tableName || isNaN(tableYear)) {
+            toast('Por favor, complete el nombre y año de la tabla', 'err');
+            return;
+        }
+
+        try {
+            // Create table definition document
+            const tableRef = await db.collection('tablas_definiciones').add({
+                nombre: tableName,
+                descripcion: tableDescription,
+                año: tableYear,
+                columnas: tableColumns,
+                fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
+                creadorUID: auth.currentUser.uid
+            });
+
+            // Show success message and switch to data entry
+            document.getElementById('table-id').value = tableRef.id;
+            tableInfoForm.style.display = 'none';
+            columnDefinitionDiv.style.display = 'none';
+
+            // Show data entry form
+            const dataEntryHTML = `
+                <div class="card" id="data-entry-card">
+                    <div class="card-title">📝 Ingresar Datos para "${tableName}"</div>
+                    <p style="font-size:14px; color:var(--muted); margin-bottom:16px;">Ahora puede agregar filas de datos a su tabla:</p>
                     <div id="data-entry-form">
                         <!-- Data entry form will be generated here -->
                     </div>
-                    <button type="button" id="add-row-button" style="margin-bottom 10px; background-color: #0b5ed7; color: white;">+ Agregar Fila</button>
-                    <div id="rows-container">
+                    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="button" id="add-row-button" class="btn btn-secondary">+ Agregar Fila</button>
+                        <button type="submit" form="table-data-form" id="save-table-data-button" class="btn btn-ok" style="display: none;">
+                            💾 Guardar Todos los Datos
+                        </button>
+                    </div>
+                    <div id="rows-container" style="margin-top:14px;">
                         <!-- Rows will be added here -->
                     </div>
-                    <button type="submit" form="table-data-form" id="save-table-data-button" style="margin-top: 15px; background-color: #15803d; color: white; padding: 12px 24px; font-size: 16px; display: none;">
-                        Guardar Todos los Datos
-                    </button>
                     <form id="table-data-form">
                         <input type="hidden" id="table-definition-id" value="${tableRef.id}">
                     </form>
-                `;
-
-                // Insert after the forms
-                const insertPoint = document.querySelector('#crear-tabla .section:last-child');
-                insertPoint.insertAdjacentHTML('afterend', dataEntryHTML);
-
-                // Initialize data entry
-                initializeDataEntry();
-
-            } catch (error) {
-                console.error("Error creating table definition:", error);
-                alert('Error al crear la definición de la tabla: ' + error.message);
-            }
-        });
-
-        // Initialize data entry form
-        function initializeDataEntry() {
-            const rowsContainer = document.getElementById('rows-container');
-            const addRowButton = document.getElementById('add-row-button');
-            const saveDataButton = document.getElementById('save-table-data-button');
-
-            // Add first row by default
-            addDataRow();
-
-            addRowButton.addEventListener('click', addDataRow);
-
-            // Save table data
-            document.getElementById('table-data-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                try {
-                    const tableDefId = document.getElementById('table-definition-id').value;
-                    const tableRef = db.collection('tablas_definiciones').doc(tableDefId);
-                    const tableDoc = await tableRef.get();
-
-                    if (!tableDoc.exists) {
-                        throw new Error('Definición de tabla no encontrada');
-                    }
-
-                    const tableData = tableDoc.data();
-                    const tableYear = tableData.año;
-
-                    // Get all rows
-                    const rowContainers = document.querySelectorAll('.data-row');
-                    const batch = db.batch();
-
-                    rowContainers.forEach((rowContainer, rowIndex) => {
-                        const rowData = {};
-
-                        // Collect data from each column in this row
-                        tableColumns.forEach((column, colIndex) => {
-                            const inputId = `row-${rowIndex}-col-${colIndex}`;
-                            const inputElement = document.getElementById(inputId);
-
-                            if (inputElement) {
-                                let value = inputElement.value;
-
-                                // Convert based on column type
-                                switch (column.type) {
-                                    case 'numero':
-                                        value = value ? parseFloat(value) : null;
-                                        break;
-                                    case 'booleano':
-                                        value = inputElement.checked;
-                                        break;
-                                    case 'fecha':
-                                        value = value ? new Date(value) : null;
-                                        break;
-                                    case 'monto':
-                                        value = value ? parseFloat(value.replace(/[^\d.-]/g, '')) : null;
-                                        break;
-                                    default: // texto
-                                        value = value || '';
-                                }
-
-                                rowData[column.nombre] = value;
-                            }
-                        });
-
-                        // Save to Firestore
-                        const rowRef = db.collection('tablas_dinamicas')
-                            .doc(tableYear.toString())
-                            .collection(tableDefId)
-                            .doc();
-
-                        batch.set(rowRef, {
-                            ...rowData,
-                            fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
-                            creadorUID: auth.currentUser.uid
-                        });
-                    });
-
-                    await batch.commit();
-                    alert('Todos los datos han sido guardados exitosamente');
-
-                    // Reset form
-                    document.getElementById('table-data-form').reset();
-                    rowsContainer.innerHTML = '';
-                    addDataRow(); // Add empty row for next entry
-
-                } catch (error) {
-                    console.error("Error saving table data:", error);
-                    alert('Error al guardar los datos: ' + error.message);
-                }
-            });
-        }
-
-        // Add a new data row
-        function addDataRow() {
-            const rowIndex = document.querySelectorAll('.data-row').length;
-            const rowHTML = `
-                <div class="data-row" data-index="${rowIndex}">
-                    <h3>Fila ${rowIndex + 1}</h3>
-                    <div class="row-columns">
-                        <!-- Columns will be added here -->
-                    </div>
-                    <button type="button" class="remove-row-button" style="margin-left: 10px; background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Eliminar Fila</button>
                 </div>
             `;
 
-            const rowsContainer = document.getElementById('rows-container');
-            rowsContainer.insertAdjacentHTML('beforeend', rowHTML);
+            // Insert after the forms
+            columnDefinitionDiv.insertAdjacentHTML('afterend', dataEntryHTML);
 
-            // Add column inputs for this row
-            const newRowDiv = rowsContainer.lastElementChild;
-            const columnsDiv = newRowDiv.querySelector('.row-columns');
+            // Initialize data entry
+            initializeDataEntry();
 
-            tableColumns.forEach((column, colIndex) => {
-                const inputId = `row-${rowIndex}-col-${colIndex}`;
-                let inputHTML = '';
-
-                switch (column.type) {
-                    case 'texto':
-                        inputHTML = `<input type="text" id="${inputId}" placeholder="Ingrese texto">`;
-                        break;
-                    case 'numero':
-                        inputHTML = `<input type="number" id="${inputId}" placeholder="Ingrese número">`;
-                        break;
-                    case 'booleano':
-                        inputHTML = `<input type="checkbox" id="${inputId}">`;
-                        break;
-                    case 'fecha':
-                        inputHTML = `<input type="date" id="${inputId}">`;
-                        break;
-                    case 'monto':
-                        inputHTML = `<input type="text" id="${inputId}" placeholder="0.00" style="width: 100px;">`;
-                        break;
-                    default:
-                        inputHTML = `<input type="text" id="${inputId}" placeholder="Ingrese valor">`;
-                }
-
-                const labelText = column.nombre || `Columna ${colIndex + 1}`;
-                const columnHTML = `
-                    <div class="row-column">
-                        <label for="${inputId}">${labelText}:</label>
-                        ${inputHTML}
-                    </div>
-                `;
-
-                columnsDiv.insertAdjacentHTML('beforeend', columnHTML);
-            });
-
-            // Add remove row button functionality
-            const removeButton = newRowDiv.querySelector('.remove-row-button');
-            removeButton.addEventListener('click', () => {
-                newRowDiv.remove();
-                // Re-index remaining rows
-                document.querySelectorAll('.data-row').forEach((div, index) => {
-                    div.dataset.index = index;
-                    const rowNumber = div.querySelector('h3');
-                    if (rowNumber) {
-                        rowNumber.textContent = `Fila ${index + 1}`;
-                    }
-
-                    // Update input IDs and event listeners would need to be rebound in a real app
-                    // For simplicity, we're not re-binding events here - in production would need to rebind
-                });
-            });
+        } catch (error) {
+            console.error("Error creating table definition:", error);
+            toast('Error al crear la definición de la tabla: ' + error.message, 'err');
         }
+    });
 
-        // Load user's tables
-        async function loadUserTables() {
+    // Initialize data entry form
+    function initializeDataEntry() {
+        const rowsContainer = document.getElementById('rows-container');
+        const addRowButton = document.getElementById('add-row-button');
+        const saveDataButton = document.getElementById('save-table-data-button');
+
+        // Add first row by default
+        addDataRow();
+
+        addRowButton.addEventListener('click', addDataRow);
+
+        // Save table data
+        document.getElementById('table-data-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
             try {
-                tablesListDiv.innerHTML = '<p>Cargando sus tablas...</p>';
+                const tableDefId = document.getElementById('table-definition-id').value;
+                const tableRef = db.collection('tablas_definiciones').doc(tableDefId);
+                const tableDoc = await tableRef.get();
 
-                // Get tables definitions where user is creator
-                const tablesSnapshot = await db.collection('tablas_definiciones')
-                    .where('creadorUID', '==', auth.currentUser.uid)
-                    .get();
-
-                if (tablesSnapshot.empty) {
-                    tablesListDiv.innerHTML = '<p>Aún no ha creado ninguna tabla dinámica. Use la pestaña "Crear Nueva Tabla" para comenzar.</p>';
-                    return;
+                if (!tableDoc.exists) {
+                    throw new Error('Definición de tabla no encontrada');
                 }
 
-                const tables = [];
-                tablesSnapshot.forEach(doc => {
-                    tables.push({ id: doc.id, ...doc.data() });
+                const tableData = tableDoc.data();
+                const tableYear = tableData.año;
+
+                // Get all rows
+                const rowContainers = document.querySelectorAll('.data-row');
+                const batch = db.batch();
+
+                rowContainers.forEach((rowContainer, rowIndex) => {
+                    const rowData = {};
+
+                    // Collect data from each column in this row
+                    tableColumns.forEach((column, colIndex) => {
+                        const inputId = `row-${rowIndex}-col-${colIndex}`;
+                        const inputElement = document.getElementById(inputId);
+
+                        if (inputElement) {
+                            let value = inputElement.value;
+
+                            // Convert based on column type
+                            switch (column.type) {
+                                case 'numero':
+                                    value = value ? parseFloat(value) : null;
+                                    break;
+                                case 'booleano':
+                                    value = inputElement.checked;
+                                    break;
+                                case 'fecha':
+                                    value = value ? new Date(value) : null;
+                                    break;
+                                case 'monto':
+                                    value = value ? parseFloat(value.replace(/[^\d.-]/g, '')) : null;
+                                    break;
+                                default: // texto
+                                    value = value || '';
+                            }
+
+                            rowData[column.nombre] = value;
+                        }
+                    });
+
+                    // Save to Firestore
+                    const rowRef = db.collection('tablas_dinamicas')
+                        .doc(tableYear.toString())
+                        .collection(tableDefId)
+                        .doc();
+
+                    batch.set(rowRef, {
+                        ...rowData,
+                        fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
+                        creadorUID: auth.currentUser.uid
+                    });
                 });
 
-                displayUserTables(tables);
+                await batch.commit();
+                toast('Todos los datos han sido guardados exitosamente', 'ok');
+
+                // Reset form
+                document.getElementById('table-data-form').reset();
+                rowsContainer.innerHTML = '';
+                addDataRow(); // Add empty row for next entry
 
             } catch (error) {
-                console.error("Error loading user tables:", error);
-                tablesListDiv.innerHTML = '<p>Error cargando las tablas</p>';
+                console.error("Error saving table data:", error);
+                toast('Error al guardar los datos: ' + error.message, 'err');
             }
-        }
+        });
+    }
 
-        // Display user's tables
-        function displayUserTables(tables) {
-            let html = '';
+    // Add a new data row
+    function addDataRow() {
+        const rowIndex = document.querySelectorAll('.data-row').length;
+        const rowHTML = `
+            <div class="data-row" data-index="${rowIndex}">
+                <h3>Fila ${rowIndex + 1}</h3>
+                <div class="row-columns">
+                    <!-- Columns will be added here -->
+                </div>
+                <div style="margin-top:12px;">
+                    <button type="button" class="remove-column-button">Eliminar Fila</button>
+                </div>
+            </div>
+        `;
 
-            tables.forEach(table => {
-                const fecha = table.fechaCreacion ?
-                    new Date(table.fechaCreacion.seconds * 1000).toLocaleDateString() :
-                    'Fecha desconocida';
+        const rowsContainer = document.getElementById('rows-container');
+        rowsContainer.insertAdjacentHTML('beforeend', rowHTML);
 
-                html += `
-                    <div class="table-card">
-                        <div class="table-header">
-                            <h3>${table.nombre}</h3>
-                            <span class="table-year">Año: ${table.año}</span>
-                        </div>
-                        <div class="table-body">
-                            ${table.descripcion ? `<p><strong>Descripción:</strong> ${table.descripcion}</p>` : ''}
-                            <p><strong>Columnas:</strong> ${table.columnas.length}</p>
-                            <p><strong>Creada:</strong> ${fecha}</p>
-                        </div>
-                        <div class="table-footer">
-                            <button onclick="viewTableData('${table.id}', '${table.nombre}')" class="btn btn-sm btn-outline-primary">
-                                Ver Datos
-                            </button>
-                            <button onclick="editTable('${table.id}')" class="btn btn-sm btn-outline-secondary">
-                                Editar
-                            </button>
-                        </div>
-                    </div>
-                `;
+        // Add column inputs for this row
+        const newRowDiv = rowsContainer.lastElementChild;
+        const columnsDiv = newRowDiv.querySelector('.row-columns');
+
+        tableColumns.forEach((column, colIndex) => {
+            const inputId = `row-${rowIndex}-col-${colIndex}`;
+            let inputHTML = '';
+
+            switch (column.type) {
+                case 'texto':
+                    inputHTML = `<input type="text" id="${inputId}" placeholder="Ingrese texto">`;
+                    break;
+                case 'numero':
+                    inputHTML = `<input type="number" id="${inputId}" placeholder="Ingrese número">`;
+                    break;
+                case 'booleano':
+                    inputHTML = `<input type="checkbox" id="${inputId}" style="width:18px; height:18px; accent-color:var(--y); cursor:pointer;">`;
+                    break;
+                case 'fecha':
+                    inputHTML = `<input type="date" id="${inputId}">`;
+                    break;
+                case 'monto':
+                    inputHTML = `<input type="text" id="${inputId}" placeholder="0.00">`;
+                    break;
+                default:
+                    inputHTML = `<input type="text" id="${inputId}" placeholder="Ingrese valor">`;
+            }
+
+            const labelText = column.nombre || `Columna ${colIndex + 1}`;
+            const columnHTML = `
+                <div class="row-column">
+                    <label for="${inputId}">${labelText}:</label>
+                    ${inputHTML}
+                </div>
+            `;
+
+            columnsDiv.insertAdjacentHTML('beforeend', columnHTML);
+        });
+
+        // Add remove row button functionality
+        const removeButton = newRowDiv.querySelector('.remove-column-button');
+        removeButton.addEventListener('click', () => {
+            newRowDiv.remove();
+            // Re-index remaining rows
+            document.querySelectorAll('.data-row').forEach((div, index) => {
+                div.dataset.index = index;
+                const rowNumber = div.querySelector('h3');
+                if (rowNumber) {
+                    rowNumber.textContent = `Fila ${index + 1}`;
+                }
+
+                // Update input IDs and event listeners would need to be rebound in a real app
+                // For simplicity, we're not re-binding events here - in production would need to rebind
+            });
+        });
+    }
+
+    // Load user's tables
+    async function loadUserTables() {
+        try {
+            tablesListDiv.innerHTML = '<div class="empty-state">Cargando sus tablas...</div>';
+
+            // Get tables definitions where user is creator
+            const tablesSnapshot = await db.collection('tablas_definiciones')
+                .where('creadorUID', '==', auth.currentUser.uid)
+                .get();
+
+            if (tablesSnapshot.empty) {
+                tablesListDiv.innerHTML = '<div class="empty-state">Aún no ha creado ninguna tabla dinámica. Use la pestaña "Crear Nueva Tabla" para comenzar.</div>';
+                return;
+            }
+
+            const tables = [];
+            tablesSnapshot.forEach(doc => {
+                tables.push({ id: doc.id, ...doc.data() });
             });
 
-            tablesListDiv.innerHTML = html;
-        }
+            displayUserTables(tables);
 
-        // View table data (placeholder)
-        function viewTableData(tableId, tableName) {
-            alert(`Funcionalidad de visualización de datos para "${tableName}" será implementada en una fase futura.`);
+        } catch (error) {
+            console.error("Error loading user tables:", error);
+            tablesListDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando las tablas</div>';
         }
+    }
 
-        // Edit table (placeholder)
-        function editTable(tableId) {
-            alert(`Funcionalidad de edición de tabla será implementada en una fase futura.`);
-        }
-    </script>
+    // Display user's tables
+    function displayUserTables(tables) {
+        let html = '';
+
+        tables.forEach(table => {
+            const fecha = table.fechaCreacion ?
+                new Date(table.fechaCreacion.seconds * 1000).toLocaleDateString() :
+                'Fecha desconocida';
+
+            html += `
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>${table.nombre}</h3>
+                        <span class="table-year">Año: ${table.año}</span>
+                    </div>
+                    <div class="table-body">
+                        ${table.descripcion ? `<p><strong>Descripción:</strong> ${table.descripcion}</p>` : ''}
+                        <p><strong>Columnas:</strong> ${table.columnas.length}</p>
+                        <p><strong>Creada:</strong> ${fecha}</p>
+                    </div>
+                    <div class="table-footer">
+                        <button onclick="viewTableData('${table.id}', '${table.nombre}')" class="btn btn-secondary">
+                            👁️ Ver Datos
+                        </button>
+                        <button onclick="editTable('${table.id}')" class="btn btn-secondary">
+                            ✎ Editar
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        tablesListDiv.innerHTML = html;
+    }
+
+    // View table data (placeholder)
+    function viewTableData(tableId, tableName) {
+        toast(`Funcionalidad de visualización de datos para "${tableName}" será implementada en una fase futura.`);
+    }
+
+    // Edit table (placeholder)
+    function editTable(tableId) {
+        toast(`Funcionalidad de edición de tabla será implementada en una fase futura.`);
+    }
+</script>
 </body>
 </html>
