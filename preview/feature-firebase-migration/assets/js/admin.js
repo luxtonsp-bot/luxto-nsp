@@ -664,32 +664,59 @@ window.updateMemberRole = async function (memberId, newRole) {
 };
 
 /* ── Sugerencias y Feedback ────────────────────────── */
+// Los docs migrados del Excel usan campos en inglés: name, suggestion, comment, rating,
+// created_at (ISO string), date_sent/week, assembly_date.
+// Los nuevos (desde la web) usan: tema, descripcion, comentario, puntuacion, createdAt (Timestamp).
+// Estas helpers leen ambos esquemas.
+function sugerenciaTema(d)  { return d.tema || d.suggestion_tema || "Sin tema"; }
+function sugerenciaDesc(d)  { return d.descripcion || d.suggestion || "Sin descripción"; }
+function feedbackComent(d)  { return d.comentario || d.comment || "Sin comentario"; }
+function feedbackAsam(d)    { return d.asambleaFecha || d.assembly_date || "No especificada"; }
+function feedbackPuntos(d)  {
+  const p = d.puntuacion ?? d.rating ?? 0;
+  const n = Math.max(0, Math.min(5, Math.round(Number(p) || 0)));
+  return n;
+}
+function docFecha(d) {
+  // createdAt (Timestamp modular), created_at (ISO string) o fechaCreacion (Timestamp compat)
+  if (d.createdAt?.seconds) return new Date(d.createdAt.seconds * 1000).toLocaleString();
+  if (d.fechaCreacion?.seconds) return new Date(d.fechaCreacion.seconds * 1000).toLocaleString();
+  if (d.created_at) {
+    const f = new Date(d.created_at);
+    return isNaN(f) ? "Fecha desconocida" : f.toLocaleString();
+  }
+  return "Fecha desconocida";
+}
+function docNombre(d) { return d.nombre || d.name || "Anónimo"; }
+
 window.loadSuggestions = async function () {
   try {
     const container = document.getElementById("suggestions-list");
     if (!container) return;
     container.innerHTML = '<p>Cargando sugerencias...</p>';
 
-    const q = query(
-      collection(fsdb, "sugerencias"),
-      orderBy("createdAt", "desc"),
-      limit(50)
-    );
-    const snap = await getDocs(q);
+    const snap = await getDocs(collection(fsdb, "sugerencias"));
 
     if (snap.empty) {
       container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay sugerencias aún.</p>';
       return;
     }
 
+    // Ordenar por fecha descendente en cliente (los docs tienen created_at de tipos distintos)
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    docs.sort((a, b) => {
+      const fa = a.createdAt?.seconds || (a.created_at ? new Date(a.created_at).getTime() / 1000 : 0) || 0;
+      const fb = b.createdAt?.seconds || (b.created_at ? new Date(b.created_at).getTime() / 1000 : 0) || 0;
+      return fb - fa;
+    });
+
     let html = '<ul style="list-style:none; padding:0;">';
-    snap.forEach(docSnap => {
-      const d = docSnap.data();
-      const fecha = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString() : "Fecha desconocida";
+    docs.forEach(d => {
+      const fecha = docFecha(d);
       html += `<li style="background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom:8px;">`;
-      html += `<div style="font-weight:600; margin-bottom:4px;">${d.tema || "Sin tema"}</div>`;
-      html += `<div style="font-size:13px; color:var(--muted); margin-bottom:4px;">${d.descripcion || "Sin descripción"}</div>`;
-      html += `<div style="font-size:11px; color:var(--muted);">Por: ${d.nombre || "Anónimo"} · ${fecha}</div>`;
+      html += `<div style="font-weight:600; margin-bottom:4px;">${escaparHTML(sugerenciaTema(d))}</div>`;
+      html += `<div style="font-size:13px; color:var(--muted); margin-bottom:4px;">${escaparHTML(sugerenciaDesc(d))}</div>`;
+      html += `<div style="font-size:11px; color:var(--muted);">Por: ${escaparHTML(docNombre(d))} · ${fecha}</div>`;
       html += `</li>`;
     });
     html += '</ul>';
@@ -706,28 +733,31 @@ window.loadFeedback = async function () {
     if (!container) return;
     container.innerHTML = '<p>Cargando feedback...</p>';
 
-    const q = query(
-      collection(fsdb, "feedback"),
-      orderBy("createdAt", "desc"),
-      limit(50)
-    );
-    const snap = await getDocs(q);
+    const snap = await getDocs(collection(fsdb, "feedback"));
 
     if (snap.empty) {
       container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay feedback aún.</p>';
       return;
     }
 
+    // Ordenar por fecha descendente en cliente
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    docs.sort((a, b) => {
+      const fa = a.createdAt?.seconds || (a.created_at ? new Date(a.created_at).getTime() / 1000 : 0) || 0;
+      const fb = b.createdAt?.seconds || (b.created_at ? new Date(b.created_at).getTime() / 1000 : 0) || 0;
+      return fb - fa;
+    });
+
     let html = '<ul style="list-style:none; padding:0;">';
-    snap.forEach(docSnap => {
-      const d = docSnap.data();
-      const fecha = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString() : "Fecha desconocida";
-      const estrellas = "⭐".repeat(d.puntuacion || 0) + "☆".repeat(5 - (d.puntuacion || 0));
+    docs.forEach(d => {
+      const fecha = docFecha(d);
+      const n = feedbackPuntos(d);
+      const estrellas = "⭐".repeat(n) + "☆".repeat(5 - n);
       html += `<li style="background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom:8px;">`;
-      html += `<div style="font-weight:600; margin-bottom:4px;">Asamblea: ${d.asambleaFecha || "No especificada"}</div>`;
-      html += `<div style="font-size:13px; color:var(--muted); margin-bottom:4px;">${d.comentario || "Sin comentario"}</div>`;
+      html += `<div style="font-weight:600; margin-bottom:4px;">Asamblea: ${escaparHTML(feedbackAsam(d))}</div>`;
+      html += `<div style="font-size:13px; color:var(--muted); margin-bottom:4px;">${escaparHTML(feedbackComent(d))}</div>`;
       html += `<div>${estrellas}</div>`;
-      html += `<div style="font-size:11px; color:var(--muted);">Por: ${d.nombre || "Anónimo"} · ${fecha}</div>`;
+      html += `<div style="font-size:11px; color:var(--muted);">Por: ${escaparHTML(docNombre(d))} · ${fecha}</div>`;
       html += `</li>`;
     });
     html += '</ul>';
