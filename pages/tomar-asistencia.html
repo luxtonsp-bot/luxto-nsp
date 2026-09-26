@@ -325,8 +325,13 @@
         const startMinutes = h * 60 + m;
 
         let diff = normalizedArrivalMinutes - startMinutes;
-        if (diff < -720) diff += 1440;   // cruce de medianoche hacia adelante
-        else if (diff > 720) diff -= 1440;
+        // Cruce de medianoche: solo si la asamblea empieza temprano (ej. 8:00 = 480 min)
+        // y llegaste tarde en la noche anterior (ej. 23:00 = 1380 min) → diff = 1380-480 = 900 > 720
+        // En ese caso restamos 1440 para obtener diff negativo (llegada día anterior)
+        // Si asamblea es tarde (ej. 16:00 = 960) y llegas madrugada misma día (ej. 00:25 = 25) → diff = -935
+        // NO es cruce de medianoche, es llegada temprano → diff negativo = no tardanza
+        if (diff > 720) diff -= 1440;        // cruce medianoche: llegada noche anterior, asamblea mañana temprano
+        // NO hacer: if (diff < -720) diff += 1440  ← eso convertía llegada temprano en tardanza
         const tardanzaMinutos = Math.max(0, diff);
 
         console.log('[TARDANZA DEBUG]', {
