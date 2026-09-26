@@ -482,15 +482,16 @@ Ejemplo:
     function getSaturdaysForYear(year) {
         // Devuelve array de Date (UTC medianoche) de todos los sábados del año en Lima
         const saturdays = [];
-        // 1 de enero a medianoche en Lima = 05:00 UTC (Lima es UTC-5)
-        let d = new Date(Date.UTC(year, 0, 1, 5, 0, 0));
-        // Avanzar al primer sábado (getDay() en UTC = día en Lima porque estamos a las 05:00 UTC)
-        while (d.getUTCDay() !== 6) {
+        // Usar Intl para obtener el día de la semana en Lima directamente
+        const fmt = new Intl.DateTimeFormat('es-ES', { timeZone: 'America/Lima', weekday: 'numeric' });
+        // 1 de enero a medianoche UTC
+        let d = new Date(Date.UTC(year, 0, 1));
+        // Avanzar al primer sábado en Lima
+        while (parseInt(fmt.format(d)) !== 6) { // 6 = sábado en ISO (1=lunes...7=domingo), pero JS getDay: 0=dom...6=sáb
             d.setUTCDate(d.getUTCDate() + 1);
         }
         // Iterar todos los sábados del año
         while (d.getUTCFullYear() === year) {
-            // Guardar como UTC medianoche
             const utcMidnight = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
             saturdays.push(utcMidnight);
             d.setUTCDate(d.getUTCDate() + 7);
@@ -588,17 +589,19 @@ Ejemplo:
 
     // Obtener todos los días de semana específicos de un año (ej. todos los lunes, martes, etc.)
     function getWeekdaysForYear(year, targetWeekday) {
-        // targetWeekday: 1=Lunes, 2=Martes, ..., 5=Viernes (0=Domingo, 6=Sábado)
+        // targetWeekday: 1=Lunes, 2=Martes, ..., 5=Viernes (0=Domingo, 6=Sábado) - formato JS getDay
         const days = [];
-        // 1 de enero a medianoche en Lima = 05:00 UTC
-        let d = new Date(Date.UTC(year, 0, 1, 5, 0, 0));
-        // Avanzar al primer día de la semana objetivo (usando getUTCDay que corresponde a día en Lima)
-        while (d.getUTCDay() !== targetWeekday) {
+        const fmt = new Intl.DateTimeFormat('es-ES', { timeZone: 'America/Lima', weekday: 'numeric' });
+        // 1 de enero a medianoche UTC
+        let d = new Date(Date.UTC(year, 0, 1));
+        // Avanzar al primer día objetivo en Lima
+        // fmt.format retorna 1=Lunes...7=Domingo (ISO), targetWeekday es 0=Dom...6=Sáb (JS)
+        const targetISO = targetWeekday === 0 ? 7 : targetWeekday;
+        while (parseInt(fmt.format(d)) !== targetISO) {
             d.setUTCDate(d.getUTCDate() + 1);
         }
         // Iterar todos los días de ese tipo en el año
         while (d.getUTCFullYear() === year) {
-            // Guardar como UTC medianoche
             const utcMidnight = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
             days.push(utcMidnight);
             d.setUTCDate(d.getUTCDate() + 7);
