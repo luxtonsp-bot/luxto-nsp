@@ -84,6 +84,16 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
+    // ── Zona horaria Lima (UTC-5) ──
+    const LIMA_OFFSET_MIN = -300; // UTC-5 en minutos (Perú no tiene DST)
+
+    function getLimaDateStr() {
+        // Retorna YYYY-MM-DD en zona Lima
+        const now = new Date();
+        const lima = new Date(now.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return lima.toISOString().split('T')[0];
+    }
+
     let currentMember = null;
     let currentAssemblyDate = null;
 
@@ -119,15 +129,11 @@
         }
     });
 
-    // Load current assembly (today's assembly)
+    // Load current assembly (today's assembly in Lima timezone)
     async function loadCurrentAssembly() {
         try {
-            // Get today's date in YYYY-MM-DD format
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`;
+            // Get today's date in YYYY-MM-DD format (Lima timezone)
+            const dateStr = getLimaDateStr();
 
             currentAssemblyDate = dateStr;
 
@@ -203,11 +209,20 @@
             const nombre = data.nombre || data.name || 'Sin nombre';
             const email = data.email || '';
             const initial = nombre.charAt(0).toUpperCase();
+            // Avatar: photoURL, avatar, o fallback a inicial
+            const photoURL = data.photoURL || data.avatar || '';
+            const avatarHtml = photoURL
+                ? `<img src="${photoURL}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                : '';
+            const initialHtml = photoURL
+                ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:none; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
+                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`;
 
             html += `
                 <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        <div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>
+                        ${avatarHtml}
+                        ${initialHtml}
                         <div>
                             <div class="item-title">${nombre}</div>
                             ${email ? `<div class="item-meta">${email}</div>` : ''}
