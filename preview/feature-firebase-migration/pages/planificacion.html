@@ -443,45 +443,27 @@ Ejemplo:
         return now.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }); // en-CA = YYYY-MM-DD
     }
 
-    function getLimaDateStr(date) {
-        // date es UTC medianoche de la fecha Lima (ej. 2026-01-03T00:00:00Z = 3 ene en Lima)
-        // Devolvemos directamente los componentes UTC
-        const y = date.getUTCFullYear();
-        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const d = String(date.getUTCDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
-
-    function formatLimaDate(date) {
-        // date es UTC medianoche de la fecha Lima
-        // Formatear usando componentes UTC + timeZone para weekday correcto
-        return date.toLocaleDateString('es-ES', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            timeZone: 'America/Lima'
-        });
-    }
-
     function getSaturdaysForYear(year) {
-        // Devuelve array de Date (UTC medianoche) de todos los sábados del año en Lima
+        // Devuelve array de strings YYYY-MM-DD (fechas en zona Lima) de todos los sábados del año
         const saturdays = [];
-        // Crear 1 de enero a medianoche en zona horaria Lima
-        // Usamos string ISO con offset para forzar interpretación en Lima
-        const limaJan1 = new Date(`${year}-01-01T00:00:00-05:00`);
-        // Avanzar al primer sábado (getDay() en Date local = día en Lima)
-        while (limaJan1.getDay() !== 6) {
-            limaJan1.setDate(limaJan1.getDate() + 1);
-        }
-        // Iterar todos los sábados del año (usando fecha local Lima)
-        let d = new Date(limaJan1);
-        while (d.getFullYear() === year) {
-            // Convertir a UTC medianoche: YYYY-MM-DD en Lima → UTC 05:00 mismo día
-            // Pero para almacenar como "medianoche UTC consistente", usamos los componentes de Lima
-            const utcMidnight = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            saturdays.push(utcMidnight);
-            d.setDate(d.getDate() + 7);
+        // 1 ene en Lima: usar Date.UTC(year, 0, 1, 5, 0, 0) = 1 ene 05:00 UTC = 1 ene 00:00 Lima
+        const jan1 = new Date(Date.UTC(year, 0, 1, 5, 0, 0));
+        // Obtener weekday en Lima (1=Dom...7=Sáb)
+        const weekday = parseInt(jan1.toLocaleDateString('en-US', { timeZone: 'America/Lima', weekday: 'numeric' }));
+        const dayOfWeek = weekday % 7; // 0=Dom...6=Sáb
+        const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
+        // Primer sábado (día del mes en Lima)
+        let dayOfMonth = 1 + daysUntilSaturday;
+        // Iterar sumando 7 días, usando Date.UTC con hora 05:00 para mantener medianoche Lima
+        while (true) {
+            const check = new Date(Date.UTC(year, 0, dayOfMonth, 5, 0, 0));
+            const checkYear = parseInt(check.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }).split('-')[0]);
+            if (checkYear !== year) break;
+            // Guardar como string YYYY-MM-DD (fecha en Lima)
+            const m = String(check.getUTCMonth() + 1).padStart(2, '0');
+            const d = String(check.getUTCDate()).padStart(2, '0');
+            saturdays.push(`${year}-${m}-${d}`);
+            dayOfMonth += 7;
         }
         return saturdays;
     }
@@ -504,15 +486,15 @@ Ejemplo:
         const yearSelect = document.getElementById('yearSelect');
         const saturdaySelect = document.getElementById('saturdaySelect');
         const year = parseInt(yearSelect.value);
-        const saturdays = getSaturdaysForYear(year);
+        const saturdays = getSaturdaysForYear(year); // array de strings YYYY-MM-DD
         const todayLimaStr = getTodayLimaDateStr();
 
         saturdaySelect.innerHTML = '';
         let defaultIndex = 0;
 
-        saturdays.forEach((sat, i) => {
-            const dateStr = getLimaDateStr(sat); // YYYY-MM-DD en Lima
-            const displayStr = formatLimaDate(sat);
+        saturdays.forEach((dateStr, i) => {
+            // dateStr ya es YYYY-MM-DD en Lima
+            const displayStr = formatLimaDateStr(dateStr);
             const isNext = dateStr === todayLimaStr;
             const isFuture = dateStr > todayLimaStr && defaultIndex === 0;
 
@@ -529,6 +511,19 @@ Ejemplo:
         // Actualizar selectedSaturdayDate al seleccionado por defecto
         const selectedOpt = saturdaySelect.options[saturdaySelect.selectedIndex];
         if (selectedOpt) selectedSaturdayDate = selectedOpt.value;
+    }
+
+    // Formatea string YYYY-MM-DD (fecha Lima) a texto legible
+    function formatLimaDateStr(dateStr) {
+        // dateStr = 'YYYY-MM-DD' en zona Lima
+        const date = new Date(dateStr + 'T00:00:00-05:00');
+        return date.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: 'America/Lima'
+        });
     }
 
     // ── Cargar datos del sábado seleccionado ──
@@ -574,8 +569,7 @@ Ejemplo:
 
     function updateSelectedSaturdayInfo(dateStr) {
         const infoEl = document.getElementById('selectedSaturdayInfo');
-        const date = new Date(dateStr + 'T00:00:00');
-        const displayStr = formatLimaDate(date);
+        const displayStr = formatLimaDateStr(dateStr);
         infoEl.textContent = `Editando: ${displayStr}`;
         infoEl.style.display = 'block';
     }
@@ -756,9 +750,7 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
         div.className = 'preview-template';
 
         const fechaStr = selectedSaturdayDate || getTodayLimaDateStr();
-        // fechaStr ya está en YYYY-MM-DD de Lima, parsear como UTC medianoche
-        const date = new Date(fechaStr + 'T00:00:00');
-        const fechaFormateada = formatLimaDate(date);
+        const fechaFormateada = formatLimaDateStr(fechaStr);
 
         const hora = document.getElementById('hora').value || 'Por definir';
         const tema = document.getElementById('tema').value || 'Por definir';
