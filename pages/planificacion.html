@@ -28,7 +28,7 @@
         .saturday-selector label { font-weight: 600; color: var(--cream); }
         .saturday-selector select {
             flex: 1;
-            min-width: 200px;
+            min-width: 160px;
             padding: 10px 14px;
             background: var(--bg3);
             border: 1.5px solid var(--border);
@@ -38,6 +38,7 @@
             font-size: 14px;
         }
         .saturday-selector select:focus { outline: none; border-color: var(--o); }
+        #yearSelect { min-width: 100px; flex: 0 0 auto; }
         .saturday-btn {
             padding: 10px 16px;
             border-radius: 8px;
@@ -301,6 +302,8 @@
     <div class="card">
         <div class="card-title">🗓️ Seleccionar Sábado</div>
         <div class="saturday-selector">
+            <label for="yearSelect">Año:</label>
+            <select id="yearSelect" onchange="generateSaturdayOptions()"></select>
             <label for="saturdaySelect">Sábado a planificar:</label>
             <select id="saturdaySelect"></select>
             <button class="saturday-btn saturday-btn-primary" id="loadSaturdayBtn" onclick="loadSelectedSaturday()">Cargar</button>
@@ -434,40 +437,97 @@ Ejemplo:
     let selectedSaturdayDate = null; // YYYY-MM-DD
     let currentPreviewDataUrl = null;
 
-    // ── Generar lista de sábados (próximos 12 + pasados 4) ──
+    // ── Zona horaria Lima (UTC-5) ──
+    const LIMA_OFFSET_MIN = -300; // UTC-5 en minutos (Perú no tiene DST)
+
+    function getLimaNow() {
+        const now = new Date();
+        return new Date(now.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+    }
+
+    function getLimaDateStr(date) {
+        // date es Date en UTC, devuelve YYYY-MM-DD en zona Lima
+        const lima = new Date(date.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return lima.toISOString().split('T')[0];
+    }
+
+    function formatLimaDate(date) {
+        // date es Date en UTC, formatea en zona Lima
+        const lima = new Date(date.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return lima.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: 'America/Lima'
+        });
+    }
+
+    function getSaturdaysForYear(year) {
+        // Devuelve array de Date (UTC medianoche) de todos los sábados del año en Lima
+        const saturdays = [];
+        // 1 de enero en UTC
+        let d = new Date(Date.UTC(year, 0, 1));
+        // Ajustar a medianoche Lima
+        d = new Date(d.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        // Avanzar al primer sábado
+        while (d.getDay() !== 6) {
+            d.setDate(d.getDate() + 1);
+        }
+        // Iterar todos los sábados del año
+        while (d.getFullYear() === year) {
+            // Guardar como UTC medianoche para consistencia
+            const utcMidnight = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            saturdays.push(utcMidnight);
+            d.setDate(d.getDate() + 7);
+        }
+        return saturdays;
+    }
+
+    function generateYearOptions() {
+        const yearSelect = document.getElementById('yearSelect');
+        const limaNow = getLimaNow();
+        const currentYear = limaNow.getFullYear();
+        // Generar años: actual - 2 hasta actual + 3 (rango de 6 años)
+        for (let y = currentYear - 2; y <= currentYear + 3; y++) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+    }
+
     function generateSaturdayOptions() {
-        const select = document.getElementById('saturdaySelect');
-        const today = new Date();
-        const options = [];
+        const yearSelect = document.getElementById('yearSelect');
+        const saturdaySelect = document.getElementById('saturdaySelect');
+        const year = parseInt(yearSelect.value);
+        const saturdays = getSaturdaysForYear(year);
+        const limaNow = getLimaNow();
+        const todayLimaStr = getLimaDateStr(limaNow);
 
-        // Encontrar el próximo sábado
-        let nextSaturday = new Date(today);
-        const dayOfWeek = today.getDay(); // 0=Dom, 6=Sáb
-        const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
-        nextSaturday.setDate(today.getDate() + (daysUntilSaturday === 0 ? 0 : daysUntilSaturday));
+        saturdaySelect.innerHTML = '';
+        let defaultIndex = 0;
 
-        // Generar 12 sábados futuros + 4 pasados
-        for (let i = -4; i <= 12; i++) {
-            const sat = new Date(nextSaturday);
-            sat.setDate(nextSaturday.getDate() + i * 7);
-            const dateStr = sat.toISOString().split('T')[0];
-            const displayStr = sat.toLocaleDateString('es-ES', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+        saturdays.forEach((sat, i) => {
+            const dateStr = getLimaDateStr(sat); // YYYY-MM-DD en Lima
+            const displayStr = formatLimaDate(sat);
+            const isNext = dateStr === todayLimaStr;
+            const isFuture = dateStr > todayLimaStr && defaultIndex === 0;
+
             const option = document.createElement('option');
             option.value = dateStr;
-            option.textContent = displayStr + (i === 0 ? ' (próximo)' : '');
-            if (i === 0) option.selected = true;
-            select.appendChild(option);
-            options.push(dateStr);
-        }
+            option.textContent = displayStr + (isNext ? ' (hoy)' : isFuture && defaultIndex === 0 ? ' (próximo)' : '');
+            if (isNext || (isFuture && defaultIndex === 0)) {
+                option.selected = true;
+                defaultIndex = i;
+            }
+            saturdaySelect.appendChild(option);
+        });
 
-        // Seleccionar el próximo sábado por defecto
-        selectedSaturdayDate = options[4]; // índice 4 = próximo sábado (i=0)
-        return options;
+        // Actualizar selectedSaturdayDate al seleccionado por defecto
+        const selectedOpt = saturdaySelect.options[saturdaySelect.selectedIndex];
+        if (selectedOpt) selectedSaturdayDate = selectedOpt.value;
     }
 
     // ── Cargar datos del sábado seleccionado ──
@@ -514,12 +574,7 @@ Ejemplo:
     function updateSelectedSaturdayInfo(dateStr) {
         const infoEl = document.getElementById('selectedSaturdayInfo');
         const date = new Date(dateStr + 'T00:00:00');
-        const displayStr = date.toLocaleDateString('es-ES', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        const displayStr = formatLimaDate(date);
         infoEl.textContent = `Editando: ${displayStr}`;
         infoEl.style.display = 'block';
     }
@@ -699,14 +754,10 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
         const div = document.createElement('div');
         div.className = 'preview-template';
 
-        const fechaStr = selectedSaturdayDate || new Date().toISOString().split('T')[0];
+        const fechaStr = selectedSaturdayDate || getLimaDateStr(getLimaNow());
+        // fechaStr ya está en YYYY-MM-DD de Lima, parsear como UTC medianoche
         const date = new Date(fechaStr + 'T00:00:00');
-        const fechaFormateada = date.toLocaleDateString('es-ES', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        const fechaFormateada = formatLimaDate(date);
 
         const hora = document.getElementById('hora').value || 'Por definir';
         const tema = document.getElementById('tema').value || 'Por definir';
@@ -772,7 +823,7 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
             </div>
             <div class="footer">
                 Luz de Cristo - Parroquia Nuestra Señora de la Piedad<br>
-                Generado el ${new Date().toLocaleDateString('es-ES')}
+                Generado el ${getLimaNow().toLocaleDateString('es-ES', { timeZone: 'America/Lima' })}
             </div>
         `;
         return div;
@@ -797,8 +848,9 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
     // ── Initialize ──
     auth.onAuthStateChanged(async (user) => {
         if (user) {
+            generateYearOptions();
             generateSaturdayOptions();
-            // Load the next Saturday by default
+            // Load the selected Saturday by default
             const select = document.getElementById('saturdaySelect');
             selectedSaturdayDate = select.value;
             await loadAssemblyData(selectedSaturdayDate);
