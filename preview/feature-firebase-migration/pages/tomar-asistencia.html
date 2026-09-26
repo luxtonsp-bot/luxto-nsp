@@ -297,8 +297,8 @@
     }
 
     // Calcula tardanza contra horaInicio de asambleas/{fecha}
-    // Usa serverTimestamp del servidor (no reloj del dispositivo) — zona horaria Lima, tolerancia 10 min
-    const LIMA_OFFSET = -5 * 60; // UTC-5 en minutos (Perú no tiene DST)
+    // Usa serverTimestamp del servidor (UTC) — zona horaria Lima (UTC-5), tolerancia 10 min
+    const LIMA_OFFSET_MIN = -5 * 60; // UTC-5 en minutos (Perú no tiene DST)
     const TOLERANCIA_TARDANZA_MIN = 10;
 
     async function calcularTardanza(attendanceRef, fechaAsamblea) {
@@ -310,16 +310,22 @@
         const assemblyData = assemblyDoc.data();
         if (!assemblyData.horaInicio) return;
 
-        // Llegada en minutos desde medianoche (zona horaria Lima)
+        // serverTimestamp viene en UTC. Convertir a minutos desde medianoche en zona horaria Lima (UTC-5)
         const arrivalDate = arrival.toDate ? arrival.toDate() : new Date(arrival);
-        const arrivalLima = new Date(arrivalDate.getTime() + LIMA_OFFSET * 60 * 1000);
-        const arrivalMinutes = arrivalLima.getHours() * 60 + arrivalLima.getMinutes();
+        // Usar getUTCHours/getUTCMinutes para obtener la hora UTC real, luego aplicar offset Lima
+        const arrivalUTCHours = arrivalDate.getUTCHours();
+        const arrivalUTCMinutes = arrivalDate.getUTCMinutes();
+        const arrivalTotalUTCMinutes = arrivalUTCHours * 60 + arrivalUTCMinutes;
+        // Lima = UTC - 5 horas = UTC - 300 min
+        const arrivalMinutes = arrivalTotalUTCMinutes + LIMA_OFFSET_MIN;
+        // Normalizar a 0-1439 (minutos del día en Lima)
+        const normalizedArrivalMinutes = ((arrivalMinutes % 1440) + 1440) % 1440;
 
-        // Hora de inicio en minutos
+        // Hora de inicio en minutos (ya está en hora Lima)
         const [h, m] = assemblyData.horaInicio.split(':').map(Number);
         const startMinutes = h * 60 + m;
 
-        let diff = arrivalMinutes - startMinutes;
+        let diff = normalizedArrivalMinutes - startMinutes;
         if (diff < -720) diff += 1440;   // cruce de medianoche hacia adelante
         else if (diff > 720) diff -= 1440;
         const tardanzaMinutos = Math.max(0, diff);
