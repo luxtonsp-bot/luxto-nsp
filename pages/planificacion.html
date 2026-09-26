@@ -331,6 +331,19 @@
                 <input type="text" id="tema" name="tema" placeholder="Ej. Amor al prójimo">
             </div>
             <div style="margin-top:14px;">
+                <label for="categoria">Categoría del tema:</label>
+                <select id="categoria" name="categoria">
+                    <option value="">-- Seleccionar categoría --</option>
+                    <option value="doctrinal">📖 Doctrinal</option>
+                    <option value="espiritual">🙏 Espiritual</option>
+                    <option value="psicologico">🧠 Psicológico</option>
+                    <option value="sanacion">💚 Sanación</option>
+                    <option value="integracion">🤝 Integración</option>
+                    <option value="salida">🚌 Salida</option>
+                    <option value="actua">🎭 Actúa</option>
+                </select>
+            </div>
+            <div style="margin-top:14px;">
                 <label for="objetivo">Objetivo:</label>
                 <input type="text" id="objetivo" name="objetivo" placeholder="Ej. Reflexionar sobre el servicio">
             </div>
@@ -484,7 +497,7 @@ Ejemplo:
             await db.collection('asambleas').doc(dateStr).set({
                 hayAsamblea: false,
                 horaInicio: '',
-                tema: { titulo: '', objetivo: '' },
+                tema: { titulo: '', categoria: '', objetivo: '' },
                 ponentes: [],
                 esquema: '',
                 creadoEn: firebase.firestore.FieldValue.serverTimestamp()
@@ -520,6 +533,7 @@ Ejemplo:
                 document.getElementById('activar').value = data.hayAsamblea ? 'true' : 'false';
                 document.getElementById('hora').value = data.horaInicio || '';
                 document.getElementById('tema').value = data.tema?.titulo || '';
+                document.getElementById('categoria').value = data.tema?.categoria || '';
                 document.getElementById('objetivo').value = data.tema?.objetivo || '';
                 const ponentes = data.ponentes || [];
                 document.getElementById('ponente').value = ponentes.map(p => p.nombre).join(', ');
@@ -549,6 +563,7 @@ Ejemplo:
         const activar = document.getElementById('activar').value === 'true';
         const hora = document.getElementById('hora').value;
         const tema = document.getElementById('tema').value;
+        const categoria = document.getElementById('categoria').value;
         const objetivo = document.getElementById('objetivo').value;
         const ponenteStr = document.getElementById('ponente').value;
         const ponentes = ponenteStr.split(',').map(p => p.trim()).filter(p => p);
@@ -558,7 +573,7 @@ Ejemplo:
             await db.collection('asambleas').doc(selectedSaturdayDate).set({
                 hayAsamblea: activar,
                 horaInicio: hora,
-                tema: { titulo: tema, objetivo: objetivo },
+                tema: { titulo: tema, categoria: categoria, objetivo: objetivo },
                 ponentes: ponentes.map(n => ({ nombre: n })),
                 esquema: esquema,
                 actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
@@ -698,7 +713,20 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
         const objetivo = document.getElementById('objetivo').value || 'Por definir';
         const ponente = document.getElementById('ponente').value || 'Por definir';
         const activar = document.getElementById('activar').value === 'true';
+        const categoria = document.getElementById('categoria').value;
         const esquema = document.getElementById('schemaText').value || 'Esquema no definido';
+
+        // Mapear valor a label bonito
+        const categoriaLabels = {
+            'doctrinal': '📖 Doctrinal',
+            'espiritual': '🙏 Espiritual',
+            'psicologico': '🧠 Psicológico',
+            'sanacion': '💚 Sanación',
+            'integracion': '🤝 Integración',
+            'salida': '🚌 Salida',
+            'actua': '🎭 Actúa'
+        };
+        const categoriaLabel = categoria ? categoriaLabels[categoria] : 'No definida';
 
         div.innerHTML = `
             <div class="header">
@@ -724,6 +752,10 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
                 <div class="info-row">
                     <span class="info-label">Tema</span>
                     <span class="info-value">${tema}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Categoría</span>
+                    <span class="info-value">${categoriaLabel}</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Objetivo</span>
