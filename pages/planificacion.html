@@ -304,10 +304,23 @@
         <div class="saturday-selector">
             <label for="yearSelect">Año:</label>
             <select id="yearSelect" onchange="generateSaturdayOptions()"></select>
+            <label for="dayTypeSelect">Tipo de día:</label>
+            <select id="dayTypeSelect" onchange="generateSaturdayOptions()">
+                <option value="saturday">Sábado</option>
+                <option value="weekday">Día de semana (asamblea/salida)</option>
+            </select>
+            <label for="weekdaySelect" id="weekdayLabel" style="display:none;">Día de la semana:</label>
+            <select id="weekdaySelect" style="display:none;" onchange="generateSaturdayOptions()">
+                <option value="1">Lunes</option>
+                <option value="2">Martes</option>
+                <option value="3">Miércoles</option>
+                <option value="4">Jueves</option>
+                <option value="5">Viernes</option>
+            </select>
             <label for="saturdaySelect">Sábado a planificar:</label>
             <select id="saturdaySelect"></select>
             <button class="saturday-btn saturday-btn-primary" id="loadSaturdayBtn" onclick="loadSelectedSaturday()">Cargar</button>
-            <button class="saturday-btn saturday-btn-ghost" id="addSaturdayBtn" onclick="addNewSaturday()">+ Nuevo sábado</button>
+            <button class="saturday-btn saturday-btn-ghost" id="addSaturdayBtn" onclick="addNewSaturday()">+ Nuevo día</button>
         </div>
         <p id="selectedSaturdayInfo" style="font-size: 13px; color: var(--muted); display: none;"></p>
     </div>
@@ -488,8 +501,8 @@ Ejemplo:
         const yearSelect = document.getElementById('yearSelect');
         const limaNow = getLimaNow();
         const currentYear = limaNow.getFullYear();
-        // Generar años: actual - 2 hasta actual + 3 (rango de 6 años)
-        for (let y = currentYear - 2; y <= currentYear + 3; y++) {
+        // Generar años: actual - 2 hasta actual + 5 (rango escalable, se actualiza cada año automáticamente)
+        for (let y = currentYear - 2; y <= currentYear + 5; y++) {
             const opt = document.createElement('option');
             opt.value = y;
             opt.textContent = y;
@@ -500,34 +513,94 @@ Ejemplo:
 
     function generateSaturdayOptions() {
         const yearSelect = document.getElementById('yearSelect');
+        const dayTypeSelect = document.getElementById('dayTypeSelect');
+        const weekdaySelect = document.getElementById('weekdaySelect');
+        const weekdayLabel = document.getElementById('weekdayLabel');
         const saturdaySelect = document.getElementById('saturdaySelect');
         const year = parseInt(yearSelect.value);
-        const saturdays = getSaturdaysForYear(year);
+        const dayType = dayTypeSelect.value;
         const limaNow = getLimaNow();
         const todayLimaStr = getLimaDateStr(limaNow);
+
+        // Mostrar/ocultar selector de día de semana
+        if (dayType === 'weekday') {
+            weekdaySelect.style.display = 'inline-block';
+            weekdayLabel.style.display = 'inline-block';
+            saturdaySelect.style.display = 'none';
+        } else {
+            weekdaySelect.style.display = 'none';
+            weekdayLabel.style.display = 'none';
+            saturdaySelect.style.display = 'inline-block';
+        }
 
         saturdaySelect.innerHTML = '';
         let defaultIndex = 0;
 
-        saturdays.forEach((sat, i) => {
-            const dateStr = getLimaDateStr(sat); // YYYY-MM-DD en Lima
-            const displayStr = formatLimaDate(sat);
-            const isNext = dateStr === todayLimaStr;
-            const isFuture = dateStr > todayLimaStr && defaultIndex === 0;
+        if (dayType === 'weekday') {
+            // Generar días de semana para el año seleccionado
+            const weekday = parseInt(weekdaySelect.value);
+            const weekdays = getWeekdaysForYear(year, weekday);
 
-            const option = document.createElement('option');
-            option.value = dateStr;
-            option.textContent = displayStr + (isNext ? ' (hoy)' : isFuture && defaultIndex === 0 ? ' (próximo)' : '');
-            if (isNext || (isFuture && defaultIndex === 0)) {
-                option.selected = true;
-                defaultIndex = i;
-            }
-            saturdaySelect.appendChild(option);
-        });
+            weekdays.forEach((wd, i) => {
+                const dateStr = getLimaDateStr(wd);
+                const displayStr = formatLimaDate(wd);
+                const isNext = dateStr === todayLimaStr;
+                const isFuture = dateStr > todayLimaStr && defaultIndex === 0;
+
+                const option = document.createElement('option');
+                option.value = dateStr;
+                option.textContent = displayStr + (isNext ? ' (hoy)' : isFuture && defaultIndex === 0 ? ' (próximo)' : '');
+                if (isNext || (isFuture && defaultIndex === 0)) {
+                    option.selected = true;
+                    defaultIndex = i;
+                }
+                saturdaySelect.appendChild(option);
+            });
+        } else {
+            // Generar sábados (comportamiento original)
+            const saturdays = getSaturdaysForYear(year);
+
+            saturdays.forEach((sat, i) => {
+                const dateStr = getLimaDateStr(sat);
+                const displayStr = formatLimaDate(sat);
+                const isNext = dateStr === todayLimaStr;
+                const isFuture = dateStr > todayLimaStr && defaultIndex === 0;
+
+                const option = document.createElement('option');
+                option.value = dateStr;
+                option.textContent = displayStr + (isNext ? ' (hoy)' : isFuture && defaultIndex === 0 ? ' (próximo)' : '');
+                if (isNext || (isFuture && defaultIndex === 0)) {
+                    option.selected = true;
+                    defaultIndex = i;
+                }
+                saturdaySelect.appendChild(option);
+            });
+        }
 
         // Actualizar selectedSaturdayDate al seleccionado por defecto
         const selectedOpt = saturdaySelect.options[saturdaySelect.selectedIndex];
         if (selectedOpt) selectedSaturdayDate = selectedOpt.value;
+    }
+
+    // Obtener todos los días de semana específicos de un año (ej. todos los lunes, martes, etc.)
+    function getWeekdaysForYear(year, targetWeekday) {
+        // targetWeekday: 1=Lunes, 2=Martes, ..., 5=Viernes (0=Domingo, 6=Sábado)
+        const days = [];
+        let d = new Date(Date.UTC(year, 0, 1));
+        d = new Date(d.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+
+        // Avanzar al primer día de la semana objetivo
+        while (d.getDay() !== targetWeekday) {
+            d.setDate(d.getDate() + 1);
+        }
+
+        // Iterar todos los días de ese tipo en el año
+        while (d.getFullYear() === year) {
+            const utcMidnight = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            days.push(utcMidnight);
+            d.setDate(d.getDate() + 7);
+        }
+        return days;
     }
 
     // ── Cargar datos del sábado seleccionado ──
@@ -548,7 +621,7 @@ Ejemplo:
         const select = document.getElementById('saturdaySelect');
         const dateStr = select.value;
         if (!dateStr) {
-            toast('Selecciona un sábado', 'err');
+            toast('Selecciona un día', 'err');
             return;
         }
         selectedSaturdayDate = dateStr;
@@ -562,12 +635,12 @@ Ejemplo:
                 esquema: '',
                 creadoEn: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            toast('Sábado creado ✓', 'ok');
+            toast('Día creado ✓', 'ok');
             await loadAssemblyData(dateStr);
             updateSelectedSaturdayInfo(dateStr);
         } catch (err) {
             console.error(err);
-            toast('Error al crear sábado', 'err');
+            toast('Error al crear día', 'err');
         }
     }
 
@@ -577,6 +650,11 @@ Ejemplo:
         const displayStr = formatLimaDate(date);
         infoEl.textContent = `Editando: ${displayStr}`;
         infoEl.style.display = 'block';
+    }
+
+    // Función global para que se llame desde el onchange del selector de día de semana
+    function onDayTypeChange() {
+        generateSaturdayOptions();
     }
 
     // ── Cargar datos de asamblea desde Firestore ──
