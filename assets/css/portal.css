@@ -289,4 +289,32 @@ tr:hover td { background:rgba(255,255,255,.03); }
   .form-grid  { grid-template-columns:1fr; }
   .card       { padding:20px; }
   .topbar-inner { height:56px; }
+  .tabs       { gap:6px; }
+  .tab-button { padding:8px 14px; font-size:13px; }
+  .filters    { flex-direction:column; align-items:stretch; }
+  .filters > div { width:100%; }
+  .filters select { width:100%; min-width:auto; }
+  .btn        { width:100%; justify-content:center; }
+  .np-opciones-grid { grid-template-columns:1fr; }
+  .np-meta    { grid-template-columns:1fr; }
+  .np-actions { width:100%; justify-content:center; }
+  .asamblea-estado { grid-template-columns:1fr; }
+  .stats-live { justify-content:center; }
+  .stat-live { min-width:80px; }
+  .stat-live-num { font-size:28px; }
+  .table-card { padding:16px; }
+  .table-header { flex-direction:column; align-items:flex-start; }
+  .table-footer { flex-direction:column; }
+  .table-footer .btn { width:100%; }
+  .column-definition { flex-direction:column; align-items:stretch; gap:10px; }
+  .column-definition > div { width:100%; }
+  .remove-column-button { width:100%; }
+  .data-row { padding:14px; }
+  .row-columns { grid-template-columns:1fr; }
+  .member-perseverante { flex-direction:column; align-items:flex-start; gap:8px; }
+  .member-perseverante label { width:100%; }
+  .item { flex-direction:column; align-items:flex-start; gap:12px; }
+  .item > div:last-child { width:100%; justify-content:flex-end; }
+  .item-title { font-size:15px; }
+  .item-meta { font-size:13px; }
 }
