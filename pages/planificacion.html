@@ -797,7 +797,11 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
 
             // Generate SVG directly (vectorial, no pixelación)
             const svgString = createPreviewSVG();
-            currentPreviewDataUrl = 'data:image/svg+xml;base64,' + btoa(svgString);
+            // btoa no soporta Unicode, usar TextEncoder para UTF-8
+            const utf8Bytes = new TextEncoder().encode(svgString);
+            let binary = '';
+            for (let i = 0; i < utf8Bytes.length; i++) binary += String.fromCharCode(utf8Bytes[i]);
+            currentPreviewDataUrl = 'data:image/svg+xml;base64,' + btoa(binary);
 
             previewContent.innerHTML = `
                 <img src="${currentPreviewDataUrl}" alt="Esquema de asamblea" style="max-width: 100%; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);">
