@@ -90,6 +90,14 @@ onAuthStateChanged(auth, async (user) => {
       if (rol === "coordinador") {
         document.getElementById("gestion-lideres").style.display = "block";
         document.getElementById("sugerencias-feedback").style.display = "block";
+        document.getElementById("tab-gestion-lideres").style.display = "inline-flex";
+        document.getElementById("tab-sugerencias-feedback").style.display = "inline-flex";
+      } else {
+        // Líder: ocultar tabs de gestión de líderes y sugerencias/feedback
+        document.getElementById("gestion-lideres").style.display = "none";
+        document.getElementById("sugerencias-feedback").style.display = "none";
+        document.getElementById("tab-gestion-lideres").style.display = "none";
+        document.getElementById("tab-sugerencias-feedback").style.display = "none";
       }
       // Guardar rol para usar en UI (botón finalizar asamblea)
       window._userRol = rol;
@@ -101,6 +109,11 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     // Admin hardcodeado → tratar como coordinador
     window._userRol = "coordinador";
+    // Mostrar tabs de coordinador
+    document.getElementById("gestion-lideres").style.display = "block";
+    document.getElementById("sugerencias-feedback").style.display = "block";
+    document.getElementById("tab-gestion-lideres").style.display = "inline-flex";
+    document.getElementById("tab-sugerencias-feedback").style.display = "inline-flex";
   }
   inicializar();
 });
@@ -341,12 +354,19 @@ window.finalizarAsamblea = async function () {
     });
 
     // 3. Copiar a historico/{anio}/asambleas_kahoot/{fecha}
-    await setDoc(doc(fsdb, "historico", String(hoy.getFullYear()), "asambleas_kahoot", hoyStr), {
-      fecha: hoyStr,
-      rankingGlobal: rankingData,
-      totalPreguntas: preguntaNumActual,
-      creadoEn: serverTimestamp()
-    });
+    try {
+      await setDoc(doc(fsdb, "historico", String(hoy.getFullYear()), "asambleas_kahoot", hoyStr), {
+        fecha: hoyStr,
+        rankingGlobal: rankingData,
+        totalPreguntas: preguntaNumActual,
+        creadoEn: serverTimestamp()
+      });
+    } catch (historicoError) {
+      // Si falla el write a historico (ej. reglas de seguridad), avisar pero no deshacer lo anterior
+      console.error("Error guardando en histórico:", historicoError);
+      toast("Asamblea finalizada, pero no se pudo guardar en histórico (¿falta permiso de coordinador?)", "warn");
+      return;
+    }
 
     document.getElementById("rankingCard").classList.remove("visible");
     toast("🏁 Asamblea finalizada · Snapshot guardado", "ok");

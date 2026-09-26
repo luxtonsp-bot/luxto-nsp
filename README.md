@@ -305,53 +305,33 @@ las ramas de trabajo. Hecho una vez, no se vuelve a tocar.
 
 ---
 
-## ✅ PASOS PENDIENTES — hacer al iniciar sesión (en este orden)
+## ✅ ESTADO DEL PROYECTO (actualizado 2026-09-12)
 
-### 1. Desplegar las reglas de Firestore (2 minutos)
-El archivo `firestore.rules` del repo ya está corregido y completo, pero **no está
-publicado en Firebase** — mientras no se publique, la app usa las reglas viejas y
-algunas cosas fallarán (registro, roles, tablas).
+| Componente | Estado | Detalles |
+|------------|--------|----------|
+| **Migración de datos** | ✅ Completada | 1.125 documentos migrados a Firestore (modelo final) |
+| **Firestore rules** | ✅ Desplegadas | Reglas por rol (miembro/líder/coordinador) publicadas en Firebase + fix `historico/{anio}` para collectionGroup |
+| **GitHub Actions** | ✅ Configurados | Deploy preview + cumpleaños automático con secrets |
+| **Tardanzas** | ✅ Implementadas | `calcularTardanza()` con serverTimestamp, zona horaria Lima (UTC-5), tolerancia 10 min |
+| **Finalizar asamblea** | ✅ Solo coordinador | Validación server-side + UI oculta botón para líderes |
+| **Finalizar asistencia** | ✅ Solo activos | Filtra `estadoAnioActual === 'activo'` |
+| **Fase 10 (Pruebas)** | ⬜ Pendiente | Validación final con coordinador en link de preview |
 
-**Opción rápida (sin instalar nada):**
-1. Abre este archivo en el repo: `firestore.rules` — cópialo completo
-   (`https://github.com/luxtonsp-bot/luxto-nsp/blob/feature/firebase-migration/firestore.rules`)
-2. Ve a **Firebase Console** → `luxto-nsp` → **Firestore Database** → pestaña **"Reglas"**
-3. Pega las reglas completes → botón **"Publicar"**
-4. Debe decir "Reglas publicadas" sin errores
+### 🎯 Próximos pasos inmediatos
 
-**Opción con CLI (si prefieres terminal):**
-```bash
-npm install -g firebase-tools
-firebase login
-# crea firebase.json con: {"firestore": {"rules": "firestore.rules"}}
-echo '{"firestore": {"rules": "firestore.rules"}}' > firebase.json
-firebase deploy --only firestore:rules --project luxto-nsp
-```
+1. **Validar con el coordinador** en el link de preview:  
+   `https://luxtonsp-bot.github.io/luxto-nsp/preview/feature-firebase-migration/`
+   
+   - [ ] Registrar miembro nuevo (nombre → Gmail + contraseña + fecha de nacimiento)
+   - [ ] Login → dashboard carga perfil, cumpleaños y estadísticas
+   - [ ] `planificacion.html` → activar asamblea + "Descargar esquema" (PNG)
+   - [ ] `tomar-asistencia.html` → marcar presente (tolerancia 10 min, **tardanza calculada con serverTimestamp**)
+   - [ ] `admin.html` → gestión de líderes (promover/degradar) + **sugerencias/feedback del Excel visibles**
+   - [ ] `tablas.html` → crear tabla dinámica de prueba
+   - [ ] `historial.html` → ver años cerrados (**dropdown años funcional**)
+   - [ ] Recibir correo de cumpleaños de prueba
 
-### 2. Configurar los secrets de GitHub (3 minutos)
-El Action de cumpleaños (`.github/workflows/felicitar-cumpleanos.yml`) necesita 3 credenciales:
-
-1. Ve a `https://github.com/luxtonsp-bot/luxto-nsp/settings/secrets/actions`
-2. Botón **"New repository secret"** y crea los 3:
-   | Nombre del secret | Dónde sacar el valor |
-   |---|---|
-   | `FIREBASE_SERVICE_ACCOUNT` | **Firebase Console** → ⚙️ Configuración del proyecto → **Cuentas de servicio** → *Nueva clave privada* → se descarga un `.json` → copia **todo el contenido** del JSON |
-   | `GMAIL_USER` | El Gmail de la cuenta que envía los correos (ej. `luxtonsp@gmail.com`) |
-   | `GMAIL_APP_PASSWORD` | **Cuenta de Google** → Seguridad → **Verificación en 2 pasos** (activarla primero si no está) → **Contraseñas de aplicación** → crear una para "Correo" → copia la contraseña de 16 letras |
-3. Probar el envío: `https://github.com/luxtonsp-bot/luxto-nsp/actions/workflows/felicitar-cumpleanos.yml`
-   → botón **"Run workflow"** (_dispatch) → revisa el log del job.
-
-### 3. Probar todo con el coordinador (Fase 10, antes del merge a `main`)
-En el link de preview: `https://luxtonsp-bot.github.io/luxto-nsp/preview/feature-firebase-migration/`
-
-- [ ] Registrar un miembro nuevo (nombre → Gmail + contraseña + **fecha de nacimiento**)
-- [ ] Login → dashboard carga perfil, cumpleaños y estadísticas
-- [ ] `planificacion.html` → activar asamblea del sábado + "Descargar esquema" (imagen PNG)
-- [ ] `tomar-asistencia.html` → marcar presente (verificar que guarda con tolerancia de 10 min)
-- [ ] `admin.html` → gestión de líderes (promover/degradar con cuenta coordinador)
-- [ ] `tablas.html` → crear una tabla dinámica de prueba
-- [ ] `historial.html` → se abre y muestra "sin datos" para años cerrados (normal hasta el primer cierre de año)
-- [ ] Recibir correo de cumpleaños de prueba (paso 2)
+2. **Merge a `main`** tras aprobación → despliegue automático a producción
 
 ### Configuración previa (ya hecha ✅, referencia)
 1. **Firebase Console** → Authentication → Sign-in method → Email/Password ✅
@@ -364,6 +344,9 @@ En el link de preview: `https://luxtonsp-bot.github.io/luxto-nsp/preview/feature
 
 | Commit | Fecha | Cambio |
 |--------|-------|--------|
+| `8bf3db6` | 2026-09-12 | **fix(dashboard): ordenar eje X de tardanza de forma ascendente** (más antigua a la izquierda) |
+| `ace708b` | 2026-09-12 | **chore(migration): script para re-enlazar members/{id} con el uid de Auth** (dry-run por defecto) |
+| `e726cd8` | 2026-09-12 | **fix(dashboard): asistencia por getDoc en paralelo** (collectionGroup no encuentra asistencia/{anio}/{fecha}/{uid}) |
 | `b1c1a46` | 2026-09-11 | Añadir carpetas `appscript/`, `scripts/` y backup al repositorio para completitud |
 | `48e6b54` | 2026-09-11 | Añadir assets y pages faltantes tras la reorg; asegurar que imágenes, js y html estén presentes |
 | `efae5ab` | 2026-09-11 | Restaurar lógica Drive-only para fotos de perfil; eliminar fallback local (assets/images) y corregir og:image en historia.html |
@@ -383,6 +366,16 @@ En el link de preview: `https://luxtonsp-bot.github.io/luxto-nsp/preview/feature
 ### Mejoras de seguridad (2026-06-30)
 
 - **Reglas de Firebase inseguras (alerta automática de Firebase):** La regla raíz original (`.read`/`.write`: `"auth != null"`) permitía que cualquier usuario logueado leyera y escribiera TODA la base de datos, no solo los administradores. Firebase detectó esto automáticamente y envió una alerta por correo. Se corrigió implementando reglas granulares por nodo, con verificación de admin vía `/admins/{uid}` en vez de depender únicamente del check de JavaScript en el cliente (que era fácilmente evadible).
+
+### Fixes críticos (2026-09-25 — rama `feature/firebase-migration`)
+
+| Commit | Cambio | Impacto |
+|--------|--------|---------|
+| `4203aab` | **A2**: Restaurar `calcularTardanza()` (Lima UTC-5, tolerancia 10 min) | Dashboard tardanzas ya no son 0; `asistencia/...` guarda `tardanzaMinutos` + `esTardanza` |
+| `4203aab` | **A3**: `finalizarAsamblea()` solo coordinador | Valida `rol === 'coordinador'` server-side + oculta botón en UI para líderes |
+| `4203aab` | **B2**: `finalizeAttendance()` filtra `estadoAnioActual === 'activo'` | Ex-miembros dados de baja no acumulan ausencias |
+| `4ed008f` | **Rules**: `historico/{anio}` read para collectionGroup | `historial.html` dropdown de años carga sin permission-denied |
+| `4ed008f` | **Admin**: sugerencias/feedback leen esquema inglés (Excel) + español | `admin.html` pestaña Sugerencias/Feedback muestra datos migrados |
 
 ---
 

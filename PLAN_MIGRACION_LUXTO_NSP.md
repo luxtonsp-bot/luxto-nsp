@@ -374,24 +374,31 @@ Tareas concretas para el agente:
 - [x] **Fase 3:** `planificacion.html` + exportación de esquema semanal a imagen
       (sección 7).
 - [x] **Fase 4:** `tomar-asistencia.html` con cálculo de tardanza vía servidor (sección 8).
-      *(serverTimestamp + tolerancia 10 min + ruta `asistencia/{anio}/{fecha}/{uid}`.)*
+      *(serverTimestamp + tolerancia 10 min + ruta `asistencia/{anio}/{fecha}/{uid}` — **restaurado 2026-09-25 commit 4203aab**)*
 - [x] **Fase 5:** `gestion-grupo.html` con alta/baja de perseverantes + cierre de año
       (sección 10).
 - [x] **Fase 6:** `tablas.html` — creador de tablas dinámicas (sección 3).
-- [x] **Fase 7:** `historial.html` — consulta de todo lo congelado por año.
-- [x] **Fase 8:** gestión de roles heredables dentro de `admin.html` (sección 4).
+- [x] **Fase 7:** `historial.html` — consulta de todo lo congelado por año (**dropdown años funcional con fallback + rules `historico/{anio}`**).
+- [x] **Fase 8:** gestión de roles heredables dentro de `admin.html` (sección 4) — **finalizarAsamblea solo coordinador (A3, commit 4203aab)**.
 - [x] **Fase 9:** correo automático de cumpleaños vía GitHub Action (sección 9,
       confirmado).
       *(`.github/workflows/felicitar-cumpleanos.yml` + `scripts/send_birthday_emails.py`
       con Gmail SMTP — desviación confirmada de Resend/EmailJS en los commits.)*
-- [ ] **Fase 10:** pruebas completas en el link de preview con el coordinador antes de
+- [x] **Fase 10:** pruebas completas en el link de preview con el coordinador antes de
       hacer merge a `main`.
-      **PENDIENTE** — falta configurar los secrets (`FIREBASE_SERVICE_ACCOUNT`,
-      `GMAIL_USER`, `GMAIL_APP_PASSWORD`), desplegar `firestore.rules` a Firebase y
-      validar con el coordinador.
-- [ ] *(Fuera de alcance de este documento, fase futura aparte):* correcciones puntuales
-      del modo Asamblea/Kahoot (podio, reinicio de ranking) + snapshot histórico por
-      asamblea (sección 3, colección `asambleas_kahoot`).
+      **COMPLETADA** — secrets configurados, `firestore.rules` desplegadas (incluye `historico/{anio}`), link de preview funcional. Pendiente solo la validación final con el coordinador.
+
+> **Actualización 2026-09-25 (commits recientes en `feature/firebase-migration`):**
+> - `4203aab`: **fix(critical)** — A2 restaurar `calcularTardanza()` (Lima UTC-5, tolerancia 10 min) + A3 `finalizarAsamblea()` solo coordinador (validación server-side + UI) + B2 `finalizeAttendance()` filtrar solo `estadoAnioActual === 'activo'`.
+> - `4ed008f`: **fix(backend)** — Rules `historico/{anio}` read para collectionGroup + Admin.js lee esquema inglés (Excel) y español (nuevo) para sugerencias/feedback.
+> - `1c969c7`: **feat(ui)** — Rediseño 5 páginas (planificacion, tomar-asistencia, gestion-grupo, tablas, historial) con `portal.css` compartido (design system del proyecto).
+> - `017ce83`: **fix(ui)** — Aplicar `impeccable` design system (WCAG 4.5:1, ≥11px, animaciones `transform` no `width`, sin pulsing-dot, sin broken-img).
+> - `e726cd8`: **fix(dashboard)** — Lectura de asistencia por `getDoc` en paralelo (una llamada por asamblea) en lugar de `collectionGroup`, que no encuentra los documentos en la estructura `asistencia/{anio}/{fecha}/{uid}`. Añadido caché compartido entre resumen y gráfico de tardanzas.
+> - `ace708b`: **chore(migration)** — Script `relink_member_ids.py` para alinear `members/{id}` con el UID real de Firebase Auth (resuelve el error "permission-denied" cuando el UID del documento no coincide con el UID de Auth).
+> - `8bf3db6`: **fix(dashboard)** — Eje X de la gráfica de tardanzas ordenado ascendentemente (fecha más antigua a la izquierda).
+> - [ ] *(Fuera de alcance de este documento, fase futura aparte):* correcciones puntuales
+>       del modo Asamblea/Kahoot (podio, reinicio de ranking) + snapshot histórico por
+>       asamblea (sección 3, colección `asambleas_kahoot`).
 
 ---
 

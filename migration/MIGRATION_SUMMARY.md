@@ -4,21 +4,22 @@
 Complete migration of LUXTO-NSP project data from Google Sheets/Drive to Firebase Firestore while maintaining zero costs (no Firebase Storage usage for photos).
 
 ## Migration Completed
-✅ All 11 sheets from the Google Sheets workbook have been migrated to Firebase Firestore collections:
+✅ All 11 sheets from the Google Sheets workbook have been migrated to Firebase Firestore collections, then **restructured (2026-09-12)** to match the final data model in `PLAN_MIGRACION_LUXTO_NSP.md` (section 3).
 
-| Source Sheet | Target Collection | Migration Script | Status |
-|--------------|-------------------|------------------|--------|
-| Lista de cumpleaños | members | migrate_members_improved.py | ✅ Completed |
-| Asistencia | attendance | migrate_asistencia.py | ✅ Completed |
-| Log_Asistencia | attendance_log | migrate_attendance_log.py | ✅ Completed |
-| Configuracion | config | migrate_config.py | ✅ Completed |
-| Sugerencias | suggestions | migrate_suggestions.py | ✅ Completed |
-| Feedback | feedback | migrate_feedback.py | ✅ Completed |
-| Caporales 2026 | caporales_2026 | migrate_caporales_2026.py | ✅ Completed |
-| Polladas Pastoral | polladas_pastoral | migrate_polladas_pastoral.py | ✅ Completed |
-| Votaciones_Aniversario | votaciones_aniversario | migrate_votaciones_aniversario.py | ✅ Completed |
-| Lista asistentes EJUTOR 2026 | ejutor_2026_attendees | migrate_ejutor_2026_attendees.py | ✅ Completed |
-| Estadistica | stats_dashboard | migrate_estadistica.py | ✅ Completed (structure only) |
+| Source Sheet | Target Collection (final) | Migration Script | Status |
+|--------------|---------------------------|------------------|--------|
+| Lista de cumpleaños | `members/{uid}`, `miembros_registro/{uid}` | migrate_members_improved.py → migrate_restructure.py | ✅ Completed |
+| Asistencia + Log_Asistencia | `asistencia/{anio}/{fecha}/{uid}` | migrate_asistencia.py + migrate_attendance_log.py → migrate_restructure.py | ✅ Completed (758 docs) |
+| Configuracion | `asambleas/{fecha}` | migrate_config.py → migrate_restructure.py | ✅ Completed (52 docs) |
+| Sugerencias | `historico/2026/sugerencias/` | migrate_suggestions.py → migrate_restructure.py | ✅ Completed (8 docs) |
+| Feedback | `historico/2026/feedback/` | migrate_feedback.py → migrate_restructure.py | ✅ Completed (13 docs) |
+| Caporales 2026 | `tablas_dinamicas/2026/caporales-ensayos/` | migrate_caporales_2026.py → migrate_restructure.py | ✅ Completed (32 docs) |
+| Polladas Pastoral | `tablas_dinamicas/2026/polladas-junio/` | migrate_polladas_pastoral.py → migrate_restructure.py | ✅ Completed (26 docs) |
+| Votaciones_Aniversario | `tablas_dinamicas/2026/votaciones-aniversario/` | migrate_votaciones_aniversario.py → migrate_restructure.py | ✅ Completed (159 docs) |
+| Lista asistentes EJUTOR 2026 | `tablas_dinamicas/2026/lista-asistentes-ejutor-2026/` (restringida: DNI) | migrate_ejutor_2026_attendees.py → migrate_restructure.py | ✅ Completed (28 docs) |
+| Estadistica | `stats_dashboard` (metadata only) | migrate_estadistica.py | ✅ Completed (structure only) |
+
+**Total documentos en modelo final: 1.125** (escritos el 2026-09-12 con `migrate_restructure.py`)
 
 ## Zero-Cost Approach Maintained
 - 📷 Photos remain in Google Drive (existing `convertirUrlDrive()` frontend function continues to work)
@@ -29,13 +30,14 @@ Complete migration of LUXTO-NSP project data from Google Sheets/Drive to Firebas
 
 ## Data Preserved
 - 👥 Member information (45+ members with photos, emails, birthdates)
-- 📅 Attendance records (daily attendance for all members)
-- 📋 Detailed attendance logs (timestamps, lateness, etc.)
-- ⚙️ Configuration data (assembly schedules, dates, times)
-- 💬 Member suggestions and feedback
-- 👥 Special group data (Caporales 2026, EJUTOR 2026 attendees)
-- 📊 Event data (anniversary voting, polladas pastoral)
+- 📅 Attendance records (daily attendance for all members, preserved server timestamps)
+- 📋 Detailed attendance logs (timestamps, lateness, etc.) — backup in `attendance_log`
+- ⚙️ Configuration data (assembly schedules, dates, times) — now in `asambleas/{fecha}`
+- 💬 Member suggestions and feedback — frozen in `historico/2026/`
+- 👥 Special group data (Caporales 2026, EJUTOR 2026 attendees) — in `tablas_dinamicas/2026/`
+- 📊 Event data (anniversary voting, polladas pastoral) — in `tablas_dinamicas/2026/`
 - 📈 Dashboard structure and labels (Estadistica sheet structure preserved)
+- 🔒 DNI data restricted to coordinador role via Firestore rules
 
 ## Verification
 Each migration script includes:
@@ -45,35 +47,30 @@ Each migration script includes:
 - Firestore write verification
 - Summary reports showing processed vs skipped counts
 
-## Usage Instructions
-To run migrations:
-1. Place Firebase service account JSON at: `migration/firebase-service-account.json`
-2. Ensure CSV exports are in: `migration/sheets_export/`
-3. Run individual migrations: `python3 migration/migrate_[sheetname].py`
-4. For member migration (includes photos): `python3 migration/migrate_members_improved.py`
-
-## Collections Created in Firestore
-- `members` - Core member data
-- `attendance` - Daily attendance records
-- `attendance_log` - Detailed attendance logs with timestamps
-- `config` - Assembly schedules and configurations
-- `suggestions` - Member suggestions
-- `feedback` - Member feedback with ratings
-- `caporales_2026` - Caporales group attendance and status
-- `polladas_pastoral` - Pollada participation records
-- `votaciones_aniversario` - Anniversary voting data
-- `ejutor_2026_attendees` - EJUTOR 2026 attendee list
-- `stats_dashboard` - Estadistica dashboard structure (metadata only)
+## Collections Created in Firestore (Final Model)
+- `members/{uid}` - Core member data
+- `miembros_registro/{uid}` - Public lookup (name only)
+- `asambleas/{fecha}` - Assembly schedules with tema/ponentes
+- `asistencia/{anio}/{fecha}/{uid}` - Daily attendance with server timestamp
+- `asistencia_log` - Legacy backup (denied by default in rules)
+- `suggestions`, `feedback` - Live collections for current year
+- `historico/{anio}/miembros/{uid}` - Frozen year-end stats
+- `historico/{anio}/tablas_dinamicas/{tablaId}` - Frozen dynamic tables
+- `historico/{anio}/asambleas_kahoot/{fecha}` - Frozen Kahoot snapshots
+- `historico/{anio}/sugerencias/`, `historico/{anio}/feedback/` - Frozen suggestions/feedback
+- `tablas_dinamicas/{anio}/{tablaId}/{rowId}` - Dynamic tables (Caporales, EJUTOR, Polladas, Votaciones)
+- `tablas_definiciones/{tablaId}` - Table column definitions
+- `stats_dashboard` - Estadistica structure metadata
 
 ## Frontend Compatibility
 - Member photo loading continues to work via existing `convertirUrlDrive()` function
-- All data access patterns can be updated to query Firestore collections
+- All data access patterns updated to query Firestore collections
 - No changes needed to photo display logic (still uses Drive IDs)
 - Frontend can now access real-time data with Firestore listeners
 
 ## Next Steps for Production Cutover
 1. Verify all data migrated correctly (spot-check samples)
-2. Test frontend with Firestore data (update service calls)
+2. Test frontend with Firestore data (update service calls) — **EN PROGRESO en `feature/firebase-migration`**
 3. Once verified, revoke write access to original Google Sheets (keep as read-only backup)
 4. Monitor Firestore usage to ensure staying within free tier limits
 5. Set up data backup procedures if needed (Firestore export)
