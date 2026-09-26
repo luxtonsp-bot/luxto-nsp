@@ -23,53 +23,77 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding: 24px;
   }
-  .container { max-width: 1400px; margin: 0 auto; }
-  header { text-align: center; margin-bottom: 32px; }
-  h1 { font-family: 'Lora', serif; font-size: clamp(28px, 4vw, 42px); color: var(--text); margin-bottom: 8px; }
-  .subtitle { color: #5e554a; font-size: 16px; }
-  .diagram-wrapper {
-    background: var(--card);
-    border-radius: 16px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    padding: 24px;
-    overflow: auto;
-  }
-  .mermaid { max-width: 100%; }
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 20px;
+  .container { max-width: 100%; margin: 0; padding: 16px; }
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg);
     padding: 16px;
-    background: #fdf3c4;
-    border-radius: 12px;
-    border: 1px solid #f5e0a0;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
   }
-  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-  .legend-color { width: 16px; height: 16px; border-radius: 4px; }
+  h1 { font-family: 'Lora', serif; font-size: clamp(24px, 3vw, 36px); color: var(--text); margin-bottom: 4px; }
+  .subtitle { color: #5e554a; font-size: 14px; }
   .controls {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    display: flex; gap: 8px; justify-content: center; margin: 12px 0; flex-wrap: wrap;
   }
   button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    background: var(--primary);
-    color: var(--text);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s;
+    padding: 8px 16px; border: none; border-radius: 6px;
+    background: var(--primary); color: var(--text); font-weight: 600; font-size: 13px;
+    cursor: pointer; transition: all .2s;
   }
-  button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+  button:hover { background: var(--primary-dark); }
   button.secondary { background: var(--accent); color: white; }
   button.secondary:hover { background: #3a7a90; }
-  .footer-note { text-align: center; margin-top: 24px; color: #8d8478; font-size: 13px; }
+
+  .diagram-wrapper {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 160px);
+    min-height: 600px;
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  #arch-diagram {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  #arch-diagram svg {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 2000px;
+    min-height: 3000px;
+  }
+
+  /* Pan/Zoom con wheel + drag */
+  .diagram-wrapper.pan-active { cursor: grabbing; }
+  .diagram-wrapper { cursor: grab; }
+
+  .legend {
+    position: sticky; bottom: 0; z-index: 50;
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center; padding: 12px;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    margin-top: -1px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+  .legend-color { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  .footer-note { text-align: center; padding: 12px; color: #8d8478; font-size: 12px; }
+
+  /* Zoom indicator */
+  .zoom-info {
+    position: fixed; bottom: 60px; right: 16px; z-index: 200;
+    background: var(--text); color: var(--bg);
+    padding: 8px 12px; border-radius: 6px; font-size: 12px;
+    pointer-events: none; opacity: 0; transition: opacity .2s;
+  }
+  .zoom-info.visible { opacity: 1; }
 </style>
 </head>
 <body>
@@ -80,12 +104,12 @@
   </header>
 
   <div class="controls">
-    <button onclick="mermaid.run()">🔄 Re-renderizar</button>
-    <button class="secondary" onclick="downloadSVG()">💾 Descargar SVG</button>
-    <button class="secondary" onclick="downloadPNG()">🖼️ Descargar PNG</button>
+    <button onclick="resetView()">Reset Vista</button>
+    <button class="secondary" onclick="downloadSVG()">Descargar SVG</button>
+    <button class="secondary" onclick="downloadPNG()">Descargar PNG</button>
   </div>
 
-  <div class="diagram-wrapper">
+  <div class="diagram-wrapper" id="diagramWrapper">
     <div class="mermaid" id="arch-diagram">
 %%{init: {'theme': 'base', 'themeVariables': {
   'primaryColor': '#f5c518',
@@ -96,10 +120,11 @@
   'tertiaryColor': '#4a8fa8',
   'background': '#ffffff',
   'fontFamily': 'Inter',
-  'fontSize': '14px',
-  'nodeBorder': '2px',
+  'fontSize': '12px',
+  'nodeBorder': '1.5px',
   'clusterBkg': '#fdf3c4',
-  'clusterBorder': '#f5c518'
+  'clusterBorder': '#f5c518',
+  'edgeLabelBackground': '#ffffff'
 }}}%%
 flowchart TB
     %% ==================== STYLES ====================
@@ -112,78 +137,78 @@ flowchart TB
     classDef process fill:#f5efd0,stroke:#c4703a,stroke-width:2px,color:#1c1814;
 
     %% ==================== EXTERNAL USERS ====================
-    subgraph Users["👥 Usuarios"]
-        Member["👤 Miembro<br/>(Celular/Laptop)"]
-        Coordinator["⚙️ Coordinador<br/>(Laptop/Proyector)"]
-        Public["🌐 Visitante Público"]
+    subgraph Users["Usuarios"]
+        Member["Miembro (Celular/Laptop)"]
+        Coordinator["Coordinador (Laptop/Proyector)"]
+        Public["Visitante Publico"]
     end
     class Member,Coordinator,Public frontend;
 
     %% ==================== FRONTEND PAGES ====================
-    subgraph Frontend["🖥️ Frontend — 12 Páginas HTML (Vanilla JS ES Modules)"]
+    subgraph Frontend["Frontend - 12 Paginas HTML (Vanilla JS ES Modules)"]
         direction TB
 
-        subgraph PublicPages["📄 Páginas Públicas (Light Theme)"]
-            Index["index.html<br/>Landing + Historia + Coro + Donaciones"]
-            Historia["historia.html<br/>Cronología 2010-2025 + Directivas + Coro"]
+        subgraph PublicPages["Paginas Publicas (Light Theme)"]
+            Index["index.html - Landing + Historia + Coro + Donaciones"]
+            Historia["historia.html - Cronologia 2010-2025 + Directivas + Coro"]
         end
         class Index,Historia frontend;
 
-        subgraph AuthPages["🔐 Autenticación"]
-            Login["login.html<br/>Email/Pass + Recuperar"]
-            Registro["registro.html<br/>Validar Sheet → Firebase Auth"]
+        subgraph AuthPages["Autenticacion"]
+            Login["login.html - Email/Pass + Recuperar"]
+            Registro["registro.html - Validar Sheet - Firebase Auth"]
         end
         class Login,Registro frontend;
 
-        subgraph MemberPortal["🎫 Portal Miembro (Dark Theme + portal.css)"]
-            Dashboard["dashboard.html<br/>Stats, Gauge, Sugerencias, Feedback, Cumpleaños"]
-            GestionGrupo["gestion-grupo.html<br/>Miembros, Roles, Fotos"]
-            TomarAsistencia["tomar-asistencia.html<br/>Marcar presente/ausente + Tardanza"]
+        subgraph MemberPortal["Portal Miembro (Dark Theme + portal.css)"]
+            Dashboard["dashboard.html - Stats, Gauge, Sugerencias, Feedback, Cumpleanos"]
+            GestionGrupo["gestion-grupo.html - Miembros, Roles, Fotos"]
+            TomarAsistencia["tomar-asistencia.html - Marcar presente/ausente + Tardanza"]
         end
         class Dashboard,GestionGrupo,TomarAsistencia frontend;
 
-        subgraph AssemblySystem["📡 Sistema Asambleas Tiempo Real (3 Vistas Sincronizadas)"]
-            Admin["admin.html<br/>Coordinador: Preguntas, Lanzar, Ranking, Finalizar"]
-            Proyector["proyector.html<br/>Pantalla: Countdown, Pregunta, Barras %, Podio"]
-            Asamblea["asamblea.html<br/>Móvil: Solo A/B/C/D + Timer + Resultado"]
+        subgraph AssemblySystem["Sistema Asambleas Tiempo Real (3 Vistas Sincronizadas)"]
+            Admin["admin.html - Coordinador: Preguntas, Lanzar, Ranking, Finalizar"]
+            Proyector["proyector.html - Pantalla: Countdown, Pregunta, Barras %, Podio"]
+            Asamblea["asamblea.html - Movil: Solo A/B/C/D + Timer + Resultado"]
         end
         class Admin,Proyector,Asamblea frontend;
 
-        subgraph OtherPages["📊 Otras"]
-            Planificacion["planificacion.html<br/>Activar asamblea + Descargar esquema PNG"]
-            Historial["historial.html<br/>Años cerrados + Kahoot + Stats"]
-            Tablas["tablas.html<br/>Tablas dinámicas pivot"]
+        subgraph OtherPages["Otras"]
+            Planificacion["planificacion.html - Activar asamblea + Descargar esquema PNG"]
+            Historial["historial.html - Anos cerrados + Kahoot + Stats"]
+            Tablas["tablas.html - Tablas dinamicas pivot"]
         end
         class Planificacion,Historial,Tablas frontend;
     end
 
     %% ==================== FIREBASE ====================
-    subgraph Firebase["☁️ Firebase (Proyecto: luxto-nsp)"]
+    subgraph Firebase["Firebase (Proyecto: luxto-nsp)"]
         direction TB
 
-        subgraph Auth["🔐 Authentication"]
-            AuthEmail["Email/Password<br/>Provider"]
-            AuthUsers["Users UID<br/>+ Custom Claims (rol)"]
+        subgraph Auth["Authentication"]
+            AuthEmail["Email/Password Provider"]
+            AuthUsers["Users UID + Custom Claims (rol)"]
         end
 
-        subgraph RTDB["⚡ Realtime Database\n(asambleas en vivo)"]
-            RTDBAsamblea["/asamblea\n{activa, estado, preguntaNum,\n preguntaActual, respuestas}"]
-            RTDBRanking["/rankingGlobal\n{uid: {nombre, pts, fotoUrl}}"]
-            RTDBBoradores["/borradores\n{preguntas guardadas}"]
-            RTDBAdmins["/admins\n{uid: true}"]
+        subgraph RTDB["Realtime Database (asambleas en vivo)"]
+            RTDBAsamblea["/asamblea {activa, estado, preguntaNum, preguntaActual, respuestas}"]
+            RTDBRanking["/rankingGlobal {uid: {nombre, pts, fotoUrl}}"]
+            RTDBBoradores["/borradores {preguntas guardadas}"]
+            RTDBAdmins["/admins {uid: true}"]
         end
 
-        subgraph Firestore["🔥 Cloud Firestore\n(datos persistentes)"]
-            FSMembers["members/{uid}\n{nombre, email, fotoUrl,\n fotoThumb, fotoDriveId,\n generacion, birthDate,\n estadoAnioActual, rol}"]
-            FSAsistencia["asistencia/{anio}/{fecha}/{uid}\n{presente, timestamp,\n tardanzaMinutos, esTardanza}"]
-            FSHistorico["historico/{anio}/{fecha}/{uid}\n{snapshot asistencia final}"]
-            FSFotos["fotos/{uid}\n{fotoDisplay, fotoThumb,\n driveId, updatedAt}"]
-            FSSugerencias["sugerencias/{docId}\n{nombre, email, texto, ts}"]
-            FSFeedback["feedback/{docId}\n{nombre, email, stars,\n comentario, ts}"]
+        subgraph Firestore["Cloud Firestore (datos persistentes)"]
+            FSMembers["members/{uid} {nombre, email, fotoUrl, fotoThumb, fotoDriveId, generacion, birthDate, estadoAnioActual, rol}"]
+            FSAsistencia["asistencia/{anio}/{fecha}/{uid} {presente, timestamp, tardanzaMinutos, esTardanza}"]
+            FSHistorico["historico/{anio}/{fecha}/{uid} {snapshot asistencia final}"]
+            FSFotos["fotos/{uid} {fotoDisplay, fotoThumb, driveId, updatedAt}"]
+            FSSugerencias["sugerencias/{docId} {nombre, email, texto, ts}"]
+            FSFeedback["feedback/{docId} {nombre, email, stars, comentario, ts}"]
         end
 
-        subgraph Storage["📦 Firebase Storage\n(opcional, para fotos)"]
-            FBStorage["fotos/{uid}.jpg\n+ thumbnails"]
+        subgraph Storage["Firebase Storage (opcional, para fotos)"]
+            FBStorage["fotos/{uid}.jpg + thumbnails"]
         end
     end
     class AuthEmail,AuthUsers firebase;
@@ -192,118 +217,105 @@ flowchart TB
     class FBStorage storage;
 
     %% ==================== GOOGLE APPS SCRIPT ====================
-    subgraph AppsScript["📜 Google Apps Script\n(Backend + Sheets + Drive)"]
+    subgraph AppsScript["Google Apps Script (Backend + Sheets + Drive)"]
         direction TB
-        ASMain["Code.gs\nEndpoints: getDashboard, validarMiembro,\nguardarEmail, guardarFotoUrl,\nguardarSugerencia, guardarFeedback,\nenviarCumpleaños"]
-        ASCaporales["caporales.gs\nLógica específica caporales"]
-        ASSheets["📊 Google Sheets\nMiembros | Asistencia | Sugerencias |\nFeedback | Estadística | Cumpleaños"]
-        ASDrive["💾 Google Drive\nFotos perfil (thumbnail público)\nEsquemas asamblea (PNG)"]
+        ASMain["Code.gs - Endpoints: getDashboard, validarMiembro, guardarEmail, guardarFotoUrl, guardarSugerencia, guardarFeedback, enviarCumpleanos"]
+        ASCaporales["caporales.gs - Logica especifica caporales"]
+        ASSheets["Google Sheets - Miembros | Asistencia | Sugerencias | Feedback | Estadistica | Cumpleanos"]
+        ASDrive["Google Drive - Fotos perfil (thumbnail publico) + Esquemas asamblea (PNG)"]
     end
     class ASMain,ASCaporales backend;
     class ASSheets,ASDrive storage;
 
     %% ==================== HOSTING ====================
-    subgraph Hosting["🌍 Hosting & CI/CD"]
-        GHPages["GitHub Pages\nluxtonsp-bot.github.io/luxto-nsp/"]
-        GHPreview["Preview por rama\n/preview/feature-xxx/"]
-        GHActions["GitHub Actions\n• deploy-production.yml (main → gh-pages)\n• deploy-preview.yml (rama → gh-pages/preview/)\n• feliz-cumpleanos.yml (diario, envía emails)"]
+    subgraph Hosting["Hosting & CI/CD"]
+        GHPages["GitHub Pages - luxtonsp-bot.github.io/luxto-nsp/"]
+        GHPreview["Preview por rama - /preview/feature-xxx/"]
+        GHActions["GitHub Actions - deploy-production.yml (main), deploy-preview.yml (rama), feliz-cumpleanos.yml (diario)"]
     end
     class GHPages,GHPreview,GHActions hosting;
 
     %% ==================== CONNECTIONS ====================
     %% Public access
-    Public -->|HTTPS| Index
-    Public -->|HTTPS| Historia
+    Public --> Index
+    Public --> Historia
 
     %% Auth flow
-    Member -->|1. Email/Pass| Login
-    Member -->|2. Validar Sheet| Registro
-    Registro -->|Apps Script: validarMiembro| ASMain
-    Registro -->|Firebase: createUser| AuthEmail
-    Registro -->|Apps Script: guardarEmail| ASMain
+    Member --> Login
+    Member --> Registro
+    Registro --> ASMain
+    Registro --> AuthEmail
+    Registro --> ASMain
 
     %% Member portal
-    Member -->|Login OK| Dashboard
-    Member -->|Gestión| GestionGrupo
-    Member -->|Asistencia| TomarAsistencia
+    Member --> Dashboard
+    Member --> GestionGrupo
+    Member --> TomarAsistencia
 
     %% Dashboard data
-    Dashboard -->|getDashboard(email)| ASMain
-    ASMain -->|Read Sheets| ASSheets
-    Dashboard -->|Realtime: activa, podio| RTDBAsamblea
-    Dashboard -->|Historial tardanzas| FSAsistencia
+    Dashboard --> ASMain
+    ASMain --> ASSheets
+    Dashboard --> RTDBAsamblea
+    Dashboard --> FSAsistencia
 
     %% Assembly system (real-time)
-    Coordinator -->|Admin panel| Admin
-    Coordinator -->|Proyector| Proyector
-    Member -->|Móvil| Asamblea
+    Coordinator --> Admin
+    Coordinator --> Proyector
+    Member --> Asamblea
 
-    Admin -->|Escritura atómica| RTDBAsamblea
-    Admin -->|Ranking global| RTDBRanking
-    Admin -->|Borradores| RTDBBoradores
-    Proyector -->|Listener tiempo real| RTDBAsamblea
-    Asamblea -->|Responder A/B/C/D| RTDBAsamblea
+    Admin --> RTDBAsamblea
+    Admin --> RTDBRanking
+    Admin --> RTDBBoradores
+    Proyector --> RTDBAsamblea
+    Asamblea --> RTDBAsamblea
 
-    %% Planificación
-    Coordinator -->|Activar asamblea| Planificacion
-    Planificacion -->|Escribir /asamblea/activa=true| RTDBAsamblea
-    Planificacion -->|html2canvas PNG| ASDrive
+    %% Planificacion
+    Coordinator --> Planificacion
+    Planificacion --> RTDBAsamblea
+    Planificacion --> ASDrive
 
     %% Historial & Tablas
-    Member -->|Ver histórico| Historial
-    Historial -->|CollectionGroup| FSAsistencia
-    Historial -->|Años| FSHistorico
-    Member -->|Tablas dinámicas| Tablas
-    Tablas -->|Aggregations| FSAsistencia
+    Member --> Historial
+    Historial --> FSAsistencia
+    Historial --> FSHistorico
+    Member --> Tablas
+    Tablas --> FSAsistencia
 
     %% Foto perfil
-    Member -->|Subir foto| GestionGrupo
-    GestionGrupo -->|guardarFotoUrl (base64)| ASMain
-    ASMain -->|Subir a Drive| ASDrive
-    ASMain -->|Thumbnail URL| FSMembers
+    Member --> GestionGrupo
+    GestionGrupo --> ASMain
+    ASMain --> ASDrive
+    ASMain --> FSMembers
 
     %% Sugerencias & Feedback
-    Dashboard -->|guardarSugerencia| ASMain
-    Dashboard -->|guardarFeedback| ASMain
-    ASMain -->|Escribir Sheets| ASSheets
-    ASMain -->|Escribir Firestore| FSSugerencias
-    ASMain -->|Escribir Firestore| FSFeedback
+    Dashboard --> ASMain
+    Dashboard --> ASMain
+    ASMain --> ASSheets
+    ASMain --> FSSugerencias
+    ASMain --> FSFeedback
 
-    %% Migración (scripts Python)
-    subgraph Migration["🔄 Migración Datos (Python Scripts)"]
-        MigrateScripts["migration/*.py\n15+ scripts\n→ 1,125 docs Firestore"]
+    %% Migracion (scripts Python)
+    subgraph Migration["Migracion Datos (Python Scripts)"]
+        MigrateScripts["migration/*.py - 15+ scripts - 1,125 docs Firestore"]
     end
     class MigrateScripts process;
 
-    MigrateScripts -->|Excel/CSV origen| ASSheets
-    MigrateScripts -->|Escribir| FSMembers
-    MigrateScripts -->|Escribir| FSAsistencia
-    MigrateScripts -->|Escribir| FSHistorico
-    MigrateScripts -->|Escribir| FSFotos
-    MigrateScripts -->|Escribir| FSSugerencias
-    MigrateScripts -->|Escribir| FSFeedback
+    MigrateScripts --> ASSheets
+    MigrateScripts --> FSMembers
+    MigrateScripts --> FSAsistencia
+    MigrateScripts --> FSHistorico
+    MigrateScripts --> FSFotos
+    MigrateScripts --> FSSugerencias
+    MigrateScripts --> FSFeedback
 
     %% Deploy
-    GHActions -->|Build + Copy| GHPages
-    GHActions -->|Build + Copy| GHPreview
+    GHActions --> GHPages
+    GHActions --> GHPreview
 
-    %% Cumpleaños
-    GHActions -.->|Diario 9am| ASMain
-    ASMain -.->|Leer birthDate| FSMembers
-    ASMain -.->|Enviar Gmail| ASSheets
-
-    %% ==================== LEGEND (visual via classes) ====================
-
-    %% Links source-backed (evidencia)
-    %% SRC 1: pages/admin.html:108-119 (Admin panel controls)
-    %% SRC 2: pages/proyector.html:121-127 (Proyector screens)
-    %% SRC 3: pages/asamblea.html:129-135 (Móvil A/B/C/D)
-    %% SRC 4: pages/tomar-asistencia.html:299-336 (calcularTardanza)
-    %% SRC 5: appscript/Code.gs (All endpoints)
-    %% SRC 6: assets/css/portal.css (Shared design system)
-    %% SRC 7: migration/migrate_members_improved.py (Members migration)
-    %% SRC 8: .github/workflows/deploy-preview.yml (Preview deploy)
-    %% SRC 9: .github/workflows/feliz-cumpleanos-temp.yml (Birthday workflow)
+    %% Cumpleanos
+    GHActions -.-> ASMain
+    ASMain -.-> FSMembers
+    ASMain -.-> ASSheets
 </div>
   </div>
 
@@ -314,27 +326,116 @@ flowchart TB
     <div class="legend-item"><div class="legend-color" style="background:#f3dde4;border:2px solid #c4869a"></div>Storage (Drive/Storage)</div>
     <div class="legend-item"><div class="legend-color" style="background:#e8e2d4;border:2px solid #8d8478"></div>Hosting (GitHub Pages)</div>
     <div class="legend-item"><div class="legend-color" style="background:#fff8e7;border:1px dashed #f5c518"></div>Datos (Sheets/Firestore)</div>
-    <div class="legend-item"><div class="legend-color" style="background:#f5efd0;border:2px solid #c4703a"></div>Procesos (Migración)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f5efd0;border:2px solid #c4703a"></div>Procesos (Migracion)</div>
   </div>
 
-  <p class="footer-note">
-    Generado 2026-09-26 · <a href="https://github.com/tt-a1i/archify" target="_blank">Inspirado en Archify</a> ·
-    <a href="https://github.com/luxtonsp-bot/luxto-nsp" target="_blank">Repo luxto-nsp</a>
-  </p>
+  <div class="zoom-info" id="zoomInfo">100%</div>
+
+  <p class="footer-note">Generado 2026-09-26 - Inspirado en Archify - Repo luxto-nsp</p>
 </div>
 
 <script>
   mermaid.initialize({
     startOnLoad: true,
     theme: 'base',
-    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' },
     securityLevel: 'loose',
     maxTextSize: 90000
   });
 
+  // Pan/Zoom functionality
+  const wrapper = document.getElementById('diagramWrapper');
+  const diagram = document.getElementById('arch-diagram');
+  const zoomInfo = document.getElementById('zoomInfo');
+
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let isPanning = false;
+  let startX, startY;
+
+  function updateTransform() {
+    diagram.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    diagram.style.transformOrigin = '0 0';
+    zoomInfo.textContent = Math.round(scale * 100) + '%';
+    zoomInfo.classList.add('visible');
+    setTimeout(() => zoomInfo.classList.remove('visible'), 1000);
+  }
+
+  function resetView() {
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    updateTransform();
+  }
+
+  // Wheel zoom
+  wrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = wrapper.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.min(Math.max(scale * zoomFactor, 0.3), 3);
+
+    // Zoom toward mouse position
+    translateX = mouseX - (mouseX - translateX) * (newScale / scale);
+    translateY = mouseY - (mouseY - translateY) * (newScale / scale);
+    scale = newScale;
+    updateTransform();
+  }, { passive: false });
+
+  // Pan drag
+  wrapper.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    isPanning = true;
+    startX = e.clientX - translateX;
+    startY = e.clientY - translateY;
+    wrapper.classList.add('pan-active');
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    translateX = e.clientX - startX;
+    translateY = e.clientY - startY;
+    updateTransform();
+  });
+
+  window.addEventListener('mouseup', () => {
+    isPanning = false;
+    wrapper.classList.remove('pan-active');
+  });
+
+  // Touch support
+  wrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      isPanning = true;
+      startX = e.touches[0].clientX - translateX;
+      startY = e.touches[0].clientY - translateY;
+      wrapper.classList.add('pan-active');
+    } else if (e.touches.length === 2) {
+      // Pinch zoom could be added here
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!isPanning || e.touches.length !== 1) return;
+    translateX = e.touches[0].clientX - startX;
+    translateY = e.touches[0].clientY - startY;
+    updateTransform();
+    e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener('touchend', () => {
+    isPanning = false;
+    wrapper.classList.remove('pan-active');
+  });
+
   async function downloadSVG() {
-    const svg = document.querySelector('#arch-diagram svg');
-    if (!svg) return alert('Diagrama no renderizado aún');
+    const svg = diagram.querySelector('svg');
+    if (!svg) return alert('Diagrama no renderizado aun');
     const blob = new Blob([svg.outerHTML], {type: 'image/svg+xml'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -343,8 +444,8 @@ flowchart TB
   }
 
   async function downloadPNG() {
-    const svg = document.querySelector('#arch-diagram svg');
-    if (!svg) return alert('Diagrama no renderizado aún');
+    const svg = diagram.querySelector('svg');
+    if (!svg) return alert('Diagrama no renderizado aun');
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const data = new XMLSerializer().serializeToString(svg);
