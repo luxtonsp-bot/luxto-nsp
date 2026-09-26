@@ -482,12 +482,13 @@ Ejemplo:
     function getSaturdaysForYear(year) {
         // Devuelve array de Date (UTC medianoche) de todos los sábados del año en Lima
         const saturdays = [];
-        // Usar Intl para obtener el día de la semana en Lima directamente
-        const fmt = new Intl.DateTimeFormat('es-ES', { timeZone: 'America/Lima', weekday: 'numeric' });
+        // Usar Intl para obtener el día de la semana en Lima (short: 'Mon', 'Tue', etc.)
+        const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Lima', weekday: 'short' });
+        const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
         // 1 de enero a medianoche UTC
         let d = new Date(Date.UTC(year, 0, 1));
-        // Avanzar al primer sábado en Lima (ISO: 6=sábado)
-        while (parseInt(fmt.format(d)) !== 6) {
+        // Avanzar al primer sábado en Lima
+        while (dayMap[fmt.format(d)] !== 6) {
             d.setUTCDate(d.getUTCDate() + 1);
         }
         // Iterar todos los sábados del año
@@ -591,13 +592,12 @@ Ejemplo:
     function getWeekdaysForYear(year, targetWeekday) {
         // targetWeekday: 1=Lunes, 2=Martes, ..., 5=Viernes (0=Domingo, 6=Sábado) - formato JS getDay
         const days = [];
-        const fmt = new Intl.DateTimeFormat('es-ES', { timeZone: 'America/Lima', weekday: 'numeric' });
+        const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Lima', weekday: 'short' });
+        const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
         // 1 de enero a medianoche UTC
         let d = new Date(Date.UTC(year, 0, 1));
         // Avanzar al primer día objetivo en Lima
-        // fmt.format retorna 1=Lunes...7=Domingo (ISO), targetWeekday es 0=Dom...6=Sáb (JS)
-        const targetISO = targetWeekday === 0 ? 7 : targetWeekday;
-        while (parseInt(fmt.format(d)) !== targetISO) {
+        while (dayMap[fmt.format(d)] !== targetWeekday) {
             d.setUTCDate(d.getUTCDate() + 1);
         }
         // Iterar todos los días de ese tipo en el año
