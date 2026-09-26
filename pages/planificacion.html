@@ -10,7 +10,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <!-- html2canvas ya no se usa (generamos SVG vectorial nativo) -->
+    <!-- canvg para renderizar SVG a canvas (PNG alta res para WhatsApp) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvg@4.0.2/dist/browser/canvg.min.js"></script>
     <style>
         /* Additional styles for planificacion */
         .saturday-selector {
@@ -946,45 +947,34 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
         svg += '</svg>';
         return svg;
     }
-                </span>
-            </div>
-            <div class="section">
-                <div class="section-title">📅 Información General</div>
-                <div class="info-row">
-                    <span class="info-label">Fecha</span>
-                    <span class="info-value">${fechaFormateada}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Hora de inicio</span>
-                    <span class="info-value">${hora}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Tema</span>
-                    <span class="info-value">${tema}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Categoría</span>
-                    <span class="info-value">${categoriaLabel}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Objetivo</span>
-                    <span class="info-value">${objetivo}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Ponente(s)</span>
-                    <span class="info-value">${ponente}</span>
-                </div>
-            </div>
-            <div class="section">
-                <div class="section-title">📝 Esquema Detallado</div>
-                <div class="schema-content">${esquema.replace(/</g, '<').replace(/>/g, '>')}</div>
-            </div>
-            <div class="footer">
-                Luz de Cristo - Parroquia Nuestra Señora de la Piedad<br>
-                Generado el ${getLimaNow().toLocaleDateString('es-ES', { timeZone: 'America/Lima' })}
-            </div>
-        `;
-        return div;
+
+    // Generar PNG alta resolución (scale 4x) desde SVG para WhatsApp
+    async function generateHighResPNG() {
+        const svgString = createPreviewSVG();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Scale 4x para calidad WhatsApp (480 * 4 = 1920px ancho)
+        const scale = 4;
+        const width = 480;
+        const svgHeight = parseInt(svgString.match(/height="(\d+)"/)[1]);
+
+        canvas.width = width * scale;
+        canvas.height = svgHeight * scale;
+        canvas.style.width = width + 'px';
+        canvas.style.height = svgHeight + 'px';
+
+        // Usar canvg para renderizar SVG a canvas
+        const v = await canvg.Canvg.fromString(ctx, svgString, {
+            scaleWidth: width * scale,
+            scaleHeight: svgHeight * scale,
+            ignoreMouse: true,
+            ignoreAnimation: true,
+            ignoreDimensions: true
+        });
+        await v.render();
+
+        return canvas.toDataURL('image/png', 1.0);
     }
 
     function downloadPreviewImage() {
@@ -993,16 +983,21 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
             return;
         }
         const fechaStr = selectedSaturdayDate || getLimaDateStr(getLimaNow());
-        const filename = `esquema-asamblea-${fechaStr}.svg`;
 
-        // currentPreviewDataUrl es data:image/svg+xml;base64,...
-        const link = document.createElement('a');
-        link.href = currentPreviewDataUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast('SVG vectorial descargado ✓', 'ok');
+        // Generar PNG alta res para WhatsApp
+        generateHighResPNG().then(pngDataUrl => {
+            const filename = `esquema-asamblea-${fechaStr}.png`;
+            const link = document.createElement('a');
+            link.href = pngDataUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast('Imagen HD para WhatsApp descargada ✓', 'ok');
+        }).catch(err => {
+            console.error(err);
+            toast('Error generando imagen HD', 'err');
+        });
     }
 
     // ── Initialize ──
