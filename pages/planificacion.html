@@ -454,20 +454,25 @@ Ejemplo:
     const LIMA_OFFSET_MIN = -300; // UTC-5 en minutos (Perú no tiene DST)
 
     function getLimaNow() {
+        // Retorna Date en UTC que representa "ahora" en Lima
         const now = new Date();
         return new Date(now.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
     }
 
     function getLimaDateStr(date) {
-        // date es Date en UTC, devuelve YYYY-MM-DD en zona Lima
-        const lima = new Date(date.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
-        return lima.toISOString().split('T')[0];
+        // date es Date en UTC (medianoche UTC), devuelve YYYY-MM-DD en zona Lima
+        // Como date ya es UTC medianoche, solo formateamos en zona Lima
+        return date.toLocaleDateString('es-ES', {
+            timeZone: 'America/Lima',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).split('/').reverse().join('-');
     }
 
     function formatLimaDate(date) {
-        // date es Date en UTC, formatea en zona Lima
-        const lima = new Date(date.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
-        return lima.toLocaleDateString('es-ES', {
+        // date es Date en UTC (medianoche UTC), formatea en zona Lima
+        return date.toLocaleDateString('es-ES', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -479,17 +484,15 @@ Ejemplo:
     function getSaturdaysForYear(year) {
         // Devuelve array de Date (UTC medianoche) de todos los sábados del año en Lima
         const saturdays = [];
-        // 1 de enero en UTC
-        let d = new Date(Date.UTC(year, 0, 1));
-        // Ajustar a medianoche Lima
-        d = new Date(d.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
-        // Avanzar al primer sábado
+        // 1 de enero a medianoche en Lima → convertimos a UTC
+        let d = new Date(Date.UTC(year, 0, 1, -LIMA_OFFSET_MIN / 60, 0, 0));
+        // Avanzar al primer sábado (en zona Lima)
         while (d.getDay() !== 6) {
             d.setDate(d.getDate() + 1);
         }
         // Iterar todos los sábados del año
         while (d.getFullYear() === year) {
-            // Guardar como UTC medianoche para consistencia
+            // Guardar como UTC medianoche (el Date ya está en UTC correcto)
             const utcMidnight = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             saturdays.push(utcMidnight);
             d.setDate(d.getDate() + 7);
@@ -588,20 +591,16 @@ Ejemplo:
     // Obtener todos los días de semana específicos de un año (ej. todos los lunes, martes, etc.)
     function getWeekdaysForYear(year, targetWeekday) {
         // targetWeekday: 1=Lunes, 2=Martes, ..., 5=Viernes (0=Domingo, 6=Sábado)
-        // Usamos zona horaria Lima consistentemente
         const days = [];
-        // 1 de enero a medianoche en Lima
-        let d = new Date(Date.UTC(year, 0, 1));
-        d = new Date(d.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
-
+        // 1 de enero a medianoche en Lima → convertimos a UTC
+        let d = new Date(Date.UTC(year, 0, 1, -LIMA_OFFSET_MIN / 60, 0, 0));
         // Avanzar al primer día de la semana objetivo (en zona Lima)
         while (d.getDay() !== targetWeekday) {
             d.setDate(d.getDate() + 1);
         }
-
         // Iterar todos los días de ese tipo en el año
         while (d.getFullYear() === year) {
-            // Guardar como UTC medianoche del día en Lima
+            // Guardar como UTC medianoche
             const utcMidnight = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             days.push(utcMidnight);
             d.setDate(d.getDate() + 7);
