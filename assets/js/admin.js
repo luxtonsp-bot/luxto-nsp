@@ -91,11 +91,16 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById("gestion-lideres").style.display = "block";
         document.getElementById("sugerencias-feedback").style.display = "block";
       }
+      // Guardar rol para usar en UI (botón finalizar asamblea)
+      window._userRol = rol;
     } catch (e) {
       toast("Acceso restringido", "err");
       setTimeout(() => window.location.href = "dashboard.html", 2000);
       return;
     }
+  } else {
+    // Admin hardcodeado → tratar como coordinador
+    window._userRol = "coordinador";
   }
   inicializar();
 });
@@ -158,11 +163,18 @@ function actualizarEstadoUI(activa) {
 
   if (!label || !sub) return;
 
+  // Verificar si es coordinador (para botón finalizar)
+  let esCoordinador = false;
+  try {
+    // El rol se verificó en onAuthStateChanged, guardarlo en variable global
+    esCoordinador = window._userRol === "coordinador";
+  } catch (e) { /* ignore */ }
+
   if (activa) {
     label.textContent = "🟢 Activo";
     label.className = "estado-label on";
     sub.textContent = "Los miembros ya pueden ingresar a la asamblea";
-    if (btnFin) btnFin.style.display = "inline-flex";
+    if (btnFin) btnFin.style.display = esCoordinador ? "inline-flex" : "none";
     if (btnReset) btnReset.style.display = "inline-flex";
   } else {
     label.textContent = "⚫ Inactivo";
@@ -287,6 +299,18 @@ window.siguientePregunta = async function () {
 
 /* ── Finalizar asamblea (con snapshot) ─────────────────── */
 window.finalizarAsamblea = async function () {
+  // Solo coordinadores pueden finalizar (escribe en historico/ que requiere isCoordinator)
+  try {
+    const userSnap = await getDoc(doc(fsdb, "members", auth.currentUser.uid));
+    if (!userSnap.exists() || userSnap.data().rol !== "coordinador") {
+      toast("Solo los coordinadores pueden finalizar la asamblea", "err");
+      return;
+    }
+  } catch (e) {
+    toast("Error verificando permisos", "err");
+    return;
+  }
+
   const ok = confirm("¿Finalizar la asamblea actual? Se guardará un snapshot histórico.");
   if (!ok) return;
 
