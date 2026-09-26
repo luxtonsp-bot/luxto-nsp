@@ -10,6 +10,18 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script>
+        // Convertir URL de Drive a thumbnail (igual que dashboard)
+        function convertirUrlDrive(url) {
+            if (!url) return "";
+            if (url.includes("drive.google.com/thumbnail")) return url;
+            const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+                   || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
+                   || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+            if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w400";
+            return url;
+        }
+    </script>
 </head>
 <body>
 
@@ -244,12 +256,15 @@
             const nombre = data.nombre || data.name || 'Sin nombre';
             const email = data.email || '';
             const initial = nombre.charAt(0).toUpperCase();
-            // Avatar: photoURL, avatar, o fallback a inicial
-            const photoURL = data.photoURL || data.avatar || '';
-            const avatarHtml = photoURL
-                ? `<img src="${photoURL}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+            // Avatar: fotoThumb (Firestore) → fotoDriveId (Drive) → fallback a inicial (igual que dashboard)
+            let photoUrl = data.fotoThumb;
+            if (!photoUrl && data.fotoDriveId) {
+                photoUrl = convertirUrlDrive(data.fotoDriveId);
+            }
+            const avatarHtml = photoUrl
+                ? `<img src="${photoUrl}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
                 : '';
-            const initialHtml = photoURL
+            const initialHtml = photoUrl
                 ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:none; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
                 : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`;
 
