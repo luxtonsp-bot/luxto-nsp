@@ -250,21 +250,28 @@
             return;
         }
 
+        // Helper: valida que sea URL real (http/https/data:), no UID ni string vacía
+        function isValidImageUrl(url) {
+            return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:'));
+        }
+
         let html = '';
         snapshot.forEach(doc => {
             const data = doc.data();
             const nombre = data.nombre || data.name || 'Sin nombre';
             const email = data.email || '';
             const initial = nombre.charAt(0).toUpperCase();
-            // Avatar: fotoThumb (Firestore) → fotoDriveId (Drive) → fallback a inicial (igual que dashboard)
+            // Avatar: fotoThumb (Firestore) → fotoDriveId (Drive) → fallback a inicial
             let photoUrl = data.fotoThumb;
-            if (!photoUrl && data.fotoDriveId) {
+            if (!isValidImageUrl(photoUrl) && data.fotoDriveId) {
                 photoUrl = convertirUrlDrive(data.fotoDriveId);
             }
-            const avatarHtml = photoUrl
+            // Validación final: solo usar si es URL real
+            const hasValidPhoto = isValidImageUrl(photoUrl);
+            const avatarHtml = hasValidPhoto
                 ? `<img src="${photoUrl}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
                 : '';
-            const initialHtml = photoUrl
+            const initialHtml = hasValidPhoto
                 ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:none; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
                 : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`;
 
