@@ -54,56 +54,6 @@
         .saturday-btn-ghost { background: rgba(255,255,255,.06); color: var(--muted); border: 1px solid var(--border); }
         .saturday-btn-ghost:hover { background: rgba(255,255,255,.1); color: var(--cream); }
 
-        /* Day selector mode */
-        .day-selector-mode {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-        .radio-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            padding: 10px 14px;
-            background: var(--bg3);
-            border: 1.5px solid var(--border);
-            border-radius: 10px;
-            color: var(--cream);
-            font-family: 'Outfit', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all .2s;
-        }
-        .radio-option:hover { border-color: var(--o); }
-        .radio-option input[type="radio"] {
-            accent-color: var(--y);
-            width: 18px;
-            height: 18px;
-        }
-        .radio-option input[type="radio"]:checked + span { color: var(--y); }
-
-        .custom-day-selector {
-            display: flex;
-            gap: 12px;
-            align-items: flex-end;
-            flex-wrap: wrap;
-        }
-        .custom-day-selector label { font-weight: 600; color: var(--cream); }
-        .custom-day-selector input[type="date"] {
-            flex: 1;
-            min-width: 180px;
-            padding: 10px 14px;
-            background: var(--bg3);
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            color: var(--cream);
-            font-family: 'Outfit', sans-serif;
-            font-size: 14px;
-        }
-        .custom-day-selector input[type="date"]:focus { outline: none; border-color: var(--o); }
-
         .schema-editor {
             margin-top: 20px;
         }
@@ -350,37 +300,15 @@
 
     <!-- Selector de Sábado -->
     <div class="card">
-        <div class="card-title">🗓️ Seleccionar Día</div>
-        <div class="day-selector-mode">
-            <label class="radio-option">
-                <input type="radio" name="dayMode" value="saturday" checked onchange="toggleDayMode()">
-                <span>📅 Sábados del año</span>
-            </label>
-            <label class="radio-option">
-                <input type="radio" name="dayMode" value="custom" onchange="toggleDayMode()">
-                <span>📌 Otro día (asamblea/salida entre semana)</span>
-            </label>
+        <div class="card-title">🗓️ Seleccionar Sábado</div>
+        <div class="saturday-selector">
+            <label for="yearSelect">Año:</label>
+            <select id="yearSelect" onchange="generateSaturdayOptions()"></select>
+            <label for="saturdaySelect">Sábado a planificar:</label>
+            <select id="saturdaySelect"></select>
+            <button class="saturday-btn saturday-btn-primary" id="loadSaturdayBtn" onclick="loadSelectedSaturday()">Cargar</button>
+            <button class="saturday-btn saturday-btn-ghost" id="addSaturdayBtn" onclick="addNewSaturday()">+ Nuevo sábado</button>
         </div>
-
-        <div id="saturdayModePanel">
-            <div class="saturday-selector">
-                <label for="yearSelect">Año:</label>
-                <select id="yearSelect" onchange="generateSaturdayOptions()"></select>
-                <label for="saturdaySelect">Sábado a planificar:</label>
-                <select id="saturdaySelect"></select>
-                <button class="saturday-btn saturday-btn-primary" id="loadSaturdayBtn" onclick="loadSelectedSaturday()">Cargar</button>
-                <button class="saturday-btn saturday-btn-ghost" id="addSaturdayBtn" onclick="addNewSaturday()">+ Nuevo sábado</button>
-            </div>
-        </div>
-
-        <div id="customModePanel" style="display: none;">
-            <div class="custom-day-selector">
-                <label for="customDate">Fecha (cualquier día de la semana):</label>
-                <input type="date" id="customDate">
-                <button class="saturday-btn saturday-btn-primary" onclick="loadCustomDate()">Cargar</button>
-            </div>
-        </div>
-
         <p id="selectedSaturdayInfo" style="font-size: 13px; color: var(--muted); display: none;"></p>
     </div>
 
@@ -518,23 +446,15 @@ Ejemplo:
     }
 
     function getLimaDateStr(date) {
-        // date es Date en UTC medianoche de la fecha Lima
-        // Devuelve YYYY-MM-DD usando componentes UTC directamente (ya representa la fecha en Lima)
-        const y = date.getUTCFullYear();
-        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const d = String(date.getUTCDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
+        // date es Date en UTC, devuelve YYYY-MM-DD en zona Lima
+        const lima = new Date(date.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return lima.toISOString().split('T')[0];
     }
 
     function formatLimaDate(date) {
-        // date es Date en UTC medianoche de la fecha Lima
-        // Formatea usando UTC y añadiendo zona Lima solo para nombre de día/mes
-        const y = date.getUTCFullYear();
-        const m = date.getUTCMonth();
-        const d = date.getUTCDate();
-        // Crear fecha en zona Lima para nombres correctos
-        const limaDate = new Date(Date.UTC(y, m, d, 5, 0, 0)); // 05:00 UTC = 00:00 Lima
-        return limaDate.toLocaleDateString('es-ES', {
+        // date es Date en UTC, formatea en zona Lima
+        const lima = new Date(date.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return lima.toLocaleDateString('es-ES', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -546,22 +466,20 @@ Ejemplo:
     function getSaturdaysForYear(year) {
         // Devuelve array de Date (UTC medianoche) de todos los sábados del año en Lima
         const saturdays = [];
-        // 1 ene a medianoche Lima = 05:00 UTC
-        const jan1Lima = new Date(Date.UTC(year, 0, 1, 5, 0, 0));
-        // Weekday en Lima (0=Dom...6=Sáb)
-        const weekday = parseInt(jan1Lima.toLocaleDateString('en-US', { timeZone: 'America/Lima', weekday: 'numeric' })) % 7;
-        // Días hasta el primer sábado
-        const daysUntilSat = (6 - weekday + 7) % 7;
-        // Primer sábado (día del mes en Lima)
-        let dayOfMonth = 1 + daysUntilSat;
-        // Iterar sumando 7 días, verificando que siga en el mismo año en Lima
-        while (true) {
-            const check = new Date(Date.UTC(year, 0, dayOfMonth, 5, 0, 0));
-            const checkYear = parseInt(check.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }).split('-')[0]);
-            if (checkYear !== year) break;
-            // Guardar como UTC medianoche de esa fecha Lima
-            saturdays.push(new Date(Date.UTC(year, 0, dayOfMonth)));
-            dayOfMonth += 7;
+        // 1 de enero en UTC
+        let d = new Date(Date.UTC(year, 0, 1));
+        // Ajustar a medianoche Lima
+        d = new Date(d.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        // Avanzar al primer sábado
+        while (d.getDay() !== 6) {
+            d.setDate(d.getDate() + 1);
+        }
+        // Iterar todos los sábados del año
+        while (d.getFullYear() === year) {
+            // Guardar como UTC medianoche para consistencia
+            const utcMidnight = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            saturdays.push(utcMidnight);
+            d.setDate(d.getDate() + 7);
         }
         return saturdays;
     }
@@ -612,35 +530,6 @@ Ejemplo:
         if (selectedOpt) selectedSaturdayDate = selectedOpt.value;
     }
 
-    // ── Toggle entre modo Sábados y modo Día personalizado ──
-    function toggleDayMode() {
-        const saturdayMode = document.querySelector('input[name="dayMode"]:checked').value;
-        const satPanel = document.getElementById('saturdayModePanel');
-        const customPanel = document.getElementById('customModePanel');
-        if (saturdayMode === 'saturday') {
-            satPanel.style.display = 'block';
-            customPanel.style.display = 'none';
-        } else {
-            satPanel.style.display = 'none';
-            customPanel.style.display = 'block';
-            // Set default to today in Lima
-            const limaNow = getLimaNow();
-            document.getElementById('customDate').value = getLimaDateStr(limaNow);
-        }
-    }
-
-    // ── Cargar fecha personalizada ──
-    async function loadCustomDate() {
-        const dateStr = document.getElementById('customDate').value;
-        if (!dateStr) {
-            toast('Selecciona una fecha', 'err');
-            return;
-        }
-        selectedSaturdayDate = dateStr;
-        await loadAssemblyData(dateStr);
-        updateSelectedSaturdayInfo(dateStr);
-    }
-
     // ── Cargar datos del sábado seleccionado ──
     async function loadSelectedSaturday() {
         const select = document.getElementById('saturdaySelect');
@@ -684,9 +573,7 @@ Ejemplo:
 
     function updateSelectedSaturdayInfo(dateStr) {
         const infoEl = document.getElementById('selectedSaturdayInfo');
-        // dateStr es YYYY-MM-DD en Lima, crear Date en UTC medianoche
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const date = new Date(Date.UTC(y, m - 1, d));
+        const date = new Date(dateStr + 'T00:00:00');
         const displayStr = formatLimaDate(date);
         infoEl.textContent = `Editando: ${displayStr}`;
         infoEl.style.display = 'block';
@@ -724,7 +611,7 @@ Ejemplo:
     document.getElementById('planForm').addEventListener('submit', async e => {
         e.preventDefault();
         if (!selectedSaturdayDate) {
-            toast('Selecciona una fecha primero', 'err');
+            toast('Selecciona un sábado primero', 'err');
             return;
         }
 
