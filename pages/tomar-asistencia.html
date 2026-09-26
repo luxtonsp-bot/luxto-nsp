@@ -157,16 +157,51 @@
                     currentAssemblyInfoDiv.innerHTML = `
                         <div class="card-title">📅 Asamblea de hoy</div>
                         <div class="item" style="background:rgba(212,136,26,.08); border-color:rgba(212,136,26,.25);">
-                            <div class="item-title" style="color:#f0b060;">🟡 Hay asamblea programada pero no está activa</div>
+                            <div class="item-title" style="color:#f0b060;">🟡 Asamblea programada pero no activada</div>
                             <div class="item-meta">Actívala desde <a href="planificacion.html" style="color:#f0b060;">Planificación</a></div>
                         </div>
                     `;
                 }
             } else {
-                currentAssemblyInfoDiv.innerHTML = `
-                    <div class="card-title">📅 Asamblea de hoy</div>
-                    <div class="empty-state">No hay asamblea programada para hoy (${formatDate(dateStr)})</div>
-                `;
+                // Buscar próxima asamblea activa en los próximos 14 días
+                let nextAssemblyInfo = null;
+                const todayLima = new Date();
+                todayLima.setTime(todayLima.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+
+                for (let i = 1; i <= 14; i++) {
+                    const checkDate = new Date(todayLima);
+                    checkDate.setDate(checkDate.getDate() + i);
+                    const checkStr = checkDate.toISOString().split('T')[0];
+                    try {
+                        const doc = await db.collection('asambleas').doc(checkStr).get();
+                        if (doc.exists && doc.data().hayAsamblea) {
+                            nextAssemblyInfo = { date: checkStr, data: doc.data() };
+                            break;
+                        }
+                    } catch (e) {}
+                }
+
+                if (nextAssemblyInfo) {
+                    const nextDateFormatted = formatDate(nextAssemblyInfo.date);
+                    currentAssemblyInfoDiv.innerHTML = `
+                        <div class="card-title">📅 Próxima asamblea programada</div>
+                        <div class="item" style="background:rgba(245,197,24,.08); border-color:rgba(245,197,24,.25);">
+                            <div class="item-title" style="color:#f5c518;">📆 Asamblea programada para el ${nextDateFormatted}</div>
+                            <div class="item-meta">
+                                ${nextAssemblyInfo.data.tema?.titulo ? `Tema: <strong>${nextAssemblyInfo.data.tema.titulo}</strong> · ` : ''}
+                                ${nextAssemblyInfo.data.horaInicio ? `Hora: <strong>${nextAssemblyInfo.data.horaInicio}</strong>` : ''}
+                            </div>
+                            <div class="item-meta" style="margin-top:8px; font-size:13px; color:var(--muted);">
+                                La asistencia se habilitará automáticamente ese día.
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    currentAssemblyInfoDiv.innerHTML = `
+                        <div class="card-title">📅 Asamblea de hoy</div>
+                        <div class="empty-state">No hay asamblea programada para hoy (${formatDate(dateStr)})</div>
+                    `;
+                }
             }
         } catch (error) {
             console.error("Error loading assembly:", error);
