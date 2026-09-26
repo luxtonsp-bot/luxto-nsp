@@ -329,6 +329,18 @@
         else if (diff > 720) diff -= 1440;
         const tardanzaMinutos = Math.max(0, diff);
 
+        console.log('[TARDANZA DEBUG]', {
+            arrivalUTC: `${arrivalUTCHours}:${arrivalUTCMinutes}`,
+            arrivalTotalUTCMinutes,
+            LIMA_OFFSET_MIN,
+            arrivalMinutes,
+            normalizedArrivalMinutes,
+            startMinutes,
+            diff,
+            tardanzaMinutos,
+            horaInicio: assemblyData.horaInicio
+        });
+
         await attendanceRef.set({
             tardanzaMinutos,
             esTardanza: tardanzaMinutos > TOLERANCIA_TARDANZA_MIN
