@@ -437,25 +437,24 @@ Ejemplo:
     let selectedSaturdayDate = null; // YYYY-MM-DD
     let currentPreviewDataUrl = null;
 
-    function getTodayLimaDateStr() {
-        // Hoy en Lima como YYYY-MM-DD
+    // ── Zona horaria Lima (UTC-5) ──
+    const LIMA_OFFSET_MIN = -300; // UTC-5 en minutos (Perú no tiene DST)
+
+    function getLimaNow() {
         const now = new Date();
-        return now.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }); // en-CA = YYYY-MM-DD
+        return new Date(now.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
     }
 
     function getLimaDateStr(date) {
-        // date es UTC medianoche de la fecha Lima (ej. 2026-01-03T00:00:00Z = 3 ene en Lima)
-        // Devolvemos directamente los componentes UTC
-        const y = date.getUTCFullYear();
-        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const d = String(date.getUTCDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
+        // date es Date en UTC, devuelve YYYY-MM-DD en zona Lima
+        const lima = new Date(date.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return lima.toISOString().split('T')[0];
     }
 
     function formatLimaDate(date) {
-        // date es UTC medianoche de la fecha Lima
-        // Formatear usando componentes UTC + timeZone para weekday correcto
-        return date.toLocaleDateString('es-ES', {
+        // date es Date en UTC, formatea en zona Lima
+        const lima = new Date(date.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return lima.toLocaleDateString('es-ES', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -467,18 +466,17 @@ Ejemplo:
     function getSaturdaysForYear(year) {
         // Devuelve array de Date (UTC medianoche) de todos los sábados del año en Lima
         const saturdays = [];
-        // Crear 1 de enero a medianoche en zona horaria Lima
-        // Usamos string ISO con offset para forzar interpretación en Lima
-        const limaJan1 = new Date(`${year}-01-01T00:00:00-05:00`);
-        // Avanzar al primer sábado (getDay() en Date local = día en Lima)
-        while (limaJan1.getDay() !== 6) {
-            limaJan1.setDate(limaJan1.getDate() + 1);
+        // 1 de enero en UTC
+        let d = new Date(Date.UTC(year, 0, 1));
+        // Ajustar a medianoche Lima
+        d = new Date(d.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        // Avanzar al primer sábado
+        while (d.getDay() !== 6) {
+            d.setDate(d.getDate() + 1);
         }
-        // Iterar todos los sábados del año (usando fecha local Lima)
-        let d = new Date(limaJan1);
+        // Iterar todos los sábados del año
         while (d.getFullYear() === year) {
-            // Convertir a UTC medianoche: YYYY-MM-DD en Lima → UTC 05:00 mismo día
-            // Pero para almacenar como "medianoche UTC consistente", usamos los componentes de Lima
+            // Guardar como UTC medianoche para consistencia
             const utcMidnight = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             saturdays.push(utcMidnight);
             d.setDate(d.getDate() + 7);
@@ -488,8 +486,8 @@ Ejemplo:
 
     function generateYearOptions() {
         const yearSelect = document.getElementById('yearSelect');
-        const now = new Date();
-        const currentYear = parseInt(now.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }).split('-')[0]);
+        const limaNow = getLimaNow();
+        const currentYear = limaNow.getFullYear();
         // Generar años: actual - 2 hasta actual + 3 (rango de 6 años)
         for (let y = currentYear - 2; y <= currentYear + 3; y++) {
             const opt = document.createElement('option');
@@ -505,7 +503,8 @@ Ejemplo:
         const saturdaySelect = document.getElementById('saturdaySelect');
         const year = parseInt(yearSelect.value);
         const saturdays = getSaturdaysForYear(year);
-        const todayLimaStr = getTodayLimaDateStr();
+        const limaNow = getLimaNow();
+        const todayLimaStr = getLimaDateStr(limaNow);
 
         saturdaySelect.innerHTML = '';
         let defaultIndex = 0;
@@ -755,7 +754,7 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
         const div = document.createElement('div');
         div.className = 'preview-template';
 
-        const fechaStr = selectedSaturdayDate || getTodayLimaDateStr();
+        const fechaStr = selectedSaturdayDate || getLimaDateStr(getLimaNow());
         // fechaStr ya está en YYYY-MM-DD de Lima, parsear como UTC medianoche
         const date = new Date(fechaStr + 'T00:00:00');
         const fechaFormateada = formatLimaDate(date);
@@ -824,7 +823,7 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
             </div>
             <div class="footer">
                 Luz de Cristo - Parroquia Nuestra Señora de la Piedad<br>
-                Generado el ${new Date().toLocaleDateString('es-ES', { timeZone: 'America/Lima' })}
+                Generado el ${getLimaNow().toLocaleDateString('es-ES', { timeZone: 'America/Lima' })}
             </div>
         `;
         return div;
