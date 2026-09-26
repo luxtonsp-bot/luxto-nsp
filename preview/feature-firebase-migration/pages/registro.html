@@ -257,7 +257,7 @@ input.valid{border-color:var(--ok);}
   import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword }
                                   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, query, where, getDocs, updateDoc, doc }
+  import { getFirestore, collection, query, where, getDocs, updateDoc, doc, getDoc, writeBatch }
                                   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -367,13 +367,35 @@ input.valid{border-color:var(--ok);}
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       const uid  = cred.user.uid;
 
-      // Actualizar documento del miembro en Firestore con email, UID y fecha de nacimiento
-      // (la edad nunca se guarda como número fijo, sección 6.3 del plan)
-      await updateDoc(memberDocRef, {
+      // Leer datos del documento viejo (en members/{uid_viejo})
+      const oldDocSnap = await getDoc(memberDocRef);
+      if (!oldDocSnap.exists()) {
+        throw new Error("Documento del miembro no encontrado");
+      }
+      const oldData = oldDocSnap.data();
+
+      // El ID viejo es el del documento en miembros_registro (lookupDoc.id)
+      const oldUid = memberDocRef.id;
+
+      // Crear nuevo documento en members/{nuevo_uid} con todos los datos
+      // y borrar el viejo + miembros_registro/{uid_viejo} atómicamente
+      const batch = writeBatch(db);
+      const newMemberRef = doc(db, "members", uid);
+      const oldMiembrosRegistroRef = doc(db, "miembros_registro", oldUid);
+
+      // Copiar todos los datos del viejo al nuevo, actualizando email, uid y fechaNacimiento
+      batch.set(newMemberRef, {
+        ...oldData,
         email: email,
         uid: uid,
         fechaNacimiento: fechaNac
       });
+
+      // Borrar documento viejo y el lookup público
+      batch.delete(memberDocRef);
+      batch.delete(oldMiembrosRegistroRef);
+
+      await batch.commit();
 
       document.getElementById("step2").classList.add("done");
       toast("¡Cuenta creada! Redirigiendo...", "ok");
