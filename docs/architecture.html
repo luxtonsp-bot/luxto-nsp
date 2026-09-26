@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arquitectura Luxto-NSP — Diagrama Interactivo</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fbf7ee;
+    --text: #1c1814;
+    --primary: #f5c518;
+    --primary-dark: #d4a912;
+    --secondary: #c4703a;
+    --accent: #4a8fa8;
+    --card: #ffffff;
+    --border: #e8e2d4;
+    --shadow: 0 4px 20px rgba(20,17,13,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 32px; }
+  h1 { font-family: 'Lora', serif; font-size: clamp(28px, 4vw, 42px); color: var(--text); margin-bottom: 8px; }
+  .subtitle { color: #5e554a; font-size: 16px; }
+  .diagram-wrapper {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    padding: 24px;
+    overflow: auto;
+  }
+  .mermaid { max-width: 100%; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 16px;
+    background: #fdf3c4;
+    border-radius: 12px;
+    border: 1px solid #f5e0a0;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-color { width: 16px; height: 16px; border-radius: 4px; }
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary);
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+  button.secondary { background: var(--accent); color: white; }
+  button.secondary:hover { background: #3a7a90; }
+  .footer-note { text-align: center; margin-top: 24px; color: #8d8478; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Arquitectura Luxto-NSP</h1>
+    <p class="subtitle">Grupo Juvenil Luz de Cristo — Parroquia Nuestra Señora de la Piedad</p>
+  </header>
+
+  <div class="controls">
+    <button onclick="mermaid.run()">🔄 Re-renderizar</button>
+    <button class="secondary" onclick="downloadSVG()">💾 Descargar SVG</button>
+    <button class="secondary" onclick="downloadPNG()">🖼️ Descargar PNG</button>
+  </div>
+
+  <div class="diagram-wrapper">
+    <div class="mermaid" id="arch-diagram">
+%%{init: {'theme': 'base', 'themeVariables': {
+  'primaryColor': '#f5c518',
+  'primaryTextColor': '#1c1814',
+  'primaryBorderColor': '#d4a912',
+  'lineColor': '#8d8478',
+  'secondaryColor': '#c4703a',
+  'tertiaryColor': '#4a8fa8',
+  'background': '#ffffff',
+  'fontFamily': 'Inter',
+  'fontSize': '14px',
+  'nodeBorder': '2px',
+  'clusterBkg': '#fdf3c4',
+  'clusterBorder': '#f5c518'
+}}}%%
+flowchart TB
+    %% ==================== STYLES ====================
+    classDef frontend fill:#fdf3c4,stroke:#f5c518,stroke-width:2px,color:#1c1814;
+    classDef firebase fill:#e8f4fd,stroke:#4a8fa8,stroke-width:2px,color:#1c1814;
+    classDef backend fill:#ffe8dc,stroke:#c4703a,stroke-width:2px,color:#1c1814;
+    classDef storage fill:#f3dde4,stroke:#c4869a,stroke-width:2px,color:#1c1814;
+    classDef hosting fill:#e8e2d4,stroke:#8d8478,stroke-width:2px,color:#1c1814;
+    classDef data fill:#fff8e7,stroke:#f5c518,stroke-width:1px,stroke-dasharray: 5 5,color:#1c1814;
+    classDef process fill:#f5efd0,stroke:#c4703a,stroke-width:2px,color:#1c1814;
+
+    %% ==================== EXTERNAL USERS ====================
+    subgraph Users["👥 Usuarios"]
+        Member["👤 Miembro<br/>(Celular/Laptop)"]
+        Coordinator["⚙️ Coordinador<br/>(Laptop/Proyector)"]
+        Public["🌐 Visitante Público"]
+    end
+    class Member,Coordinator,Public frontend;
+
+    %% ==================== FRONTEND PAGES ====================
+    subgraph Frontend["🖥️ Frontend — 12 Páginas HTML (Vanilla JS ES Modules)"]
+        direction TB
+
+        subgraph PublicPages["📄 Páginas Públicas (Light Theme)"]
+            Index["index.html<br/>Landing + Historia + Coro + Donaciones"]
+            Historia["historia.html<br/>Cronología 2010-2025 + Directivas + Coro"]
+        end
+        class Index,Historia frontend;
+
+        subgraph AuthPages["🔐 Autenticación"]
+            Login["login.html<br/>Email/Pass + Recuperar"]
+            Registro["registro.html<br/>Validar Sheet → Firebase Auth"]
+        end
+        class Login,Registro frontend;
+
+        subgraph MemberPortal["🎫 Portal Miembro (Dark Theme + portal.css)"]
+            Dashboard["dashboard.html<br/>Stats, Gauge, Sugerencias, Feedback, Cumpleaños"]
+            GestionGrupo["gestion-grupo.html<br/>Miembros, Roles, Fotos"]
+            TomarAsistencia["tomar-asistencia.html<br/>Marcar presente/ausente + Tardanza"]
+        end
+        class Dashboard,GestionGrupo,TomarAsistencia frontend;
+
+        subgraph AssemblySystem["📡 Sistema Asambleas Tiempo Real (3 Vistas Sincronizadas)"]
+            Admin["admin.html<br/>Coordinador: Preguntas, Lanzar, Ranking, Finalizar"]
+            Proyector["proyector.html<br/>Pantalla: Countdown, Pregunta, Barras %, Podio"]
+            Asamblea["asamblea.html<br/>Móvil: Solo A/B/C/D + Timer + Resultado"]
+        end
+        class Admin,Proyector,Asamblea frontend;
+
+        subgraph OtherPages["📊 Otras"]
+            Planificacion["planificacion.html<br/>Activar asamblea + Descargar esquema PNG"]
+            Historial["historial.html<br/>Años cerrados + Kahoot + Stats"]
+            Tablas["tablas.html<br/>Tablas dinámicas pivot"]
+        end
+        class Planificacion,Historial,Tablas frontend;
+    end
+
+    %% ==================== FIREBASE ====================
+    subgraph Firebase["☁️ Firebase (Proyecto: luxto-nsp)"]
+        direction TB
+
+        subgraph Auth["🔐 Authentication"]
+            AuthEmail["Email/Password<br/>Provider"]
+            AuthUsers["Users UID<br/>+ Custom Claims (rol)"]
+        end
+
+        subgraph RTDB["⚡ Realtime Database\n(asambleas en vivo)"]
+            RTDBAsamblea["/asamblea\n{activa, estado, preguntaNum,\n preguntaActual, respuestas}"]
+            RTDBRanking["/rankingGlobal\n{uid: {nombre, pts, fotoUrl}}"]
+            RTDBBoradores["/borradores\n{preguntas guardadas}"]
+            RTDBAdmins["/admins\n{uid: true}"]
+        end
+
+        subgraph Firestore["🔥 Cloud Firestore\n(datos persistentes)"]
+            FSMembers["members/{uid}\n{nombre, email, fotoUrl,\n fotoThumb, fotoDriveId,\n generacion, birthDate,\n estadoAnioActual, rol}"]
+            FSAsistencia["asistencia/{anio}/{fecha}/{uid}\n{presente, timestamp,\n tardanzaMinutos, esTardanza}"]
+            FSHistorico["historico/{anio}/{fecha}/{uid}\n{snapshot asistencia final}"]
+            FSFotos["fotos/{uid}\n{fotoDisplay, fotoThumb,\n driveId, updatedAt}"]
+            FSSugerencias["sugerencias/{docId}\n{nombre, email, texto, ts}"]
+            FSFeedback["feedback/{docId}\n{nombre, email, stars,\n comentario, ts}"]
+        end
+
+        subgraph Storage["📦 Firebase Storage\n(opcional, para fotos)"]
+            FBStorage["fotos/{uid}.jpg\n+ thumbnails"]
+        end
+    end
+    class AuthEmail,AuthUsers firebase;
+    class RTDBAsamblea,RTDBRanking,RTDBBoradores,RTDBAdmins firebase;
+    class FSMembers,FSAsistencia,FSHistorico,FSFotos,FSSugerencias,FSFeedback firebase;
+    class FBStorage storage;
+
+    %% ==================== GOOGLE APPS SCRIPT ====================
+    subgraph AppsScript["📜 Google Apps Script\n(Backend + Sheets + Drive)"]
+        direction TB
+        ASMain["Code.gs\nEndpoints: getDashboard, validarMiembro,\nguardarEmail, guardarFotoUrl,\nguardarSugerencia, guardarFeedback,\nenviarCumpleaños"]
+        ASCaporales["caporales.gs\nLógica específica caporales"]
+        ASSheets["📊 Google Sheets\nMiembros | Asistencia | Sugerencias |\nFeedback | Estadística | Cumpleaños"]
+        ASDrive["💾 Google Drive\nFotos perfil (thumbnail público)\nEsquemas asamblea (PNG)"]
+    end
+    class ASMain,ASCaporales backend;
+    class ASSheets,ASDrive storage;
+
+    %% ==================== HOSTING ====================
+    subgraph Hosting["🌍 Hosting & CI/CD"]
+        GHPages["GitHub Pages\nluxtonsp-bot.github.io/luxto-nsp/"]
+        GHPreview["Preview por rama\n/preview/feature-xxx/"]
+        GHActions["GitHub Actions\n• deploy-production.yml (main → gh-pages)\n• deploy-preview.yml (rama → gh-pages/preview/)\n• feliz-cumpleanos.yml (diario, envía emails)"]
+    end
+    class GHPages,GHPreview,GHActions hosting;
+
+    %% ==================== CONNECTIONS ====================
+    %% Public access
+    Public -->|HTTPS| Index
+    Public -->|HTTPS| Historia
+
+    %% Auth flow
+    Member -->|1. Email/Pass| Login
+    Member -->|2. Validar Sheet| Registro
+    Registro -->|Apps Script: validarMiembro| ASMain
+    Registro -->|Firebase: createUser| AuthEmail
+    Registro -->|Apps Script: guardarEmail| ASMain
+
+    %% Member portal
+    Member -->|Login OK| Dashboard
+    Member -->|Gestión| GestionGrupo
+    Member -->|Asistencia| TomarAsistencia
+
+    %% Dashboard data
+    Dashboard -->|getDashboard(email)| ASMain
+    ASMain -->|Read Sheets| ASSheets
+    Dashboard -->|Realtime: activa, podio| RTDBAsamblea
+    Dashboard -->|Historial tardanzas| FSAsistencia
+
+    %% Assembly system (real-time)
+    Coordinator -->|Admin panel| Admin
+    Coordinator -->|Proyector| Proyector
+    Member -->|Móvil| Asamblea
+
+    Admin -->|Escritura atómica| RTDBAsamblea
+    Admin -->|Ranking global| RTDBRanking
+    Admin -->|Borradores| RTDBBoradores
+    Proyector -->|Listener tiempo real| RTDBAsamblea
+    Asamblea -->|Responder A/B/C/D| RTDBAsamblea
+
+    %% Planificación
+    Coordinator -->|Activar asamblea| Planificacion
+    Planificacion -->|Escribir /asamblea/activa=true| RTDBAsamblea
+    Planificacion -->|html2canvas PNG| ASDrive
+
+    %% Historial & Tablas
+    Member -->|Ver histórico| Historial
+    Historial -->|CollectionGroup| FSAsistencia
+    Historial -->|Años| FSHistorico
+    Member -->|Tablas dinámicas| Tablas
+    Tablas -->|Aggregations| FSAsistencia
+
+    %% Foto perfil
+    Member -->|Subir foto| GestionGrupo
+    GestionGrupo -->|guardarFotoUrl (base64)| ASMain
+    ASMain -->|Subir a Drive| ASDrive
+    ASMain -->|Thumbnail URL| FSMembers
+
+    %% Sugerencias & Feedback
+    Dashboard -->|guardarSugerencia| ASMain
+    Dashboard -->|guardarFeedback| ASMain
+    ASMain -->|Escribir Sheets| ASSheets
+    ASMain -->|Escribir Firestore| FSSugerencias
+    ASMain -->|Escribir Firestore| FSFeedback
+
+    %% Migración (scripts Python)
+    subgraph Migration["🔄 Migración Datos (Python Scripts)"]
+        MigrateScripts["migration/*.py\n15+ scripts\n→ 1,125 docs Firestore"]
+    end
+    class MigrateScripts process;
+
+    MigrateScripts -->|Excel/CSV origen| ASSheets
+    MigrateScripts -->|Escribir| FSMembers
+    MigrateScripts -->|Escribir| FSAsistencia
+    MigrateScripts -->|Escribir| FSHistorico
+    MigrateScripts -->|Escribir| FSFotos
+    MigrateScripts -->|Escribir| FSSugerencias
+    MigrateScripts -->|Escribir| FSFeedback
+
+    %% Deploy
+    GHActions -->|Build + Copy| GHPages
+    GHActions -->|Build + Copy| GHPreview
+
+    %% Cumpleaños
+    GHActions -.->|Diario 9am| ASMain
+    ASMain -.->|Leer birthDate| FSMembers
+    ASMain -.->|Enviar Gmail| ASSheets
+
+    %% ==================== LEGEND (visual via classes) ====================
+
+    %% Links source-backed (evidencia)
+    %% SRC 1: pages/admin.html:108-119 (Admin panel controls)
+    %% SRC 2: pages/proyector.html:121-127 (Proyector screens)
+    %% SRC 3: pages/asamblea.html:129-135 (Móvil A/B/C/D)
+    %% SRC 4: pages/tomar-asistencia.html:299-336 (calcularTardanza)
+    %% SRC 5: appscript/Code.gs (All endpoints)
+    %% SRC 6: assets/css/portal.css (Shared design system)
+    %% SRC 7: migration/migrate_members_improved.py (Members migration)
+    %% SRC 8: .github/workflows/deploy-preview.yml (Preview deploy)
+    %% SRC 9: .github/workflows/feliz-cumpleanos-temp.yml (Birthday workflow)
+</div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background:#fdf3c4;border:2px solid #f5c518"></div>Frontend (HTML/JS)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#e8f4fd;border:2px solid #4a8fa8"></div>Firebase (Auth/RTDB/Firestore)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#ffe8dc;border:2px solid #c4703a"></div>Apps Script (Backend)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f3dde4;border:2px solid #c4869a"></div>Storage (Drive/Storage)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#e8e2d4;border:2px solid #8d8478"></div>Hosting (GitHub Pages)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#fff8e7;border:1px dashed #f5c518"></div>Datos (Sheets/Firestore)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f5efd0;border:2px solid #c4703a"></div>Procesos (Migración)</div>
+  </div>
+
+  <p class="footer-note">
+    Generado 2026-09-26 · <a href="https://github.com/tt-a1i/archify" target="_blank">Inspirado en Archify</a> ·
+    <a href="https://github.com/luxtonsp-bot/luxto-nsp" target="_blank">Repo luxto-nsp</a>
+  </p>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    securityLevel: 'loose',
+    maxTextSize: 90000
+  });
+
+  async function downloadSVG() {
+    const svg = document.querySelector('#arch-diagram svg');
+    if (!svg) return alert('Diagrama no renderizado aún');
+    const blob = new Blob([svg.outerHTML], {type: 'image/svg+xml'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'luxto-nsp-architecture.svg';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  async function downloadPNG() {
+    const svg = document.querySelector('#arch-diagram svg');
+    if (!svg) return alert('Diagrama no renderizado aún');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const data = new XMLSerializer().serializeToString(svg);
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'luxto-nsp-architecture.png';
+        a.click(); URL.revokeObjectURL(url);
+      });
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+  }
+</script>
+</body>
+</html>
