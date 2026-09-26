@@ -63,6 +63,21 @@
         }
         .row-columns { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; }
         .row-column label { font-size:11px; }
+
+        /* Responsive */
+        @media(max-width:780px) {
+          .column-definition { flex-direction:column; align-items:stretch; gap:10px; padding:14px; }
+          .column-definition > div { width:100%; }
+          .remove-column-button { width:100%; }
+          .table-card { padding:16px; }
+          .table-header { flex-direction:column; align-items:flex-start; }
+          .table-footer { flex-direction:column; }
+          .table-footer .btn { width:100%; }
+          .data-row { padding:14px; }
+          .row-columns { grid-template-columns:1fr; }
+          .tabs { gap:6px; }
+          .tab-button { padding:8px 14px; font-size:13px; }
+        }
     </style>
     <!-- Firebase imports (same as other pages) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
