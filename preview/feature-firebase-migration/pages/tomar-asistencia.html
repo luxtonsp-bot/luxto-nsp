@@ -298,7 +298,6 @@
 
     // Calcula tardanza contra horaInicio de asambleas/{fecha}
     // Usa serverTimestamp del servidor (UTC) — zona horaria Lima (UTC-5), tolerancia 10 min
-    const LIMA_OFFSET_MIN = -5 * 60; // UTC-5 en minutos (Perú no tiene DST)
     const TOLERANCIA_TARDANZA_MIN = 10;
 
     async function calcularTardanza(attendanceRef, fechaAsamblea) {
