@@ -12,6 +12,241 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <!-- html2canvas for image generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Additional styles for planificacion */
+        .saturday-selector {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .saturday-selector label { font-weight: 600; color: var(--cream); }
+        .saturday-selector select {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 14px;
+            background: var(--bg3);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--cream);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+        }
+        .saturday-selector select:focus { outline: none; border-color: var(--o); }
+        .saturday-btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            transition: all .2s;
+        }
+        .saturday-btn-primary { background: var(--grad); color: var(--bg); }
+        .saturday-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px -4px rgba(245,197,24,.4); }
+        .saturday-btn-ghost { background: rgba(255,255,255,.06); color: var(--muted); border: 1px solid var(--border); }
+        .saturday-btn-ghost:hover { background: rgba(255,255,255,.1); color: var(--cream); }
+
+        .schema-editor {
+            margin-top: 20px;
+        }
+        .schema-editor textarea {
+            width: 100%;
+            min-height: 280px;
+            padding: 16px;
+            background: var(--bg3);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            color: var(--cream);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .schema-editor textarea:focus {
+            border-color: var(--o);
+            box-shadow: 0 0 0 3px rgba(196,112,58,.12);
+        }
+        .schema-editor .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .schema-editor .toolbar button {
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .schema-editor .toolbar button:hover {
+            background: rgba(255,255,255,.1);
+            color: var(--cream);
+        }
+        .schema-editor .toolbar button.active {
+            background: var(--grad);
+            color: var(--bg);
+            border-color: transparent;
+        }
+
+        .preview-container {
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--bg2);
+        }
+        .preview-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .preview-header h4 { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: var(--cream); margin: 0; }
+        .preview-content {
+            padding: 20px;
+            min-height: 300px;
+        }
+        .preview-placeholder {
+            text-align: center;
+            color: var(--muted);
+            padding: 40px 20px;
+        }
+        .preview-placeholder .icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+
+        /* Preview template styles (what gets rendered to image) */
+        .preview-template {
+            font-family: 'Outfit', sans-serif;
+            background: #FBF7EE;
+            color: #1c1814;
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 480px;
+            margin: 0 auto;
+            border: 1px solid #e8e2d4;
+        }
+        .preview-template .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #F5C518;
+        }
+        .preview-template .logo-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .preview-template .logo-group img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }
+        .preview-template .logo-group .name {
+            font-family: 'Lora', serif;
+            font-size: 24px;
+            font-weight: 600;
+            color: #1c1814;
+        }
+        .preview-template .subtitle {
+            color: #a35a28;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .preview-template .section {
+            margin-bottom: 20px;
+        }
+        .preview-template .section-title {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: #a35a28;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .preview-template .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(196,112,58,.15);
+        }
+        .preview-template .info-row:last-child { border-bottom: none; }
+        .preview-template .info-label { color: #5e554a; font-weight: 500; }
+        .preview-template .info-value { color: #1c1814; font-weight: 600; text-align: right; }
+        .preview-template .schema-content {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 14px;
+            color: #1c1814;
+            background: rgba(245,197,24,.08);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(245,197,24,.2);
+        }
+        .preview-template .footer {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e8e2d4;
+            text-align: center;
+            font-size: 11px;
+            color: #5e554a;
+        }
+        .preview-template .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+        .preview-template .status-badge.active {
+            background: rgba(45,186,111,.15);
+            color: #2dba6f;
+            border: 1px solid rgba(45,186,111,.3);
+        }
+        .preview-template .status-badge.inactive {
+            background: rgba(212,136,26,.15);
+            color: #d4881a;
+            border: 1px solid rgba(212,136,26,.35);
+        }
+        .preview-template .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .preview-template .status-badge.active::before { background: #2dba6f; }
+        .preview-template .status-badge.inactive::before { background: #d4881a; }
+
+        @media (max-width: 768px) {
+            .preview-template { padding: 20px; }
+            .schema-editor textarea { min-height: 220px; }
+        }
+    </style>
 </head>
 <body>
 
@@ -31,8 +266,21 @@
 
     <div class="section-eyebrow">Planificación</div>
     <h1>Próxima Asamblea</h1>
-    <p class="section-desc">Activa la asamblea del sábado, define hora, tema, objetivo y ponentes. Al guardar puedes descargar el esquema como imagen para compartir.</p>
+    <p class="section-desc">Selecciona el sábado, define los datos, escribe el esquema libremente y genera la imagen con el logo del grupo para compartir.</p>
 
+    <!-- Selector de Sábado -->
+    <div class="card">
+        <div class="card-title">🗓️ Seleccionar Sábado</div>
+        <div class="saturday-selector">
+            <label for="saturdaySelect">Sábado a planificar:</label>
+            <select id="saturdaySelect"></select>
+            <button class="saturday-btn saturday-btn-primary" id="loadSaturdayBtn" onclick="loadSelectedSaturday()">Cargar</button>
+            <button class="saturday-btn saturday-btn-ghost" id="addSaturdayBtn" onclick="addNewSaturday()">+ Nuevo sábado</button>
+        </div>
+        <p id="selectedSaturdayInfo" style="font-size: 13px; color: var(--muted); display: none;"></p>
+    </div>
+
+    <!-- Datos de la asamblea -->
     <div class="card">
         <div class="card-title">📋 Datos de la asamblea</div>
         <form id="planForm">
@@ -64,15 +312,47 @@
             <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
                 <button type="submit" class="btn btn-primary">💾 Guardar planificación</button>
                 <button type="button" id="generateImageBtn" class="btn btn-ok">
-                    ⬇️ Descargar esquema
+                    ⬇️ Generar y descargar esquema
                 </button>
             </div>
         </form>
     </div>
 
-    <div class="card" id="preview" style="display:none;">
-        <div class="card-title">🖼️ Vista previa del esquema</div>
-        <div id="imagePreview"></div>
+    <!-- Esquema libre (editor de texto) -->
+    <div class="card schema-editor">
+        <div class="card-title">📝 Esquema de la asamblea <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">(texto libre: hora llegada, oración inicial, dinámica, cierre, etc.)</span></div>
+        <div class="toolbar">
+            <button type="button" onclick="insertTemplate('default')" title="Plantilla base">📄 Plantilla base</button>
+            <button type="button" onclick="insertTemplate('detailed')" title="Plantilla detallada">📋 Plantilla detallada</button>
+            <button type="button" onclick="insertTimestamp()" title="Insertar hora actual">🕐 Insertar hora</button>
+            <button type="button" onclick="clearSchema()" title="Limpiar esquema">🗑️ Limpiar</button>
+        </div>
+        <textarea id="schemaText" placeholder="Escribe aquí el esquema completo de la asamblea...
+Ejemplo:
+18:30 - Llegada y registro de asistencia
+18:45 - Oración inicial
+19:00 - Dinámica de integración
+19:30 - Tema central: [tema]
+20:15 - Reflexión grupal
+20:45 - Avisos y oración final
+21:00 - Cierre y convivencia"></textarea>
+    </div>
+
+    <!-- Vista previa -->
+    <div class="card preview-container" id="previewCard" style="display:none;">
+        <div class="preview-header">
+            <h4>🖼️ Vista previa del esquema (con logo del grupo)</h4>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary" onclick="generateAndDisplayPreview()">🔄 Actualizar vista previa</button>
+                <button class="btn btn-ok" onclick="downloadPreviewImage()">⬇️ Descargar imagen</button>
+            </div>
+        </div>
+        <div class="preview-content" id="previewContent">
+            <div class="preview-placeholder">
+                <div class="icon">🖼️</div>
+                <p>La vista previa se generará al hacer clic en "Actualizar vista previa" o al guardar.</p>
+            </div>
+        </div>
     </div>
 
 </main>
@@ -108,128 +388,103 @@
         firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
     }
 
-    // Handle form submission
-    document.getElementById('planForm').addEventListener('submit', async e => {
-        e.preventDefault();
-        const activar = document.getElementById('activar').value === 'true';
-        const hora = document.getElementById('hora').value;
-        const tema = document.getElementById('tema').value;
-        const objetivo = document.getElementById('objetivo').value;
-        const ponenteStr = document.getElementById('ponente').value;
-        const ponentes = ponenteStr.split(',').map(p => p.trim()).filter(p => p);
-        // Determine next Saturday date (simplistic: we could let user pick date)
-        // For now, we'll store under a placeholder date; later we can add date picker.
-        const fecha = new Date(); // placeholder
-        const fechaStr = fecha.toISOString().split('T')[0];
+    // ── Variables de estado ──
+    let selectedSaturdayDate = null; // YYYY-MM-DD
+    let currentPreviewDataUrl = null;
+
+    // ── Generar lista de sábados (próximos 12 + pasados 4) ──
+    function generateSaturdayOptions() {
+        const select = document.getElementById('saturdaySelect');
+        const today = new Date();
+        const options = [];
+
+        // Encontrar el próximo sábado
+        let nextSaturday = new Date(today);
+        const dayOfWeek = today.getDay(); // 0=Dom, 6=Sáb
+        const daysUntilSaturday = (6 - dayOfWeek + 7) % 7;
+        nextSaturday.setDate(today.getDate() + (daysUntilSaturday === 0 ? 0 : daysUntilSaturday));
+
+        // Generar 12 sábados futuros + 4 pasados
+        for (let i = -4; i <= 12; i++) {
+            const sat = new Date(nextSaturday);
+            sat.setDate(nextSaturday.getDate() + i * 7);
+            const dateStr = sat.toISOString().split('T')[0];
+            const displayStr = sat.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const option = document.createElement('option');
+            option.value = dateStr;
+            option.textContent = displayStr + (i === 0 ? ' (próximo)' : '');
+            if (i === 0) option.selected = true;
+            select.appendChild(option);
+            options.push(dateStr);
+        }
+
+        // Seleccionar el próximo sábado por defecto
+        selectedSaturdayDate = options[4]; // índice 4 = próximo sábado (i=0)
+        return options;
+    }
+
+    // ── Cargar datos del sábado seleccionado ──
+    async function loadSelectedSaturday() {
+        const select = document.getElementById('saturdaySelect');
+        const dateStr = select.value;
+        if (!dateStr) {
+            toast('Selecciona un sábado', 'err');
+            return;
+        }
+        selectedSaturdayDate = dateStr;
+        await loadAssemblyData(dateStr);
+        updateSelectedSaturdayInfo(dateStr);
+    }
+
+    // ── Añadir nuevo sábado (crear doc vacío) ──
+    async function addNewSaturday() {
+        const select = document.getElementById('saturdaySelect');
+        const dateStr = select.value;
+        if (!dateStr) {
+            toast('Selecciona un sábado', 'err');
+            return;
+        }
+        selectedSaturdayDate = dateStr;
+        // Crear doc vacío en Firestore
         try {
-            await db.collection('asambleas').doc(fechaStr).set({
-                hayAsamblea: activar,
-                horaInicio: hora,
-                tema: { titulo: tema, objetivo: objetivo },
-                ponentes: ponentes.map(n => ({ nombre: n }))
+            await db.collection('asambleas').doc(dateStr).set({
+                hayAsamblea: false,
+                horaInicio: '',
+                tema: { titulo: '', objetivo: '' },
+                ponentes: [],
+                esquema: '',
+                creadoEn: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            toast('Planificación guardada ✓', 'ok');
-            // Generate preview image after saving
-            await generateAndDisplayPreview();
+            toast('Sábado creado ✓', 'ok');
+            await loadAssemblyData(dateStr);
+            updateSelectedSaturdayInfo(dateStr);
         } catch (err) {
             console.error(err);
-            toast('Error al guardar planificación', 'err');
-        }
-    });
-
-    // Generate image preview
-    document.getElementById('generateImageBtn').addEventListener('click', async () => {
-        await generateAndDisplayPreview();
-    });
-
-    async function generateAndDisplayPreview() {
-        try {
-            // Show loading state
-            const imagePreviewDiv = document.getElementById('imagePreview');
-            const previewCard = document.getElementById('preview');
-            previewCard.style.display = 'block';
-            imagePreviewDiv.innerHTML = '<p style="color:var(--muted);">Generando imagen...</p>';
-
-            // Create a temporary element for the image
-            const templateElement = document.createElement('div');
-            templateElement.style.padding = '28px';
-            templateElement.style.fontFamily = 'Outfit, Arial, sans-serif';
-            templateElement.style.backgroundColor = '#FBF7EE';
-            templateElement.style.border = '1px solid #e8e2d4';
-            templateElement.style.borderRadius = '16px';
-            templateElement.style.maxWidth = '420px';
-            templateElement.style.margin = '0 auto';
-
-            // Add content
-            const ahora = new Date();
-            const fechaFormateada = ahora.toLocaleDateString('es-ES', {
-                year: 'numeric', month: 'long', day: 'numeric'
-            });
-
-            templateElement.innerHTML = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="color: #1c1814; margin-bottom: 6px; font-family: Lora, serif;">Luz de Cristo</h2>
-                    <p style="color: #4a443c; font-size: 14px;">Asamblea Juvenil — #SábadoDeLuxto</p>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <h3 style="color: #a35a28; margin-bottom: 8px;">Próxima Asamblea</h3>
-                    <p><strong>Fecha:</strong> ${fechaFormateada}</p>
-                    <p><strong>Hora:</strong> ${document.getElementById('hora').value || 'Por definir'}</p>
-                    <p><strong>Tema:</strong> ${document.getElementById('tema').value || 'Por definir'}</p>
-                    <p><strong>Objetivo:</strong> ${document.getElementById('objetivo').value || 'Por definir'}</p>
-                    <p><strong>Ponente(s):</strong> ${document.getElementById('ponente').value || 'Por definir'}</p>
-                    <p><strong>Estado:</strong> ${document.getElementById('activar').value === 'true' ? '🟢 Activa' : '⚫ No activa'}</p>
-                </div>
-                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e8e2d4; font-size: 12px; color: #4a443c;">
-                    Luz de Cristo - Parroquia Nuestra Señora de la Piedad
-                </div>
-            `;
-
-            // Generate image using html2canvas
-            const canvas = await html2canvas(templateElement, {
-                scale: 2, // Increase scale for better quality
-                useCORS: true
-            });
-
-            // Convert to image and display
-            const imageDataUrl = canvas.toDataURL('image/png');
-            imagePreviewDiv.innerHTML = `
-                <img src="${imageDataUrl}" alt="Esquema de asamblea" style="max-width: 100%; border: 1px solid var(--border); border-radius: 12px;">
-                <div style="margin-top: 12px;">
-                    <button onclick="downloadImage('${imageDataUrl}', 'esquema-asamblea-${fechaFormateada.replace(/\s+/g, '-').toLowerCase()}.png')" class="btn btn-primary">
-                        ⬇️ Descargar imagen
-                    </button>
-                </div>
-            `;
-
-        } catch (error) {
-            console.error("Error generating image:", error);
-            document.getElementById('imagePreview').innerHTML =
-                '<p style="color: var(--err);">Error al generar la imagen. Por favor, inténtelo de nuevo.</p>';
+            toast('Error al crear sábado', 'err');
         }
     }
 
-    // Function to download image
-    function downloadImage(dataUrl, filename) {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    function updateSelectedSaturdayInfo(dateStr) {
+        const infoEl = document.getElementById('selectedSaturdayInfo');
+        const date = new Date(dateStr + 'T00:00:00');
+        const displayStr = date.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        infoEl.textContent = `Editando: ${displayStr}`;
+        infoEl.style.display = 'block';
     }
 
-    // Load current assembly data on page load
-    async function loadCurrentAssembly() {
+    // ── Cargar datos de asamblea desde Firestore ──
+    async function loadAssemblyData(dateStr) {
         try {
-            // Get current date or next Saturday - simplified approach
-            // In a real app, we would have a proper date selector
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`;
-
             const assemblyDoc = await db.collection('asambleas').doc(dateStr).get();
             if (assemblyDoc.exists) {
                 const data = assemblyDoc.data();
@@ -239,17 +494,254 @@
                 document.getElementById('objetivo').value = data.tema?.objetivo || '';
                 const ponentes = data.ponentes || [];
                 document.getElementById('ponente').value = ponentes.map(p => p.nombre).join(', ');
+                document.getElementById('schemaText').value = data.esquema || '';
+            } else {
+                // Limpiar formulario
+                document.getElementById('planForm').reset();
+                document.getElementById('schemaText').value = '';
             }
+            // Mostrar preview card
+            document.getElementById('previewCard').style.display = 'block';
+            await generateAndDisplayPreview();
         } catch (error) {
             console.error("Error loading assembly data:", error);
-            // Continue with empty form
+            toast('Error cargando datos', 'err');
         }
     }
 
-    // Initialize
+    // ── Guardar planificación ──
+    document.getElementById('planForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (!selectedSaturdayDate) {
+            toast('Selecciona un sábado primero', 'err');
+            return;
+        }
+
+        const activar = document.getElementById('activar').value === 'true';
+        const hora = document.getElementById('hora').value;
+        const tema = document.getElementById('tema').value;
+        const objetivo = document.getElementById('objetivo').value;
+        const ponenteStr = document.getElementById('ponente').value;
+        const ponentes = ponenteStr.split(',').map(p => p.trim()).filter(p => p);
+        const esquema = document.getElementById('schemaText').value;
+
+        try {
+            await db.collection('asambleas').doc(selectedSaturdayDate).set({
+                hayAsamblea: activar,
+                horaInicio: hora,
+                tema: { titulo: tema, objetivo: objetivo },
+                ponentes: ponentes.map(n => ({ nombre: n })),
+                esquema: esquema,
+                actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            toast('Planificación guardada ✓', 'ok');
+            // Generate preview after saving
+            await generateAndDisplayPreview();
+        } catch (err) {
+            console.error(err);
+            toast('Error al guardar planificación', 'err');
+        }
+    });
+
+    // ── Plantillas de esquema ──
+    function insertTemplate(type) {
+        const textarea = document.getElementById('schemaText');
+        const hora = document.getElementById('hora').value || '18:30';
+        const tema = document.getElementById('tema').value || '[Tema]';
+
+        let template = '';
+        if (type === 'default') {
+            template = `${hora} - Llegada y registro de asistencia
+${addMinutes(hora, 15)} - Oración inicial
+${addMinutes(hora, 30)} - Dinámica de integración
+${addMinutes(hora, 60)} - Tema central: ${tema}
+${addMinutes(hora, 105)} - Reflexión grupal
+${addMinutes(hora, 135)} - Avisos y oración final
+${addMinutes(hora, 150)} - Cierre y convivencia`;
+        } else if (type === 'detailed') {
+            template = `${hora} - Llegada y registro de asistencia
+${addMinutes(hora, 10)} - Bienvenida y presentación
+${addMinutes(hora, 15)} - Oración inicial
+${addMinutes(hora, 25)} - Dinámica de integración / Rompehielos
+${addMinutes(hora, 45)} - Lectura bíblica / Motivación
+${addMinutes(hora, 55)} - Tema central: ${tema}
+${addMinutes(hora, 65)} - Desarrollo del tema
+${addMinutes(hora, 85)} - Trabajo en grupos / Reflexión personal
+${addMinutes(hora, 105)} - Compartir en plenaria
+${addMinutes(hora, 120)} - Aplicación práctica / Compromiso
+${addMinutes(hora, 130)} - Avisos de la semana
+${addMinutes(hora, 135)} - Oración final
+${addMinutes(hora, 145)} - Cierre y convivencia`;
+        }
+        textarea.value = template;
+        // Trigger preview update
+        generateAndDisplayPreview();
+    }
+
+    function addMinutes(timeStr, minutes) {
+        if (!timeStr) return 'HH:MM';
+        const [h, m] = timeStr.split(':').map(Number);
+        const date = new Date(0, 0, 0, h, m + minutes);
+        return date.toTimeString().slice(0, 5);
+    }
+
+    function insertTimestamp() {
+        const textarea = document.getElementById('schemaText');
+        const now = new Date();
+        const timeStr = now.toTimeString().slice(0, 5);
+        const pos = textarea.selectionStart;
+        textarea.value = textarea.value.slice(0, pos) + timeStr + ' - ' + textarea.value.slice(pos);
+        textarea.focus();
+        textarea.setSelectionRange(pos + 6, pos + 6);
+    }
+
+    function clearSchema() {
+        if (confirm('¿Limpiar todo el esquema?')) {
+            document.getElementById('schemaText').value = '';
+            generateAndDisplayPreview();
+        }
+    }
+
+    // ── Generar vista previa ──
+    document.getElementById('generateImageBtn').addEventListener('click', async () => {
+        await generateAndDisplayPreview();
+    });
+
+    async function generateAndDisplayPreview() {
+        try {
+            const previewContent = document.getElementById('previewContent');
+            previewContent.innerHTML = '<p style="color:var(--muted); text-align:center; padding:40px;">Generando vista previa...</p>';
+
+            // Create the preview template element (attached to DOM for html2canvas)
+            const templateElement = createPreviewTemplateElement();
+
+            // Append to body temporarily for rendering
+            templateElement.style.position = 'fixed';
+            templateElement.style.left = '-9999px';
+            templateElement.style.top = '0';
+            document.body.appendChild(templateElement);
+
+            // Wait a tick for fonts/styles to apply
+            await new Promise(r => requestAnimationFrame(r));
+
+            // Generate image using html2canvas
+            const canvas = await html2canvas(templateElement, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#FBF7EE',
+                logging: false
+            });
+
+            // Remove temporary element
+            document.body.removeChild(templateElement);
+
+            // Convert to image and display
+            currentPreviewDataUrl = canvas.toDataURL('image/png');
+            previewContent.innerHTML = `
+                <img src="${currentPreviewDataUrl}" alt="Esquema de asamblea" style="max-width: 100%; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);">
+                <div style="margin-top: 12px; text-align: center; font-size: 13px; color: var(--muted);">
+                    Vista previa generada — Usa "Descargar imagen" para guardar
+                </div>
+            `;
+
+        } catch (error) {
+            console.error("Error generating image:", error);
+            document.getElementById('previewContent').innerHTML =
+                '<p style="color: var(--err); text-align: center; padding: 20px;">Error al generar la vista previa: ' + error.message + '</p>';
+        }
+    }
+
+    function createPreviewTemplateElement() {
+        const div = document.createElement('div');
+        div.className = 'preview-template';
+
+        const fechaStr = selectedSaturdayDate || new Date().toISOString().split('T')[0];
+        const date = new Date(fechaStr + 'T00:00:00');
+        const fechaFormateada = date.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        const hora = document.getElementById('hora').value || 'Por definir';
+        const tema = document.getElementById('tema').value || 'Por definir';
+        const objetivo = document.getElementById('objetivo').value || 'Por definir';
+        const ponente = document.getElementById('ponente').value || 'Por definir';
+        const activar = document.getElementById('activar').value === 'true';
+        const esquema = document.getElementById('schemaText').value || 'Esquema no definido';
+
+        div.innerHTML = `
+            <div class="header">
+                <div class="logo-group">
+                    <img src="../assets/images/logo_luxto.png" alt="Logo Luz de Cristo" onerror="this.style.display='none'">
+                    <span class="name">Luz de Cristo</span>
+                </div>
+                <p class="subtitle">Asamblea Juvenil — #SábadoDeLuxto</p>
+                <span class="status-badge ${activar ? 'active' : 'inactive'}">
+                    ${activar ? '🟢 Asamblea Activa' : '⚫ Asamblea No Activa'}
+                </span>
+            </div>
+            <div class="section">
+                <div class="section-title">📅 Información General</div>
+                <div class="info-row">
+                    <span class="info-label">Fecha</span>
+                    <span class="info-value">${fechaFormateada}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hora de inicio</span>
+                    <span class="info-value">${hora}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Tema</span>
+                    <span class="info-value">${tema}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Objetivo</span>
+                    <span class="info-value">${objetivo}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Ponente(s)</span>
+                    <span class="info-value">${ponente}</span>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">📝 Esquema Detallado</div>
+                <div class="schema-content">${esquema.replace(/</g, '<').replace(/>/g, '>')}</div>
+            </div>
+            <div class="footer">
+                Luz de Cristo - Parroquia Nuestra Señora de la Piedad<br>
+                Generado el ${new Date().toLocaleDateString('es-ES')}
+            </div>
+        `;
+        return div;
+    }
+
+    function downloadPreviewImage() {
+        if (!currentPreviewDataUrl) {
+            toast('Primero genera la vista previa', 'err');
+            return;
+        }
+        const fechaStr = selectedSaturdayDate || new Date().toISOString().split('T')[0];
+        const filename = `esquema-asamblea-${fechaStr}.png`;
+        const link = document.createElement('a');
+        link.href = currentPreviewDataUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast('Imagen descargada ✓', 'ok');
+    }
+
+    // ── Initialize ──
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            await loadCurrentAssembly();
+            generateSaturdayOptions();
+            // Load the next Saturday by default
+            const select = document.getElementById('saturdaySelect');
+            selectedSaturdayDate = select.value;
+            await loadAssemblyData(selectedSaturdayDate);
+            updateSelectedSaturdayInfo(selectedSaturdayDate);
         } else {
             window.location.href = 'login.html';
         }
