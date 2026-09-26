@@ -10,8 +10,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <!-- canvg para renderizar SVG a canvas (PNG alta res para WhatsApp) -->
-    <script src="https://cdn.jsdelivr.net/npm/canvg@4.0.2/dist/browser/canvg.min.js"></script>
+    <!-- html2canvas para imagen HD (scale 4x) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* Additional styles for planificacion */
         .saturday-selector {
@@ -795,30 +795,51 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
             const previewContent = document.getElementById('previewContent');
             previewContent.innerHTML = '<p style="color:var(--muted); text-align:center; padding:40px;">Generando vista previa...</p>';
 
-            // Generate SVG directly (vectorial, no pixelación)
-            const svgString = createPreviewSVG();
-            // btoa no soporta Unicode, usar TextEncoder para UTF-8
-            const utf8Bytes = new TextEncoder().encode(svgString);
-            let binary = '';
-            for (let i = 0; i < utf8Bytes.length; i++) binary += String.fromCharCode(utf8Bytes[i]);
-            currentPreviewDataUrl = 'data:image/svg+xml;base64,' + btoa(binary);
+            // Create the preview template element (attached to DOM for html2canvas)
+            const templateElement = createPreviewTemplateElement();
 
+            // Append to body temporarily for rendering
+            templateElement.style.position = 'fixed';
+            templateElement.style.left = '-9999px';
+            templateElement.style.top = '0';
+            document.body.appendChild(templateElement);
+
+            // Wait a tick for fonts/styles to apply
+            await new Promise(r => requestAnimationFrame(r));
+
+            // Generate image using html2canvas at 2x for preview
+            const canvas = await html2canvas(templateElement, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#FBF7EE',
+                logging: false
+            });
+
+            // Remove temporary element
+            document.body.removeChild(templateElement);
+
+            // Convert to image and display
+            currentPreviewDataUrl = canvas.toDataURL('image/png');
             previewContent.innerHTML = `
                 <img src="${currentPreviewDataUrl}" alt="Esquema de asamblea" style="max-width: 100%; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);">
                 <div style="margin-top: 12px; text-align: center; font-size: 13px; color: var(--muted);">
-                    Vista previa generada (SVG vectorial) — Usa "Descargar imagen" para guardar
+                    Vista previa generada — Usa "Descargar imagen" para guardar (HD 4x)
                 </div>
             `;
 
         } catch (error) {
-            console.error("Error generating preview:", error);
+            console.error("Error generating image:", error);
             document.getElementById('previewContent').innerHTML =
                 '<p style="color: var(--err); text-align: center; padding: 20px;">Error al generar la vista previa: ' + error.message + '</p>';
         }
     }
 
-    function createPreviewSVG() {
+    function createPreviewTemplateElement() {
+        const div = document.createElement('div');
+        div.className = 'preview-template';
+
         const fechaStr = selectedSaturdayDate || getLimaDateStr(getLimaNow());
+        // fechaStr ya está en YYYY-MM-DD de Lima, parsear como UTC medianoche
         const date = new Date(fechaStr + 'T00:00:00');
         const fechaFormateada = formatLimaDate(date);
 
@@ -828,7 +849,7 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
         const ponente = document.getElementById('ponente').value || 'Por definir';
         const activar = document.getElementById('activar').value === 'true';
         const categoria = document.getElementById('categoria').value;
-        let esquema = document.getElementById('schemaText').value || 'Esquema no definido';
+        const esquema = document.getElementById('schemaText').value || 'Esquema no definido';
 
         // Mapear valor a label bonito
         const categoriaLabels = {
@@ -842,141 +863,79 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
         };
         const categoriaLabel = categoria ? categoriaLabels[categoria] : 'No definida';
 
-        // Escape XML para SVG
-        const escapeXML = (str) => str
-            .replace(/&/g, '&')
-            .replace(/</g, '<')
-            .replace(/>/g, '>')
-            .replace(/"/g, '"')
-            .replace(/'/g, '&apos;');
-
-        const safeTema = escapeXML(tema);
-        const safeObjetivo = escapeXML(objetivo);
-        const safePonente = escapeXML(ponente);
-        const safeCategoriaLabel = escapeXML(categoriaLabel);
-        const safeFechaFormateada = escapeXML(fechaFormateada);
-        const safeHora = escapeXML(hora);
-        const safeEsquema = escapeXML(esquema).replace(/\n/g, '&#10;');
-
-        // SVG dimensions
-        const width = 480;
-        const padding = 28;
-        const lineHeight = 22;
-        let y = padding;
-
-        // Helper para agregar texto con wrap
-        function addText(x, y, text, options = {}) {
-            const { fontSize = 14, fontWeight = 'normal', fill = '#1c1814', fontFamily = 'Outfit, sans-serif', maxWidth = width - 2 * padding } = options;
-            return `<text x="${x}" y="${y}" font-family="${fontFamily}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${fill}" style="white-space: pre;">${text}</text>`;
-        }
-
-        // Calcular altura dinámica basada en contenido
-        const esquemaLines = esquema.split('\n');
-        const contentHeight = padding * 2 + 200 + esquemaLines.length * lineHeight + 60;
-        const svgHeight = Math.max(600, contentHeight);
-
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${svgHeight}" viewBox="0 0 ${width} ${svgHeight}">`;
-        svg += `<rect width="${width}" height="${svgHeight}" fill="#FBF7EE"/>`;
-        svg += `<rect x="0.5" y="0.5" width="${width-1}" height="${svgHeight-1}" fill="none" stroke="#e8e2d4" stroke-width="1"/>`;
-
-        // Header background
-        svg += `<rect x="0" y="0" width="${width}" height="140" fill="#FBF7EE"/>`;
-        svg += `<line x1="${padding}" y1="110" x2="${width-padding}" y2="110" stroke="#F5C518" stroke-width="2"/>`;
-
-        // Logo placeholder (círculo dorado)
-        svg += `<circle cx="${width/2}" cy="48" r="24" fill="#F5C518" opacity="0.2"/>`;
-        svg += `<text x="${width/2}" y="54" text-anchor="middle" font-family="Lora, serif" font-size="18" font-weight="600" fill="#1c1814">LdC</text>`;
-
-        // Nombre grupo
-        svg += addText(width/2, 88, 'Luz de Cristo', { fontSize: 22, fontWeight: '600', fontFamily: 'Lora, serif', fill: '#1c1814' });
-
-        // Subtitle
-        svg += addText(width/2, 118, 'Asamblea Juvenil — #SábadoDeLuxto', { fontSize: 12, fontWeight: '600', fill: '#a35a28', letterSpacing: '1px' });
-
-        // Status badge
-        const badgeY = 140;
-        const badgeColor = activar ? '#2dba6f' : '#d4881a';
-        const badgeBg = activar ? 'rgba(45,186,111,0.15)' : 'rgba(212,136,26,0.15)';
-        const badgeText = activar ? '🟢 Asamblea Activa' : '⚫ Asamblea No Activa';
-        svg += `<rect x="${width/2 - 100}" y="${badgeY}" width="200" height="28" rx="14" fill="${badgeBg}" stroke="${badgeColor}" stroke-width="1"/>`;
-        svg += addText(width/2, badgeY + 19, badgeText, { fontSize: 11, fontWeight: '700', fill: badgeColor });
-
-        // Sección Información General
-        y = badgeY + 50;
-        svg += addText(padding, y, '📅 Información General', { fontSize: 16, fontWeight: '600', fontFamily: 'Lora, serif', fill: '#a35a28' });
-        y += 28;
-
-        const infoRows = [
-            ['Fecha', safeFechaFormateada],
-            ['Hora de inicio', safeHora],
-            ['Tema', safeTema],
-            ['Categoría', safeCategoriaLabel],
-            ['Objetivo', safeObjetivo],
-            ['Ponente(s)', safePonente]
-        ];
-
-        infoRows.forEach(([label, value], i) => {
-            const rowY = y + i * 30;
-            svg += `<line x1="${padding}" y1="${rowY + 20}" x2="${width-padding}" y2="${rowY + 20}" stroke="rgba(196,112,58,0.15)" stroke-width="1"/>`;
-            svg += addText(padding, rowY, label, { fontSize: 13, fontWeight: '500', fill: '#5e554a' });
-            svg += addText(width - padding, rowY, value, { fontSize: 13, fontWeight: '600', fill: '#1c1814', textAnchor: 'end' });
-        });
-
-        // Sección Esquema
-        y += infoRows.length * 30 + 20;
-        svg += addText(padding, y, '📝 Esquema Detallado', { fontSize: 16, fontWeight: '600', fontFamily: 'Lora, serif', fill: '#a35a28' });
-        y += 28;
-
-        // Fondo esquema
-        const schemaHeight = esquemaLines.length * lineHeight + 32;
-        svg += `<rect x="${padding}" y="${y}" width="${width - 2*padding}" height="${schemaHeight}" fill="rgba(245,197,24,0.08)" stroke="rgba(245,197,24,0.2)" stroke-width="1" rx="10"/>`;
-
-        // Texto esquema (línea por línea para control de wrap)
-        const esquemaX = padding + 16;
-        const esquemaYStart = y + 16;
-        esquemaLines.forEach((line, i) => {
-            const lineY = esquemaYStart + i * lineHeight;
-            // Truncar líneas muy largas
-            const displayLine = line.length > 70 ? line.substring(0, 70) + '…' : line;
-            svg += addText(esquemaX, lineY, escapeXML(displayLine), { fontSize: 13, fill: '#1c1814', lineHeight: 1.8 });
-        });
-
-        // Footer
-        const footerY = y + schemaHeight + 30;
-        const fechaGen = getLimaNow().toLocaleDateString('es-ES', { timeZone: 'America/Lima', year: 'numeric', month: 'long', day: 'numeric' });
-        svg += `<line x1="${padding}" y1="${footerY - 10}" x2="${width-padding}" y2="${footerY - 10}" stroke="#e8e2d4" stroke-width="1"/>`;
-        svg += addText(width/2, footerY, 'Luz de Cristo - Parroquia Nuestra Señora de la Piedad', { fontSize: 10, fill: '#5e554a', textAnchor: 'middle' });
-        svg += addText(width/2, footerY + 16, `Generado el ${fechaGen}`, { fontSize: 10, fill: '#5e554a', textAnchor: 'middle' });
-
-        svg += '</svg>';
-        return svg;
+        div.innerHTML = `
+            <div class="header">
+                <div class="logo-group">
+                    <img src="../assets/images/logo_luxto.png" alt="Logo Luz de Cristo" onerror="this.style.display='none'">
+                    <span class="name">Luz de Cristo</span>
+                </div>
+                <p class="subtitle">Asamblea Juvenil — #SábadoDeLuxto</p>
+                <span class="status-badge ${activar ? 'active' : 'inactive'}">
+                    ${activar ? '🟢 Asamblea Activa' : '⚫ Asamblea No Activa'}
+                </span>
+            </div>
+            <div class="section">
+                <div class="section-title">📅 Información General</div>
+                <div class="info-row">
+                    <span class="info-label">Fecha</span>
+                    <span class="info-value">${fechaFormateada}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hora de inicio</span>
+                    <span class="info-value">${hora}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Tema</span>
+                    <span class="info-value">${tema}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Categoría</span>
+                    <span class="info-value">${categoriaLabel}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Objetivo</span>
+                    <span class="info-value">${objetivo}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Ponente(s)</span>
+                    <span class="info-value">${ponente}</span>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">📝 Esquema Detallado</div>
+                <div class="schema-content">${esquema.replace(/</g, '<').replace(/>/g, '>')}</div>
+            </div>
+            <div class="footer">
+                Luz de Cristo - Parroquia Nuestra Señora de la Piedad<br>
+                Generado el ${getLimaNow().toLocaleDateString('es-ES', { timeZone: 'America/Lima' })}
+            </div>
+        `;
+        return div;
     }
 
-    // Generar PNG alta resolución (scale 4x) desde SVG para WhatsApp
+    // Generar PNG alta resolución (scale 4x) para WhatsApp
     async function generateHighResPNG() {
-        const svgString = createPreviewSVG();
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        const templateElement = createPreviewTemplateElement();
 
-        // Scale 4x para calidad WhatsApp (480 * 4 = 1920px ancho)
-        const scale = 4;
-        const width = 480;
-        const svgHeight = parseInt(svgString.match(/height="(\d+)"/)[1]);
+        // Append to body temporarily for rendering
+        templateElement.style.position = 'fixed';
+        templateElement.style.left = '-9999px';
+        templateElement.style.top = '0';
+        document.body.appendChild(templateElement);
 
-        canvas.width = width * scale;
-        canvas.height = svgHeight * scale;
-        canvas.style.width = width + 'px';
-        canvas.style.height = svgHeight + 'px';
+        // Wait a tick for fonts/styles to apply
+        await new Promise(r => requestAnimationFrame(r));
 
-        // Usar canvg para renderizar SVG a canvas
-        const v = await canvg.Canvg.fromString(ctx, svgString, {
-            scaleWidth: width * scale,
-            scaleHeight: svgHeight * scale,
-            ignoreMouse: true,
-            ignoreAnimation: true,
-            ignoreDimensions: true
+        // Generate image using html2canvas at 4x for WhatsApp HD
+        const canvas = await html2canvas(templateElement, {
+            scale: 4,  // 4x = 1920px ancho, calidad HD para WhatsApp
+            useCORS: true,
+            backgroundColor: '#FBF7EE',
+            logging: false
         });
-        await v.render();
+
+        // Remove temporary element
+        document.body.removeChild(templateElement);
 
         return canvas.toDataURL('image/png', 1.0);
     }
@@ -988,7 +947,7 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
         }
         const fechaStr = selectedSaturdayDate || getLimaDateStr(getLimaNow());
 
-        // Generar PNG alta res para WhatsApp
+        // Generar PNG 4x HD para WhatsApp
         generateHighResPNG().then(pngDataUrl => {
             const filename = `esquema-asamblea-${fechaStr}.png`;
             const link = document.createElement('a');
@@ -997,7 +956,7 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            toast('Imagen HD para WhatsApp descargada ✓', 'ok');
+            toast('Imagen HD (4x) para WhatsApp descargada ✓', 'ok');
         }).catch(err => {
             console.error(err);
             toast('Error generando imagen HD', 'err');
