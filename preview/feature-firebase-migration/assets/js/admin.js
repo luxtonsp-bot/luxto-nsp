@@ -65,6 +65,7 @@ function convertirUrlDrive(url) {
 
 function avatarFallbackAdmin(nombre) {
   const inicial = (nombre || "?").charAt(0).toUpperCase();
+  // Escape # -> %23 para data URI válida (fix "Unexpected identifier 'http'")
   return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>" + inicial + "</text></svg>";
 }
 
@@ -80,20 +81,21 @@ onAuthStateChanged(auth, async (user) => {
 
   // Verificar si es admin (hardcodeado por ahora)
   if (!ADMINS.includes(user.email)) {
-    // Permitir líderes y coordinadores (verificar en Firestore)
+    // Permitir servidores, apoyos y coordinadores (verificar en Firestore)
     try {
       const memberSnap = await getDoc(doc(fsdb, "members", user.uid));
       if (!memberSnap.exists()) throw new Error("No member doc");
       const rol = memberSnap.data().rol;
-      if (rol !== "lider" && rol !== "coordinador") throw new Error("Not authorized");
-      // Si es líder o coordinador, continuar (líder ve solo modo asamblea)
+      // Roles con acceso al panel admin: servidor, apoyo, coordinador
+      if (rol !== "servidor" && rol !== "apoyo" && rol !== "coordinador") throw new Error("Not authorized");
+      // Si es coordinador, mostrar tabs de gestión
       if (rol === "coordinador") {
         document.getElementById("gestion-lideres").style.display = "block";
         document.getElementById("sugerencias-feedback").style.display = "block";
         document.getElementById("tab-gestion-lideres").style.display = "inline-flex";
         document.getElementById("tab-sugerencias-feedback").style.display = "inline-flex";
       } else {
-        // Líder: ocultar tabs de gestión de líderes y sugerencias/feedback
+        // Servidor/Apoyo: solo modo asamblea
         document.getElementById("gestion-lideres").style.display = "none";
         document.getElementById("sugerencias-feedback").style.display = "none";
         document.getElementById("tab-gestion-lideres").style.display = "none";
@@ -135,37 +137,44 @@ async function inicializar() {
 
 /* ── Escuchar estado de la asamblea (RTDB) ───────────────── */
 function escucharAsamblea() {
-  onValue(ref(rtdb, "asamblea"), (snap) => {
-    const data = snap.val() || {};
+  try {
+    onValue(ref(rtdb, "asamblea"), (snap) => {
+      const data = snap.val() || {};
 
-    if (!toggleEnProceso) {
-      document.getElementById("toggleAsamblea").checked = data.activa === true;
-    }
-    actualizarEstadoUI(data.activa === true);
+      if (!toggleEnProceso) {
+        document.getElementById("toggleAsamblea").checked = data.activa === true;
+      }
+      actualizarEstadoUI(data.activa === true);
 
-    const p = data.preguntaActual;
-    if (p && p.estado === "activa") {
-      mostrarPreguntaActiva(p, data);
-    } else {
-      document.getElementById("preguntaActivaCard").classList.remove("visible");
-    }
+      const p = data.preguntaActual;
+      if (p && p.estado === "activa") {
+        mostrarPreguntaActiva(p, data);
+      } else {
+        document.getElementById("preguntaActivaCard").classList.remove("visible");
+      }
 
-    if (p && data.respuestas && data.respuestas[p.id]) {
-      const resps = Object.values(data.respuestas[p.id]);
-      document.getElementById("statConectados").textContent = resps.length;
-      document.getElementById("statAciertos").textContent = resps.filter(r => r.correcta).length;
-      mostrarRespuestasLive(resps, p);
-      actualizarRanking(data.respuestas);
-    } else {
-      document.getElementById("statConectados").textContent = "0";
-      document.getElementById("statAciertos").textContent = "0";
-      document.getElementById("respLiveList").innerHTML = '<div class="resp-vacia">Esperando respuestas...</div>';
-      document.getElementById("rankingCard").classList.remove("visible");
-      document.getElementById("rankLista").innerHTML = "";
-    }
+      if (p && data.respuestas && data.respuestas[p.id]) {
+        const resps = Object.values(data.respuestas[p.id]);
+        document.getElementById("statConectados").textContent = resps.length;
+        document.getElementById("statAciertos").textContent = resps.filter(r => r.correcta).length;
+        mostrarRespuestasLive(resps, p);
+        actualizarRanking(data.respuestas);
+      } else {
+        document.getElementById("statConectados").textContent = "0";
+        document.getElementById("statAciertos").textContent = "0";
+        document.getElementById("respLiveList").innerHTML = '<div class="resp-vacia">Esperando respuestas...</div>';
+        document.getElementById("rankingCard").classList.remove("visible");
+        document.getElementById("rankLista").innerHTML = "";
+      }
 
-    document.getElementById("statPreguntas").textContent = preguntaNumActual;
-  });
+      document.getElementById("statPreguntas").textContent = preguntaNumActual;
+    }, (error) => {
+      // ERR_BLOCKED_BY_CLIENT u otros errores de listener
+      console.warn("RTDB listener error (asamblea):", error.message);
+    });
+  } catch (e) {
+    console.warn("RTDB onValue setup error (asamblea):", e.message);
+  }
 }
 
 function actualizarEstadoUI(activa) {
@@ -443,37 +452,43 @@ function actualizarRanking(respuestas) {
 /* ── Ranking global ──────────────────────────────────── */
 function escucharRankingGlobal() {
   if (rankingGlobalListener) return;
-  rankingGlobalListener = onValue(ref(rtdb, "rankingGlobal"), (snap) => {
-    const data = snap.val() || {};
-    const lista = document.getElementById("rankingGlobalList");
-    if (!lista) return;
-    const entries = Object.entries(data).map(([key, v]) => ({
-      key,
-      nombre: v.nombre || v.email || "Anónimo",
-      pts: v.pts || 0,
-      fotoUrl: v.fotoUrl || "",
-      email: v.email || ""
-    }));
-    entries.sort((a, b) => b.pts - a.pts);
-    if (entries.length === 0) {
-      lista.innerHTML = '<div class="resp-vacia">Aún no hay puntos acumulados</div>';
-      return;
-    }
-    lista.innerHTML = entries.map((e, i) => {
-      const pos = i + 1;
-      const posClass = pos === 1 ? "g1" : pos === 2 ? "g2" : pos === 3 ? "g3" : "";
-      const itemClass = pos === 1 ? "top1" : pos === 2 ? "top2" : pos === 3 ? "top3" : "";
-      const fotoSrc = e.fotoUrl ? convertirUrlDrive(e.fotoUrl) : avatarFallbackAdmin(e.nombre);
-      const fallback = avatarFallbackAdmin(e.nombre);
-      return '<div class="rank-item ' + itemClass + '">' +
-        '<div class="rank-pos ' + posClass + '">' + pos + '</div>' +
-        '<img src="' + fotoSrc + '" class="rank-foto" alt="" onerror="this.onerror=null;this.src=\'' + fallback + '\'">' +
-        '<div class="rank-nombre">' + escaparHTML(e.nombre) + '</div>' +
-        '<div><div class="rank-pts">' + e.pts + '</div>' +
-        '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">pts</div></div>' +
-        '</div>';
-    }).join("");
-  });
+  try {
+    rankingGlobalListener = onValue(ref(rtdb, "rankingGlobal"), (snap) => {
+      const data = snap.val() || {};
+      const lista = document.getElementById("rankingGlobalList");
+      if (!lista) return;
+      const entries = Object.entries(data).map(([key, v]) => ({
+        key,
+        nombre: v.nombre || v.email || "Anónimo",
+        pts: v.pts || 0,
+        fotoUrl: v.fotoUrl || "",
+        email: v.email || ""
+      }));
+      entries.sort((a, b) => b.pts - a.pts);
+      if (entries.length === 0) {
+        lista.innerHTML = '<div class="resp-vacia">Aún no hay puntos acumulados</div>';
+        return;
+      }
+      lista.innerHTML = entries.map((e, i) => {
+        const pos = i + 1;
+        const posClass = pos === 1 ? "g1" : pos === 2 ? "g2" : pos === 3 ? "g3" : "";
+        const itemClass = pos === 1 ? "top1" : pos === 2 ? "top2" : pos === 3 ? "top3" : "";
+        const fotoSrc = e.fotoUrl ? convertirUrlDrive(e.fotoUrl) : avatarFallbackAdmin(e.nombre);
+        const fallback = avatarFallbackAdmin(e.nombre);
+        return '<div class="rank-item ' + itemClass + '">' +
+          '<div class="rank-pos ' + posClass + '">' + pos + '</div>' +
+          '<img src="' + fotoSrc + '" class="rank-foto" alt="" onerror="this.onerror=null;this.src=\'' + fallback + '\'">' +
+          '<div class="rank-nombre">' + escaparHTML(e.nombre) + '</div>' +
+          '<div><div class="rank-pts">' + e.pts + '</div>' +
+          '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">pts</div></div>' +
+          '</div>';
+      }).join("");
+    }, (error) => {
+      console.warn("RTDB listener error (rankingGlobal):", error.message);
+    });
+  } catch (e) {
+    console.warn("RTDB onValue setup error (rankingGlobal):", e.message);
+  }
 }
 
 /* ── Reiniciar ranking (asamblea actual) ────────────── */
@@ -520,28 +535,34 @@ window.guardarBorrador = function () {
 };
 
 function escucharBorradores() {
-  onValue(ref(rtdb, "borradores"), (snap) => {
-    const data = snap.val();
-    const lista = document.getElementById("histLista");
-    if (!lista) return;
-    if (!data) {
-      lista.innerHTML = '<div class="hist-vacio">No hay preguntas guardadas aún.</div>';
-      return;
-    }
-    const letras = ["A", "B", "C", "D"];
-    lista.innerHTML = Object.entries(data).reverse().map(([key, p]) => `
-      <div class="hist-item">
-        <div style="flex:1">
-          <div class="hist-item-txt">${p.texto}</div>
-          <div class="hist-item-meta">
-            ${(p.opciones || []).map((op, i) => `<span style="margin-right:8px;color:${i === p.correcta ? '#7fe8aa' : 'rgba(255,248,231,.3)'}">${letras[i]}. ${op}</span>`).join("")}
-            · ⏱ ${p.duracion}s
+  try {
+    onValue(ref(rtdb, "borradores"), (snap) => {
+      const data = snap.val();
+      const lista = document.getElementById("histLista");
+      if (!lista) return;
+      if (!data) {
+        lista.innerHTML = '<div class="hist-vacio">No hay preguntas guardadas aún.</div>';
+        return;
+      }
+      const letras = ["A", "B", "C", "D"];
+      lista.innerHTML = Object.entries(data).reverse().map(([key, p]) => `
+        <div class="hist-item">
+          <div style="flex:1">
+            <div class="hist-item-txt">${p.texto}</div>
+            <div class="hist-item-meta">
+              ${(p.opciones || []).map((op, i) => `<span style="margin-right:8px;color:${i === p.correcta ? '#7fe8aa' : 'rgba(255,248,231,.3)'}">${letras[i]}. ${op}</span>`).join("")}
+              · ⏱ ${p.duracion}s
+            </div>
           </div>
-        </div>
-        <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px;" onclick="cargarBorrador('${key}')">Cargar</button>
-        <button class="btn btn-danger" style="font-size:12px;padding:8px 14px;" onclick="eliminarBorrador('${key}')">🗑</button>
-      </div>`).join("");
-  });
+          <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px;" onclick="cargarBorrador('${key}')">Cargar</button>
+          <button class="btn btn-danger" style="font-size:12px;padding:8px 14px;" onclick="eliminarBorrador('${key}')">🗑</button>
+        </div>`).join("");
+    }, (error) => {
+      console.warn("RTDB listener error (borradores):", error.message);
+    });
+  } catch (e) {
+    console.warn("RTDB onValue setup error (borradores):", e.message);
+  }
 }
 
 window.cargarBorrador = async function (key) {
@@ -579,7 +600,7 @@ window.loadMembersByRole = async function () {
     container.innerHTML = '<p>Cargando miembros...</p>';
 
     const membersSnap = await getDocs(collection(fsdb, "members"));
-    const roles = { miembro: [], lider: [], coordinador: [] };
+    const roles = { miembro: [], servidor: [], apoyo: [], coordinador: [] };
 
     membersSnap.forEach(docSnap => {
       const data = docSnap.data();
@@ -592,8 +613,8 @@ window.loadMembersByRole = async function () {
     // Ordenar alfabéticamente
     Object.values(roles).forEach(arr => arr.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "")));
 
-    const roleLabels = { miembro: "Miembros", lider: "Líderes", coordinador: "Coordinadores" };
-    const roleColors = { miembro: "", lider: "#4A8FA8", coordinador: "#F5C518" };
+    const roleLabels = { miembro: "Miembros", servidor: "Servidores", apoyo: "Apoyos", coordinador: "Coordinadores" };
+    const roleColors = { miembro: "", servidor: "#4A8FA8", apoyo: "#C4869A", coordinador: "#F5C518" };
 
     let html = "";
     Object.entries(roles).forEach(([role, members]) => {
@@ -604,7 +625,7 @@ window.loadMembersByRole = async function () {
       } else {
         html += `<ul style="list-style:none; padding:0;">`;
         members.forEach(m => {
-          html += `<li style="padding:6px 12px; background:rgba(255,255,255,.04); border-radius:8px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">`;
+          html += `<li style="padding:6px 12px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">`;
           html += `<span>${m.nombre || "Sin nombre"}</span>`;
           if (m.email) html += `<span style="font-size:12px; color:var(--muted);">${m.email}</span>`;
           html += `</li>`;
@@ -634,10 +655,10 @@ window.loadMemberSelector = async function () {
     });
     members.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
 
-    let html = '<select id="member-to-change" style="width:100%; padding:12px; background:rgba(255,255,255,.06); border:1.5px solid var(--border); border-radius:12px; font-family:Outfit,sans-serif; font-size:14px; color:var(--cream); outline:none;">';
-    html += '<option value="">-- Seleccione un miembro --</option>';
+    let html = '<select id="member-to-change" style="width:100%; padding:12px; background:var(--bg3) !important; border:1.5px solid var(--border) !important; border-radius:12px; font-family:Outfit,sans-serif; font-size:14px; color:var(--cream) !important; outline:none; -webkit-appearance:none; appearance:none;">';
+    html += '<option value="" style="background:var(--bg3); color:var(--cream);">-- Seleccione un miembro --</option>';
     members.forEach(m => {
-      html += `<option value="${m.id}">${m.nombre || "Sin nombre"}${m.email ? ` (${m.email})` : ""}</option>`;
+      html += `<option value="${m.id}" style="background:var(--bg3); color:var(--cream);">${m.nombre || "Sin nombre"}${m.email ? ` (${m.email})` : ""}</option>`;
     });
     html += '</select>';
     container.innerHTML = html;
@@ -678,6 +699,12 @@ window.updateMemberRole = async function (memberId, newRole) {
   try {
     const userSnap = await getDoc(doc(fsdb, "members", auth.currentUser.uid));
     const userRole = userSnap.data().rol;
+
+    const validRoles = ["miembro", "servidor", "apoyo", "coordinador"];
+    if (!validRoles.includes(newRole)) {
+      alert("Rol inválido");
+      return;
+    }
 
     if (newRole === "coordinador" && userRole !== "coordinador") {
       alert("Solo los coordinadores pueden asignar el rol de coordinador");
