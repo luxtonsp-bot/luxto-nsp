@@ -9,10 +9,10 @@ service cloud.firestore {
     function isAuth() { return request.auth != null; }
     function getUserRole(uid) { return get(/databases/$(database)/documents/members/$(uid)).data.rol; }
     function isCoordinator() { return isAuth() && getUserRole(request.auth.uid) == "coordinador"; }
-    function isLider() { return isAuth() && (getUserRole(request.auth.uid) == "lider" || getUserRole(request.auth.uid) == "coordinador"); }
+    function isStaff() { return isAuth() && (getUserRole(request.auth.uid) == "servidor" || getUserRole(request.auth.uid) == "apoyo" || getUserRole(request.auth.uid) == "coordinador"); }
 
     match /members/{uid} {
-      allow read: if isAuth() && (request.auth.uid == uid || isLider());
+      allow read: if isAuth() && (request.auth.uid == uid || isStaff());
       allow list: if isAuth() && request.auth.token.email == resource.data.email;
       // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
       allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
@@ -23,9 +23,9 @@ service cloud.firestore {
 
     match /miembros_registro/{uid} { allow read: if true; allow write: if isCoordinator(); }
 
-    match /asambleas/{fecha} { allow read: if true; allow create, update, delete: if isLider(); }
+    match /asambleas/{fecha} { allow read: if true; allow create, update, delete: if isStaff(); }
 
-    match /asamblea/{docId} { allow read: if isAuth(); allow create, update: if isLider(); allow delete: if isCoordinator(); }
+    match /asamblea/{docId} { allow read: if isAuth(); allow create, update: if isStaff(); allow delete: if isCoordinator(); }
 
     // ASISTENCIA (ruta real: asistencia/{anio}/{fecha}/{uid}; cada {fecha} es una subcolección)
     // Lee: el propio miembro o un líder. Escribe: solo líderes (los docs no tienen campo email).
@@ -33,24 +33,30 @@ service cloud.firestore {
       allow read: if isAuth() && request.auth.uid == resource.data.uid;
     }
     match /asistencia/{anio}/{fecha}/{uid} {
-      allow read: if isAuth() && (request.auth.uid == uid || isLider());
-      allow create, update: if isLider();
+      allow read: if isAuth() && (request.auth.uid == uid || isStaff());
+      allow create, update: if isStaff();
       allow delete: if false;
     }
 
-    match /tablas_definiciones/{tablaId} { allow read: if isAuth(); allow create, update, delete: if isLider(); }
+    match /tablas_definiciones/{tablaId} { allow read: if isAuth(); allow create, update, delete: if isStaff(); }
     match /tablas_dinamicas/{anio}/{tablaId}/{rowId} {
       function tablaRestringida() { return tablaId == 'lista-asistentes-ejutor-2026'; }
       allow read: if isAuth() && (!tablaRestringida() || isCoordinator());
-      allow create, update: if (isLider() && !tablaRestringida()) || isCoordinator();
+      allow create, update: if (isStaff() && !tablaRestringida()) || isCoordinator();
       allow delete: if isCoordinator();
     }
-    match /asambleas_kahoot/{fecha} { allow read: if isAuth(); allow create, update: if isLider(); allow delete: if false; }
+    match /asambleas_kahoot/{fecha} { allow read: if isAuth(); allow create, update: if isStaff(); allow delete: if false; }
     match /historico/{anio}/{collection}/{docId} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
     // Docs de año (historico/2026) y doc raíz: necesarios para collectionGroup('historico') y listados de años
     match /historico/{anio} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
-    match /suggestions/{id} { allow read: if isAuth(); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
-    match /feedback/{id} { allow read: if isAuth(); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
+    match /suggestions/{id} { allow read: if true; allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
+    match /feedback/{id} { allow read: if true; allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
     match /attendance_log/{docId} { allow read: if isAuth() && resource.data.uid == request.auth.uid; allow write: if false; }
+    // Banco de preguntas (contiene "correcta" — solo staff read/write)
+    match /preguntas/{id} {
+      allow read: if isAuth() && isStaff();
+      allow create, update: if isStaff();
+      allow delete: if isCoordinator();
+    }
   }
 }

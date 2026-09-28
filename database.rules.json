@@ -1,0 +1,67 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "asamblea": {
+      ".read": true,
+      ".write": false,
+      "sesion": {
+        ".write": "root.child('admins').child(auth.uid).exists()",
+        "fase": {
+          ".write": "root.child('admins').child(auth.uid).exists()"
+        },
+        "cola": {
+          ".write": "root.child('admins').child(auth.uid).exists()"
+        },
+        "indice": {
+          ".write": "root.child('admins').child(auth.uid).exists()"
+        },
+        "claves": {
+          "$qid": {
+            ".read": "root.child('admins').child(auth.uid).exists()",
+            ".write": "root.child('admins').child(auth.uid).exists()"
+          }
+        },
+        "puntos": {
+          "$uid": {
+            ".write": "root.child('admins').child(auth.uid).exists()"
+          }
+        },
+        "resumen": {
+          ".write": "root.child('admins').child(auth.uid).exists()"
+        },
+        "acumulada": {
+          ".write": "root.child('admins').child(auth.uid).exists()"
+        }
+      },
+      "preguntaActual": {
+        ".read": true,
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      },
+      "respuestas": {
+        "$qid": {
+          "$uid": {
+            ".write": "auth.uid === $uid && root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && !data.exists() && now < root.child('asamblea').child('preguntaActual').child('cierraEn').val()"
+          }
+        }
+      },
+      "conectados": {
+        "$uid": {
+          ".write": "auth.uid === $uid"
+        }
+      }
+    },
+    "rankingGlobal": {
+      "$uid": {
+        ".read": true,
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      }
+    },
+    "admins": {
+      "$uid": {
+        ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      }
+    }
+  }
+}
