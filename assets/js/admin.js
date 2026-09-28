@@ -57,7 +57,8 @@ import {
   apagarAsamblea,
   listPreguntas,
   savePregunta,
-  deletePregunta
+  deletePregunta,
+  checkLateHostJoin
 } from './asamblea-engine.js';
 
 /* ── Admins hardcodeados (seguridad temporal, migrar a reglas de Firestore en el futuro) ── */
@@ -117,6 +118,8 @@ async function inicializar() {
     escucharAsamblea();
     escucharBorradores();
     escucharRankingGlobal();
+    // Verificar late host join
+    setTimeout(() => checkLateHostJoin(), 1000);
   } catch (e) {
     console.error("Error inicializando:", e);
     toast("Error al inicializar panel", "err");
@@ -212,6 +215,7 @@ function actualizarEstadoUI(activa, state) {
   const btnFin = document.getElementById("btnFinalizar");
   const btnReset = document.getElementById("btnResetRanking");
   const btnIniciar = document.getElementById("btnIniciarSesion");
+  const btnTomarControl = document.getElementById("btnTomarControl");
   const colaCard = document.getElementById("cola-sesion-card");
 
   if (!label || !sub) return;
@@ -235,14 +239,46 @@ function actualizarEstadoUI(activa, state) {
     sub.textContent = faseLabels[state.fase] || "Los miembros ya pueden ingresar a la asamblea";
     if (btnFin) btnFin.style.display = esCoordinador ? "inline-flex" : "none";
     if (btnReset) btnReset.style.display = "inline-flex";
-    // Mostrar botón "Iniciar sesión" solo en lobby y si soy host
+
+    // Botones de control según fase y host status
+    const soyHost = isHost();
+    const hayHost = !!state.hostUid;
+
+    // Botón "Iniciar sesión" solo en lobby y si soy host
     if (btnIniciar) {
-      if (state.fase === 'lobby' && isHost()) {
+      if (state.fase === 'lobby' && soyHost) {
         btnIniciar.hidden = false;
       } else {
         btnIniciar.hidden = true;
       }
     }
+
+    // Botón "Tomar control" si hay otro host y no soy yo, o si no hay host
+    if (btnTomarControl) {
+      if (!soyHost && hayHost) {
+        btnTomarControl.hidden = false;
+        btnTomarControl.textContent = "🤝 Tomar control";
+      } else if (!hayHost) {
+        btnTomarControl.hidden = false;
+        btnTomarControl.textContent = "👑 Tomar control";
+      } else {
+        btnTomarControl.hidden = true;
+      }
+    }
+
+    // Botones de acción de pregunta según fase
+    const btnCerrar = document.querySelector('.pa-header .btn-danger');
+    const btnSiguiente = document.querySelector('.pa-header .btn-ok');
+    if (btnCerrar) btnCerrar.style.display = (state.fase === 'pregunta' && soyHost) ? 'inline-flex' : 'none';
+    if (btnSiguiente) {
+      if ((state.fase === 'revelada' || state.fase === 'ranking') && soyHost) {
+        btnSiguiente.style.display = 'inline-flex';
+        btnSiguiente.textContent = state.fase === 'revelada' ? '📊 Ranking' : 'Siguiente →';
+      } else {
+        btnSiguiente.style.display = 'none';
+      }
+    }
+
     // Mostrar cola de sesión si hay preguntas cargadas
     if (colaCard) {
       if (state.cola && state.cola.length > 0) {
@@ -259,9 +295,25 @@ function actualizarEstadoUI(activa, state) {
     if (btnFin) btnFin.style.display = "none";
     if (btnReset) btnReset.style.display = "none";
     if (btnIniciar) btnIniciar.hidden = true;
+    if (btnTomarControl) btnTomarControl.hidden = true;
     if (colaCard) colaCard.hidden = true;
   }
 }
+
+/* ── Tomar control (host) ────────────────────────────────── */
+window.tomarControl = async function () {
+  try {
+    const won = await claimHost();
+    if (won) {
+      toast("✅ Control tomado — eres el host", "ok");
+    } else {
+      toast("Otro admin tiene el control", "err");
+    }
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  }
+};
 
 /* ── Toggle asamblea ───────────────────────────────────── */
 window.toggleModoAsamblea = async function (activa) {

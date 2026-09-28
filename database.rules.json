@@ -2,18 +2,59 @@
   "rules": {
     ".read": false,
     ".write": false,
+
+    /* ── LEGACY PATHS (old app: asamblea/activa, estado, preguntaActual, borradores) ── */
     "asamblea": {
-      ".read": true,
+      ".read": "root.child('admins').child(auth.uid).exists() || auth != null",
       ".write": false,
+      "activa": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      },
+      "estado": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      },
+      "preguntaNum": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      },
+      "preguntaActual": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      },
+      "respuestas": {
+        "$qid": {
+          "$uid": {
+            ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
+            ".write": "auth.uid === $uid && root.child('asamblea').child('estado').val() === 'activa' && !data.exists() && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && (now < root.child('asamblea').child('preguntaActual').child('cierraEn').val() || !root.child('asamblea').child('preguntaActual').child('cierraEn').exists())"
+          }
+        }
+      },
+      "conectados": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()"
+        }
+      },
+      "borradores": {
+        ".read": "root.child('admins').child(auth.uid).exists()",
+        ".write": "root.child('admins').child(auth.uid).exists()"
+      },
       "sesion": {
+        /* ── NEW PATHS (new engine: asamblea/sesion/*) ── */
+        ".read": "auth != null",
         ".write": "root.child('admins').child(auth.uid).exists()",
         "fase": {
+          ".read": "auth != null",
           ".write": "root.child('admins').child(auth.uid).exists()"
         },
         "cola": {
+          ".read": "auth != null",
           ".write": "root.child('admins').child(auth.uid).exists()"
         },
         "indice": {
+          ".read": "auth != null",
           ".write": "root.child('admins').child(auth.uid).exists()"
         },
         "claves": {
@@ -24,36 +65,51 @@
         },
         "puntos": {
           "$uid": {
+            ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
             ".write": "root.child('admins').child(auth.uid).exists()"
           }
         },
         "resumen": {
+          ".read": "auth != null",
           ".write": "root.child('admins').child(auth.uid).exists()"
         },
         "acumulada": {
+          ".read": "root.child('admins').child(auth.uid).exists()",
           ".write": "root.child('admins').child(auth.uid).exists()"
-        }
-      },
-      "preguntaActual": {
-        ".read": true,
-        ".write": "root.child('admins').child(auth.uid).exists()"
-      },
-      "respuestas": {
-        "$qid": {
-          "$uid": {
-            ".write": "auth.uid === $uid && root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && !data.exists() && now < root.child('asamblea').child('preguntaActual').child('cierraEn').val()"
+        },
+        "hostUid": {
+          ".read": "auth != null",
+          ".write": "root.child('admins').child(auth.uid).exists()"
+        },
+        "cerradas": {
+          "$qid": {
+            ".read": "root.child('admins').child(auth.uid).exists()",
+            ".write": "root.child('admins').child(auth.uid).exists()"
           }
         }
-      },
-      "conectados": {
+      }
+    },
+    "preguntaActual": {
+      ".read": "auth != null",
+      ".write": "root.child('admins').child(auth.uid).exists()"
+    },
+    "respuestas": {
+      "$qid": {
         "$uid": {
-          ".write": "auth.uid === $uid"
+          ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
+          ".write": "auth.uid === $uid && root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' && !data.exists() && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && now < root.child('asamblea').child('preguntaActual').child('cierraEn').val()"
         }
+      }
+    },
+    "conectados": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()"
       }
     },
     "rankingGlobal": {
       "$uid": {
-        ".read": true,
+        ".read": "auth != null",
         ".write": "root.child('admins').child(auth.uid).exists()"
       }
     },
@@ -62,6 +118,10 @@
         ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
         ".write": "root.child('admins').child(auth.uid).exists()"
       }
+    },
+    "borradores": {
+      ".read": "root.child('admins').child(auth.uid).exists()",
+      ".write": "root.child('admins').child(auth.uid).exists()"
     }
   }
 }

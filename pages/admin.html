@@ -500,6 +500,9 @@ option:checked, option:hover, option:focus {
               <div class="estado-sub" id="estadoSub">Activa el modo, sube preguntas, y controla todo desde el proyector</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+              <button class="btn btn-primary" id="btnTomarControl" hidden onclick="tomarControl()">
+                👑 Tomar control
+              </button>
               <button class="btn btn-primary" id="btnIniciarSesion" hidden onclick="iniciarSesion()">
                 🟢 Iniciar sesión
               </button>
