@@ -30,10 +30,15 @@ import {
   getDocs,
   setDoc,
   runTransaction,
-  deleteDoc
+  deleteDoc,
+  rtdbServerTS,
+  writeBatch
 } from './firebase-init.js';
 
 const PHASES = ['apagada', 'lobby', 'countdown', 'pregunta', 'revelada', 'ranking', 'podio'];
+
+// Guardar countdownStart para checkLateHostJoin
+let countdownStart = 0;
 
 /* ── Estado local (caché para listeners UI) ───────────────── */
 let localState = {
@@ -230,14 +235,16 @@ export async function setSesionCola(preguntaIds) {
   }
   // Generar sesionId único para esta sesión (timestamp + random)
   const sesionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  await set(ref(rtdb, RTDB_PATHS.sesionId), sesionId);
-  await set(ref(rtdb, RTDB_PATHS.cola), preguntas);
-  await set(ref(rtdb, RTDB_PATHS.indice), 0);
-  await writePhase('lobby');
+
+  // Todo en orden: limpiar → acumulada=false → cola → fase lobby
   await remove(ref(rtdb, 'asamblea/respuestas'));
   await remove(ref(rtdb, 'asamblea/conectados'));
   await remove(ref(rtdb, 'asamblea/sesion/cerradas')); // limpiar idempotency keys de sesiones previas
   await set(ref(rtdb, RTDB_PATHS.acumulada), false);
+  await set(ref(rtdb, RTDB_PATHS.sesionId), sesionId);
+  await set(ref(rtdb, RTDB_PATHS.cola), preguntas);
+  await set(ref(rtdb, RTDB_PATHS.indice), 0);
+  await writePhase('lobby');
 }
 
 /** Iniciar sesión: lobby -> countdown -> primera pregunta */
@@ -245,6 +252,9 @@ export async function startSesion() {
   await assertStaff();
   if (localState.fase !== 'lobby') throw new Error('Debe estar en lobby');
   await writePhase('countdown');
+
+  // Guardar momento de inicio del countdown para checkLateHostJoin
+  countdownStart = serverNow();
 
   // El host agenda countdown → pregunta (5s) y cierre automático
   if (isHost()) scheduleHostActions();
@@ -285,14 +295,12 @@ export async function checkLateHostJoin() {
   if (!isHost()) return;
   const state = getState();
   if (state.fase === 'countdown') {
-    // Verificar si ya pasó el tiempo de countdown (5s)
+    // Verificar si ya pasó el tiempo de countdown (5s desde countdownStart)
     const idx = state.indice;
     const cola = state.cola;
     if (idx < cola.length) {
-      const p = cola[idx];
-      const abreEn = p.abreEn || 0;
       const now = serverNow();
-      if (now >= abreEn + 5000) {
+      if (now >= countdownStart + 5000) {
         // Ya debería haber pasado a pregunta, forzar nextPregunta
         await nextPregunta();
       }
@@ -309,8 +317,8 @@ export async function checkLateHostJoin() {
 /** Avanzar a siguiente pregunta (o iniciar primera) — lee correcta de Firestore */
 export async function nextPregunta() {
   await assertStaff();
-  // Validar fase: solo desde lobby, revelada, ranking
-  if (!['lobby', 'revelada', 'ranking'].includes(localState.fase)) {
+  // Validar fase: solo desde lobby, countdown, revelada, ranking
+  if (!['lobby', 'countdown', 'revelada', 'ranking'].includes(localState.fase)) {
     throw new Error(`No se puede lanzar pregunta desde fase: ${localState.fase}`);
   }
 

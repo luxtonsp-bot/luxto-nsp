@@ -10,14 +10,14 @@ import {
   conectar,
   responder
 } from './asamblea-engine.js';
-import { auth, onAuthStateChanged, rtdb, ref, onValue, set, serverTimestamp, onDisconnect, esc } from './firebase-init.js';
+import { auth, onAuthStateChanged, rtdb, ref, onValue, set, rtdbTS, onDisconnect, esc } from './firebase-init.js';
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let usuarioActual = null;
 let nombreActual = "";
 let fotoActual = "";
 let fotoOriginal = "";
-let puntosTotal = 0;
+let puntosTotal = 0; // se sincroniza con servidor
 let preguntaActualId = null;
 let timerInterval = null;
 let tiempoRestante = 0;
@@ -27,6 +27,7 @@ let podioMostrado = false;
 let participoEnAsamblea = false;
 let preguntaPreviaEstado = null;
 let ultimaRespuesta = null;
+let puntosListener = null; // listener de puntos del servidor
 
 /* ── Utils ── */
 function toast(msg, tipo = "") {
@@ -126,11 +127,21 @@ async function iniciarEscucha() {
       const fallback = avatarFallback(u.nombre);
       return `
         <div class="conectado-item" style="animation-delay:${i * 0.05}s">
-          <img class="conectado-foto" src="${fotoSrc || fallback}" data-foto-url="${u.fotoUrl || ''}" data-nombre="${u.nombre}" alt="${esc(u.nombre)}" onerror="this.onerror=null;this.src='${fallback}'">
+          <img class="conectado-foto" src="${esc(fotoSrc || fallback)}" data-foto-url="${esc(u.fotoUrl || '')}" data-nombre="${esc(u.nombre)}" alt="${esc(u.nombre)}" onerror="this.onerror=null;this.src='${esc(fallback)}'">
           <div class="conectado-nombre">${esc(u.nombre)}</div>
           <div class="conectado-status">Conectado</div>
         </div>`;
     }).join("");
+  });
+
+  // Puntos del servidor (sesion/puntos/{uid}) — escucha en tiempo real
+  if (puntosListener) puntosListener();
+  const { on: onPoints, getState: getPointsState } = await import('./asamblea-engine.js');
+  puntosListener = onPoints('puntos', (state) => {
+    const misPuntos = state.puntos?.[usuarioActual?.uid]?.pts || 0;
+    puntosTotal = misPuntos;
+    const scoreEl = document.getElementById("topbarScore");
+    if (scoreEl) scoreEl.textContent = misPuntos;
   });
 
   // Fase principal
@@ -161,6 +172,8 @@ async function handleFaseChange(state) {
       participoEnAsamblea = false;
       preguntaActualId = null;
       ultimaRespuesta = null;
+      // Limpiar listener de puntos
+      if (puntosListener) { puntosListener(); puntosListener = null; }
       show("screenNoActiva");
       break;
     case 'lobby':
@@ -209,7 +222,7 @@ async function handleFaseChange(state) {
       email: usuarioActual.email,
       fotoUrl: fotoOriginal,
       fotoMostrar: fotoActual,
-      ts: serverTimestamp()
+      ts: rtdbTS()
     });
     onDisconnect(conectadosRef).remove();
   } else {
@@ -230,7 +243,7 @@ function mostrarPregunta(p) {
     const btn = document.createElement("button");
     btn.className = "opcion-btn " + clases[i];
     btn.dataset.idx = i;
-    btn.innerHTML = `<div class="opcion-letra-big">${letras[i]}</div>`;
+    btn.innerHTML = `<div class="opcion-letra-big">${esc(letras[i])}</div>`;
     btn.onclick = () => responderOpcion(i, op, p);
     grid.appendChild(btn);
   });
@@ -277,16 +290,7 @@ async function responderOpcion(idx, texto, pregunta) {
   btns.forEach(b => b.disabled = true);
   btns[idx].classList.add("selected");
 
-  const tiempoResp = Math.max(0, (Date.now() - tiempoInicioResp) / 1000);
-  const esCorrecta = idx === (pregunta.correcta ?? -1);
-  let pts = 0;
-  if (esCorrecta) {
-    const dur = pregunta.duracion || 20;
-    pts = Math.round(1000 * (1 - tiempoResp / dur / 2));
-    pts = Math.max(pts, 200);
-    puntosTotal += pts;
-  }
-
+  // NO calcular puntos localmente — el servidor lo hace y nos llega via listener de puntos
   try {
     await responder(pregunta.id, usuarioActual.uid, idx);
   } catch (e) {
@@ -299,7 +303,7 @@ async function responderOpcion(idx, texto, pregunta) {
   }
 
   // Guardar para mostrar resultado cuando cierre
-  ultimaRespuesta = { idx, esCorrecta, pts, texto, pregunta };
+  ultimaRespuesta = { idx, texto, pregunta };
 }
 
 function mostrarResultado(esCorrecta, pts, respUser, respCorrecta, timeout) {
@@ -331,7 +335,7 @@ function mostrarResultado(esCorrecta, pts, respUser, respCorrecta, timeout) {
     });
   }
 
-  document.getElementById("resultRespuesta").textContent = respCorrecta || "—";
+  document.getElementById("resultRespuesta").textContent = esc(respCorrecta || "—");
   show("screenResultado");
 
   // Auto-avanzar a "esperando" después de 4s

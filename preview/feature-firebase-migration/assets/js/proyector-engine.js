@@ -7,8 +7,6 @@ import {
   initAsambleaEngine,
   on as engineOn,
   getState as engineState,
-  claimHost,
-  releaseHost,
   isHost,
   conectar,
   responder
@@ -89,7 +87,7 @@ onAuthStateChanged(auth, async (user) => {
 /* ── Listeners ── */
 async function iniciarEscucha() {
   await initAsambleaEngine();
-  await claimHost(); // Proyector también intenta ser host
+  // El proyector NO llama claimHost(); solo muestra. El control lo toma el admin.
 
   // Conectados (para lobby)
   engineOn('conectados', (state) => {

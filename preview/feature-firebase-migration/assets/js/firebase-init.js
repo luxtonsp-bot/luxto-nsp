@@ -22,7 +22,7 @@ import {
   orderBy,
   limit,
   getDocs,
-  serverTimestamp,
+  serverTimestamp as fsServerTimestamp,
   writeBatch,
   runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -57,16 +57,19 @@ export const rtdb = getDatabase(app);
 
 /* ── Helpers seguros ───────────────────────────────────────── */
 
-// Escapar HTML para prevenir XSS
+// Escapar HTML para prevenir XSS (incluye " y ')
 export function esc(str) {
   if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  return String(str)
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, "'");
 }
 
 // Timestamp del servidor (Firestore)
-export const fsTS = serverTimestamp;
+export const fsTS = fsServerTimestamp;
 
 // Timestamp del servidor (RTDB) — función que devuelve el sentinel
 export function rtdbTS() { return rtdbServerTS(); }
@@ -146,6 +149,8 @@ export const RTDB_PATHS = {
   rankingGlobalRoot: 'rankingGlobal',
   admins: (uid) => `admins/${uid}`,
   hostUid: 'asamblea/sesion/hostUid',
+  sesionId: 'asamblea/sesion/sesionId',
+  cerradas: (sid, qid) => `asamblea/sesion/cerradas/${sid}/${qid}`,
 };
 
 /* ── Re-export de SDK para consumidores ─────────────────────── */
@@ -160,6 +165,7 @@ export {
   push,
   onDisconnect,
   rtdbRunTransaction as runTransaction,
+  rtdbServerTS,
   // Firestore
   doc,
   getDoc,
@@ -170,6 +176,8 @@ export {
   query,
   orderBy,
   getDocs,
+  fsServerTimestamp,
+  writeBatch,
   // Auth
   onAuthStateChanged,
   signOut
