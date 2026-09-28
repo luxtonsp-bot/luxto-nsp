@@ -766,7 +766,7 @@ window.loadSuggestions = async function loadSuggestions() {
     if (!container) return;
     container.innerHTML = '<p>Cargando sugerencias...</p>';
 
-    const snap = await getDocs(collection(fsdb, "sugerencias"));
+    const snap = await getDocs(collection(fsdb, "suggestions"));
 
     if (snap.empty) {
       container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay sugerencias aún.</p>';
