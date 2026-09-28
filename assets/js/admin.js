@@ -838,3 +838,14 @@ window.loadFeedback = async function loadFeedback() {
     document.getElementById("feedback-list").innerHTML = '<p style="color:var(--err)">Error cargando feedback</p>';
   }
 };
+
+/* ── Tab change handler (called from inline script) ────────── */
+window.onAdminTabChange = function (tabName) {
+  if (tabName === 'gestion-lideres') {
+    if (window.loadMembersByRole) window.loadMembersByRole();
+    if (window.loadMemberSelector) window.loadMemberSelector();
+  } else if (tabName === 'sugerencias-feedback') {
+    if (window.loadSuggestions) window.loadSuggestions();
+    if (window.loadFeedback) window.loadFeedback();
+  }
+};

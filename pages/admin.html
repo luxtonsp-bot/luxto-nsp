@@ -686,21 +686,15 @@ option:checked, option:hover, option:focus {
 <script type="module" src="../assets/js/admin.js"></script>
 
 <script>
-// ── Navegación por tabs ──
+// ── Navegación por tabs (UI only) ──
 window.openTab = function(evt, tabName) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
   document.getElementById(tabName).classList.add('active');
   evt.currentTarget.classList.add('active');
 
-  // Cargar datos dinámicos al cambiar a ciertas pestañas
-  if (tabName === 'gestion-lideres') {
-    if (window.loadMembersByRole) window.loadMembersByRole();
-    if (window.loadMemberSelector) window.loadMemberSelector();
-  } else if (tabName === 'sugerencias-feedback') {
-    if (window.loadSuggestions) window.loadSuggestions();
-    if (window.loadFeedback) window.loadFeedback();
-  }
+  // Notificar al módulo admin.js que cambió el tab (para cargar datos)
+  if (window.onAdminTabChange) window.onAdminTabChange(tabName);
 };
 </script>
 
