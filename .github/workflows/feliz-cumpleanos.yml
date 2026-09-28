@@ -1,4 +1,4 @@
-name: Feliz Cumpleaños
+name: Feliz Cumpleaños (nuevo)
 on:
   schedule:
     - cron: '0 8 * * *'  # Every day at 8:00 AM UTC (3:00 AM Lima)
