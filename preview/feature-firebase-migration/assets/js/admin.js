@@ -65,8 +65,9 @@ function convertirUrlDrive(url) {
 
 function avatarFallbackAdmin(nombre) {
   const inicial = (nombre || "?").charAt(0).toUpperCase();
-  // Escape # -> %23 para data URI válida (fix "Unexpected identifier 'http'")
-  return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>" + inicial + "</text></svg>";
+  // Base64 data URI — evita problemas de escape de # / http://
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='#2a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='#F5C518'>${inicial}</text></svg>`;
+  return "data:image/svg+xml;base64," + btoa(svg);
 }
 
 function escaparHTML(str) {
