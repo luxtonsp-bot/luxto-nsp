@@ -26,69 +26,74 @@ def send_birthday_emails():
 
         print(f"Checking for birthdays on {today_mmdd}")
 
-        # Query only servidor/apoyo members with birthdays today
-        # Uses precomputed fechaNacimientoMMdd field for efficient query
+        # 1. Detectar TODOS los miembros con cumpleaños hoy (cualquier rol)
         members_ref = db.collection('members')
-        query = members_ref.where('fechaNacimientoMMdd', '==', today_mmdd).where('rol', 'in', ['servidor', 'apoyo'])
-        members_snapshot = query.get()
+        all_birthday_query = members_ref.where('fechaNacimientoMMdd', '==', today_mmdd)
+        all_birthday_snapshot = all_birthday_query.get()
 
-        if len(members_snapshot) == 0:
-            print('No members found')
-            return
-
-        birthday_members = []
-        for doc in members_snapshot:
+        birthday_names = []
+        for doc in all_birthday_snapshot:
             member = doc.to_dict()
             nombre = member.get('nombre', 'Miembro')
-            email = member.get('email')
+            birthday_names.append(nombre)
 
-            if not email:
-                print(f"Member {nombre} has no email, skipping")
-                continue
-
-            birthday_members.append((nombre, email))
-
-        if not birthday_members:
+        if not birthday_names:
             print('No birthdays today')
             return
 
-        print(f"Found {len(birthday_members)} birthday(s) today")
+        print(f"Birthdays today: {', '.join(birthday_names)}")
 
-        # Gmail SMTP settings
+        # 2. Obtener SOLO servidores/apoyos (destinatarios de la notificación)
+        notify_query = members_ref.where('rol', 'in', ['servidor', 'apoyo'])
+        notify_snapshot = notify_query.get()
+
+        notify_emails = []
+        for doc in notify_snapshot:
+            member = doc.to_dict()
+            email = member.get('email')
+            nombre = member.get('nombre', 'Miembro')
+            if email:
+                notify_emails.append((nombre, email))
+            else:
+                print(f"Notificador {nombre} sin email, saltando")
+
+        if not notify_emails:
+            print('No servidores/apoyos con email para notificar')
+            return
+
+        # 3. Enviar email a cada servidor/apoyo con la lista de cumpleañeros
         gmail_user = os.environ['GMAIL_USER']
         gmail_app_password = os.environ['GMAIL_APP_PASSWORD']
 
-        # Set up the SMTP server
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(gmail_user, gmail_app_password)
 
-        for nombre, email in birthday_members:
-            # Create the email
+        cumple_list = '\n'.join([f'• {n}' for n in birthday_names])
+
+        for notif_nombre, notif_email in notify_emails:
             msg = MIMEMultipart()
             msg['From'] = gmail_user
-            msg['To'] = email
-            msg['Subject'] = f'¡Feliz cumpleaños, {nombre}! 🎂'
+            msg['To'] = notif_email
+            msg['Subject'] = f'🎂 Cumpleaños de hoy ({len(birthday_names)})'
 
-            body = f'''
-            ¡Feliz cumpleaños, {nombre}!
+            body = f'''Hola {notif_nombre}:
 
-            Esperamos que tengas un día lleno de bendiciones, alegría y muchas razones para celebrar.
-            Que Dios te siga guiando y protegiendo en este nuevo año de vida.
+Hoy cumplen años {len(birthday_names)} asambleista(s):
 
-            ¡Con cariño,
-            El grupo Luz de Cristo
-            '''
+{cumple_list}
+
+Recuerda saludarlos en la asamblea o por el grupo.
+
+¡Bendiciones,
+Sistema Luz de Cristo'''
 
             msg.attach(MIMEText(body, 'plain'))
-
-            # Send the email
-            text = msg.as_string()
-            server.sendmail(gmail_user, email, text)
-            print(f"Birthday email sent to {nombre} ({email})")
+            server.sendmail(gmail_user, notif_email, msg.as_string())
+            print(f"Notification sent to {notif_nombre} ({notif_email})")
 
         server.quit()
-        print("All birthday emails sent successfully")
+        print("All birthday notifications sent successfully")
 
     except Exception as e:
         print(f"Error in birthday email job: {e}")
