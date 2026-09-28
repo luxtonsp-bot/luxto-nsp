@@ -451,6 +451,9 @@ option:checked, option:hover, option:focus {
   background: var(--bg4) !important;
   color: var(--y) !important;
 }
+
+/* ── Hidden utility ── */
+[hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -497,6 +500,9 @@ option:checked, option:hover, option:focus {
               <div class="estado-sub" id="estadoSub">Activa el modo, sube preguntas, y controla todo desde el proyector</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+              <button class="btn btn-primary" id="btnIniciarSesion" hidden onclick="iniciarSesion()">
+                🟢 Iniciar sesión
+              </button>
               <button class="btn btn-danger" id="btnResetRanking" style="display:none;" onclick="reiniciarRanking()">
                 🔄 Reiniciar ranking
               </button>
@@ -612,7 +618,7 @@ option:checked, option:hover, option:focus {
             <div class="np-field">
               <div class="np-label">Acciones</div>
               <div class="np-actions">
-                <button class="btn btn-ghost" onclick="guardarBorrador()">💾 Guardar</button>
+                <button class="btn btn-primary" onclick="savePreguntaAdmin()">💾 Guardar en banco</button>
                 <button class="btn btn-primary" onclick="lanzarPregunta()">🚀 Lanzar</button>
               </div>
             </div>
@@ -629,6 +635,11 @@ option:checked, option:hover, option:focus {
         <div class="hist-lista" id="preguntas-banco" style="max-height:400px;">
           <div class="hist-vacio">Cargando banco...</div>
         </div>
+      </div>
+
+      <div class="card historial" id="cola-sesion-card" hidden>
+        <div class="card-title">📝 Preguntas en la sesión (orden)</div>
+        <div id="cola-sesion" class="hist-lista" style="max-height:300px;"></div>
       </div>
 
       <div class="card historial">
