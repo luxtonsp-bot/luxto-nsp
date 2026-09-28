@@ -383,12 +383,14 @@ input.valid{border-color:var(--ok);}
       const newMemberRef = doc(db, "members", uid);
       const oldMiembrosRegistroRef = doc(db, "miembros_registro", oldUid);
 
-      // Copiar todos los datos del viejo al nuevo, actualizando email, uid y fechaNacimiento
+      // Copiar todos los datos del viejo al nuevo, actualizando email, uid, fechaNacimiento y fechaNacimientoMMdd
+      const fechaNacMMdd = fechaNac.substring(5, 10); // "YYYY-MM-DD" -> "MM-DD"
       batch.set(newMemberRef, {
         ...oldData,
         email: email,
         uid: uid,
-        fechaNacimiento: fechaNac
+        fechaNacimiento: fechaNac,
+        fechaNacimientoMMdd: fechaNacMMdd
       });
 
       // Borrar documento viejo y el lookup público
