@@ -16,12 +16,12 @@ service cloud.firestore {
       allow list: if isAuth() && request.auth.token.email == resource.data.email;
       // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
       allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
-      // Nadie puede crearse a sí mismo con un rol elevado
-      allow create: if isAuth() && request.auth.uid == uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro');
+      // Nadie puede crearse a sí mismo con un rol elevado; coordinador puede crear para nuevos
+      allow create: if isCoordinator() || (isAuth() && request.auth.uid == uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro'));
       allow delete: if false;
     }
 
-    match /miembros_registro/{uid} { allow read: if true; allow write: if false; }
+    match /miembros_registro/{uid} { allow read: if true; allow write: if isCoordinator(); }
 
     match /asambleas/{fecha} { allow read: if true; allow create, update, delete: if isLider(); }
 
