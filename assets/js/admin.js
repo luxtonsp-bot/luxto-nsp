@@ -36,7 +36,7 @@ import {
   query,
   orderBy,
   getDocs,
-  serverTimestamp,
+  fsServerTimestamp,
   writeBatch,
   onAuthStateChanged,
   signOut
@@ -845,7 +845,7 @@ window.updateMemberRole = async function (memberId, newRole) {
 
     await updateDoc(doc(fsdb, "members", memberId), {
       rol: newRole,
-      fechaActualizacionRol: serverTimestamp()
+      fechaActualizacionRol: fsServerTimestamp()
     });
 
     // Sincronizar /admins RTDB
