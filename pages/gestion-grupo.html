@@ -298,10 +298,14 @@
                 return;
             }
 
+            // Calcular MM-DD para consultas de cumpleaños
+            const birthMMdd = birthdate.substring(5, 10); // YYYY-MM-DD -> MM-DD
+
             // Create new member document with auto-generated ID (temporal UID)
             const newMemberRef = await db.collection('members').add({
                 nombre: name,
                 fechaNacimiento: birthdate,
+                fechaNacimientoMMdd: birthMMdd,
                 fechaPrimeraAsamblea: firstAssembly,
                 rol: 'miembro',
                 estadoAnioActual: 'activo',

@@ -420,6 +420,36 @@ body::before {
   .np-opciones-grid   { grid-template-columns:1fr; }
   .np-meta            { grid-template-columns:1fr; }
   .main               { padding:24px 16px 60px; }
+  .role-section li    { flex-direction:column; align-items:flex-start; gap:4px; }
+  .role-section li span:last-child { font-size:11px; }
+}
+
+/* ── PANEL ROLES: contraste y visibilidad ── */
+.role-section li {
+  background: var(--bg3) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--cream) !important;
+}
+.role-section li span {
+  color: var(--cream) !important;
+}
+.role-section li span:last-child {
+  color: var(--muted) !important;
+}
+
+/* ── SELECTS y OPTIONS: forzar tema oscuro ── */
+select, select option {
+  background: var(--bg3) !important;
+  color: var(--cream) !important;
+  border-color: var(--border) !important;
+}
+select:focus, select:hover {
+  background: var(--bg3) !important;
+  border-color: var(--y) !important;
+}
+option:checked, option:hover, option:focus {
+  background: var(--bg4) !important;
+  color: var(--y) !important;
 }
 </style>
 </head>
@@ -619,7 +649,8 @@ body::before {
               <label for="role-select" style="font-size:13px;color:var(--muted);">Nuevo rol:</label>
               <select id="role-select" class="np-select" style="flex:1;min-width:160px;">
                 <option value="miembro">Miembro</option>
-                <option value="lider">Líder</option>
+                <option value="servidor">Servidor</option>
+                <option value="apoyo">Apoyo</option>
                 <option value="coordinador">Coordinador</option>
               </select>
               <button class="btn btn-primary" id="update-role-button">Actualizar Rol</button>

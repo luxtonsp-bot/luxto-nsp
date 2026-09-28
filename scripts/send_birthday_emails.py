@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+"""
+Envío de notificaciones de cumpleaños — 100% dinámico desde Firestore.
+- Solo notificadores activos este año (estadoAnioActual: activo/perseverante)
+- Roles: servidor, apoyo, coordinador
+- Formato bonito estilo Apps Script original
+- BCC único + fallback individual si hay bounces
+"""
 import os
 import smtplib
 from datetime import datetime
@@ -7,97 +15,178 @@ from zoneinfo import ZoneInfo
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Initialize Firebase Admin SDK
-# We expect the service account JSON to be in the current directory as firebase-service-account.json
-# This file is created by the GitHub Action from the secret
 cred = credentials.Certificate('firebase-service-account.json')
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
+
+def is_valid_email(email: str) -> bool:
+    """Validación básica de email"""
+    if not email or '@' not in email:
+        return False
+    local, domain = email.split('@', 1)
+    return '.' in domain and len(local) > 0 and len(domain) > 3
+
+
 def send_birthday_emails():
     try:
-        # Hora de Lima (es la fecha de cumpleaños que importa; UTC del runner
-        # cruzaría mal: a las 7pm Lima el UTC ya cambió de día)
+        # Hora de Lima
         today = datetime.now(ZoneInfo('America/Lima'))
         month = str(today.month).zfill(2)
         day = str(today.day).zfill(2)
         today_mmdd = f"{month}-{day}"
+        fecha_hoy_texto = today.strftime('%d/%m/%Y')
 
-        print(f"Checking for birthdays on {today_mmdd}")
+        print(f"Checking for birthdays on {today_mmdd} ({fecha_hoy_texto})")
 
-        # 1. Detectar TODOS los miembros con cumpleaños hoy (cualquier rol)
+        # 1. Detectar TODOS los cumpleañeros de HOY que estén ACTIVOS este año
         members_ref = db.collection('members')
-        all_birthday_query = members_ref.where('fechaNacimientoMMdd', '==', today_mmdd)
-        all_birthday_snapshot = all_birthday_query.get()
+        birthday_query = members_ref.where('fechaNacimientoMMdd', '==', today_mmdd)
+        birthday_snapshot = birthday_query.get()
 
         birthday_names = []
-        for doc in all_birthday_snapshot:
+        for doc in birthday_snapshot:
             member = doc.to_dict()
-            nombre = member.get('nombre', 'Miembro')
-            birthday_names.append(nombre)
+            estado = member.get('estadoAnioActual', 'activo')
+            if estado in ('activo', 'perseverante'):
+                nombre = member.get('nombre', 'Miembro')
+                birthday_names.append(nombre)
+            else:
+                print(f"  ⏭️ Saltando {member.get('nombre')} (estado: {estado})")
 
         if not birthday_names:
-            print('No birthdays today')
+            print('No birthdays today (active members)')
             return
 
-        print(f"Birthdays today: {', '.join(birthday_names)}")
+        print(f"Birthdays today (active): {', '.join(birthday_names)}")
 
-        # 2. Obtener SOLO servidores/apoyos (destinatarios de la notificación)
-        notify_query = members_ref.where('rol', 'in', ['servidor', 'apoyo'])
+        # 2. Obtener notificadores DINÁMICOS: rol + estado activo este año
+        notify_query = members_ref.where('rol', 'in', ['servidor', 'apoyo', 'coordinador'])
         notify_snapshot = notify_query.get()
 
-        notify_emails = []
+        valid_recipients = []
+        skipped_no_email = []
+        skipped_inactive = []
+        skipped_invalid_email = []
+
         for doc in notify_snapshot:
             member = doc.to_dict()
-            email = member.get('email')
             nombre = member.get('nombre', 'Miembro')
-            if email:
-                notify_emails.append((nombre, email))
-            else:
-                print(f"Notificador {nombre} sin email, saltando")
+            email = member.get('email')
+            rol = member.get('rol', 'miembro')
+            estado = member.get('estadoAnioActual', 'activo')
 
-        if not notify_emails:
-            print('No servidores/apoyos con email para notificar')
+            # Solo activos/perseverantes este año
+            if estado not in ('activo', 'perseverante'):
+                skipped_inactive.append(f"{nombre} ({rol}, estado: {estado})")
+                continue
+
+            if not email:
+                skipped_no_email.append(f"{nombre} ({rol})")
+                continue
+
+            if not is_valid_email(email):
+                skipped_invalid_email.append(f"{nombre} ({rol}) - {email}")
+                continue
+
+            valid_recipients.append((nombre, email, rol))
+
+        # Logs claros
+        if skipped_no_email:
+            print(f"⏭️ Sin email ({len(skipped_no_email)}): {', '.join(skipped_no_email)}")
+        if skipped_inactive:
+            print(f"⏭️ Inactivos este año ({len(skipped_inactive)}): {', '.join(skipped_inactive)}")
+        if skipped_invalid_email:
+            print(f"⏭️ Email inválido ({len(skipped_invalid_email)}): {', '.join(skipped_invalid_email)}")
+
+        if not valid_recipients:
+            print('❌ No hay destinatarios válidos para notificar')
             return
 
-        # 3. Enviar email a cada servidor/apoyo con la lista de cumpleañeros
+        print(f"✅ Total destinatarios válidos: {len(valid_recipients)}")
+        for n, e, r in valid_recipients:
+            print(f"  → {n} ({r}) - {e}")
+
+        # 3. Construir email estilo Apps Script original
+        lista_estrellas = '\n⭐ ' + '\n⭐ '.join(birthday_names)
+        asunto = f'🎂 ¡Recordatorio de Cumpleaños! ({len(birthday_names)})'
+
+        cuerpo = f'''¡Hola servidores y apoyos!
+
+Este es el aviso de cumpleaños para hoy {fecha_hoy_texto}:
+
+{lista_estrellas}
+
+Por favor, saluden a los cumpleañeros en la asamblea o por el grupo. ¡Bendiciones!
+
+Equipo de servidores Luz De Cristo 🧂 y 💡'''
+
+        # 4. Enviar via SMTP con BCC
         gmail_user = os.environ['GMAIL_USER']
         gmail_app_password = os.environ['GMAIL_APP_PASSWORD']
 
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(gmail_user, gmail_app_password)
+        msg = MIMEMultipart()
+        msg['From'] = gmail_user
+        msg['To'] = gmail_user  # Remitente recibe copia
+        msg['Bcc'] = ', '.join([e for _, e, _ in valid_recipients])
+        msg['Subject'] = asunto
+        msg.attach(MIMEText(cuerpo, 'plain'))
 
-        cumple_list = '\n'.join([f'• {n}' for n in birthday_names])
+        try:
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server.starttls()
+            server.login(gmail_user, gmail_app_password)
 
-        for notif_nombre, notif_email in notify_emails:
-            msg = MIMEMultipart()
-            msg['From'] = gmail_user
-            msg['To'] = notif_email
-            msg['Subject'] = f'🎂 Cumpleaños de hoy ({len(birthday_names)})'
+            all_recipients = [gmail_user] + [e for _, e, _ in valid_recipients]
+            server.sendmail(gmail_user, all_recipients, msg.as_string())
+            server.quit()
 
-            body = f'''Hola {notif_nombre}:
+            print(f"✅ Email BCC enviado exitosamente a {len(valid_recipients)} destinatarios")
+            for n, e, r in valid_recipients:
+                print(f"   BCC: {n} ({r}) - {e}")
 
-Hoy cumplen años {len(birthday_names)} asambleista(s):
-
-{cumple_list}
-
-Recuerda saludarlos en la asamblea o por el grupo.
-
-¡Bendiciones,
-Sistema Luz de Cristo'''
-
-            msg.attach(MIMEText(body, 'plain'))
-            server.sendmail(gmail_user, notif_email, msg.as_string())
-            print(f"Notification sent to {notif_nombre} ({notif_email})")
-
-        server.quit()
-        print("All birthday notifications sent successfully")
+        except smtplib.SMTPRecipientsRefused as e:
+            print(f"⚠️ BCC rechazado por servidor, intentando envío individual...")
+            send_individual_fallback(gmail_user, gmail_app_password, asunto, cuerpo, valid_recipients)
+        except Exception as e:
+            print(f"❌ Error SMTP: {e}")
+            raise
 
     except Exception as e:
-        print(f"Error in birthday email job: {e}")
-        raise e
+        print(f"❌ Error en birthday email job: {e}")
+        raise
+
+
+def send_individual_fallback(gmail_user, gmail_app_password, asunto, cuerpo, recipients):
+    """Fallback: enviar uno por uno para aislar bounces"""
+    print("🔄 Modo fallback: envío individual...")
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(gmail_user, gmail_app_password)
+
+    sent = 0
+    failed = 0
+    for nombre, email, rol in recipients:
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = gmail_user
+            msg['To'] = email
+            msg['Subject'] = asunto
+            msg.attach(MIMEText(cuerpo, 'plain'))
+            server.sendmail(gmail_user, email, msg.as_string())
+            print(f"   ✅ {nombre} ({rol}) - {email}")
+            sent += 1
+        except smtplib.SMTPRecipientsRefused as e:
+            print(f"   ❌ REBOTE: {nombre} ({rol}) - {email} → {e}")
+            failed += 1
+        except Exception as e:
+            print(f"   ❌ ERROR: {nombre} ({rol}) - {email} → {e}")
+            failed += 1
+
+    server.quit()
+    print(f"Fallback: {sent} enviados, {failed} fallaron")
+
 
 if __name__ == "__main__":
     send_birthday_emails()
