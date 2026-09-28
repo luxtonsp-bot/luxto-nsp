@@ -621,9 +621,20 @@ option:checked, option:hover, option:focus {
       </div>
 
       <div class="card historial">
-        <div class="card-title">📋 Preguntas guardadas</div>
+        <div class="card-title">📋 Banco de Preguntas <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">(marca para cargar a la sesión)</span></div>
+        <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="loadPreguntasBanco()">🔄 Recargar banco</button>
+          <button class="btn btn-ok" onclick="cargarColaSesion()">📥 Cargar seleccionadas a la sesión</button>
+        </div>
+        <div class="hist-lista" id="preguntas-banco" style="max-height:400px;">
+          <div class="hist-vacio">Cargando banco...</div>
+        </div>
+      </div>
+
+      <div class="card historial">
+        <div class="card-title">📋 Borradores (RTDB)</div>
         <div class="hist-lista" id="histLista">
-          <div class="hist-vacio">No hay preguntas guardadas aún.</div>
+          <div class="hist-vacio">No hay borradores guardados aún.</div>
         </div>
       </div>
     </div>

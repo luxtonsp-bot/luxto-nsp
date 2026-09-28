@@ -4,7 +4,34 @@
  * NO toca UI directamente; expone funciones y listeners que la UI consume.
  */
 
-import { rtdb, rtdbTS, serverNow, rtdbTx, RTDB_PATHS, fsdb, fsTS, isStaff, isCoordinator, auth, ref, onValue, set, update, remove, get, onDisconnect, doc, collection, query, orderBy, getDocs, setDoc, runTransaction } from './firebase-init.js';
+import {
+  rtdb,
+  rtdbTS,
+  serverNow,
+  rtdbTx,
+  syncServerTime,
+  RTDB_PATHS,
+  fsdb,
+  fsTS,
+  isStaff,
+  isCoordinator,
+  auth,
+  ref,
+  onValue,
+  set,
+  update,
+  remove,
+  get,
+  onDisconnect,
+  doc,
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  setDoc,
+  runTransaction,
+  deleteDoc
+} from './firebase-init.js';
 
 const PHASES = ['apagada', 'lobby', 'countdown', 'pregunta', 'revelada', 'ranking', 'podio'];
 
@@ -41,7 +68,7 @@ async function writePhase(fase) {
 
 /** Inicializa listeners de la sesión (llamar una vez al cargar app) */
 export async function initAsambleaEngine() {
-  await syncServerTime(); // from firebase-init
+  await syncServerTime();
 
   // Listener fase
   onValue(ref(rtdb, RTDB_PATHS.fase), snap => {
@@ -79,15 +106,17 @@ export async function initAsambleaEngine() {
     notify('respuestas');
   });
 
-  // Listener puntos/resumen
-  onValue(ref(rtdb, RTDB_PATHS.puntos.replace('${uid}', '')), snap => {
+  // Listener puntos (root completo)
+  onValue(ref(rtdb, RTDB_PATHS.puntosRoot), snap => {
     localState.puntos = snap.val() || {};
     notify('puntos');
   });
+  // Listener resumen
   onValue(ref(rtdb, RTDB_PATHS.resumen), snap => {
     localState.resumen = snap.val() || [];
     notify('resumen');
   });
+  // Listener acumulada
   onValue(ref(rtdb, RTDB_PATHS.acumulada), snap => {
     localState.acumulada = snap.val() || false;
     notify('acumulada');
@@ -122,13 +151,19 @@ async function assertStaff() {
   if (!user || !(await isStaff(user.uid))) throw new Error('Solo staff');
 }
 
+/** Verificar permiso coordinador */
+async function assertCoordinator() {
+  const user = auth.currentUser;
+  if (!user || !(await isCoordinator(user.uid))) throw new Error('Solo coordinador');
+}
+
 /** Registrar este cliente como host (solo uno gana) */
 export async function claimHost() {
   await assertStaff();
   const uid = auth.currentUser.uid;
   const r = ref(rtdb, RTDB_PATHS.hostUid);
   const snap = await get(r);
-  if (snap.exists() && snap.val() !== uid) return false; // ya hay otro host
+  if (snap.exists() && snap.val() !== uid) return false;
   await set(r, uid);
   return true;
 }
@@ -153,22 +188,21 @@ export async function savePregunta(data) {
   const { texto, opciones, correcta, duracion, id } = data;
   if (!texto || !opciones?.length) throw new Error('Texto y opciones requeridos');
   const docRef = id ? doc(fsdb, 'preguntas', id) : doc(collection(fsdb, 'preguntas'));
-  await setDoc(docRef, { texto, opciones, correcta: correcta ?? 0, duracion: duracion ?? 20, updatedAt: fsTS });
+  await setDoc(docRef, { texto, opciones, correcta: correcta ?? 0, duracion: duracion ?? 20, createdAt: fsTS(), updatedAt: fsTS() });
   return docRef.id;
 }
 export async function deletePregunta(id) {
   await assertStaff();
-  await remove(doc(fsdb, 'preguntas', id));
+  await deleteDoc(doc(fsdb, 'preguntas', id));
 }
 export async function listPreguntas() {
-  const snap = await getDocs(query(collection(fsdb, 'preguntas'), orderBy('createdAt', 'desc')));
+  const snap = await getDocs(query(collection(fsdb, 'preguntas'), orderBy('updatedAt', 'desc')));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-/** Cargar preguntas seleccionadas a la sesión (cola) */
+/** Cargar preguntas seleccionadas a la sesión (cola) — sin correcta */
 export async function setSesionCola(preguntaIds) {
   await assertStaff();
-  // Leer preguntas de Firestore
   const preguntas = [];
   for (const id of preguntaIds) {
     const snap = await getDoc(doc(fsdb, 'preguntas', id));
@@ -176,11 +210,9 @@ export async function setSesionCola(preguntaIds) {
     const p = snap.data();
     preguntas.push({ id: snap.id, texto: p.texto, opciones: p.opciones, duracion: p.duracion });
   }
-  // Guardar cola en RTDB (sin correcta)
   await set(ref(rtdb, RTDB_PATHS.cola), preguntas);
   await set(ref(rtdb, RTDB_PATHS.indice), 0);
   await writePhase('lobby');
-  // Limpiar respuestas y conectados previos
   await remove(ref(rtdb, 'asamblea/respuestas'));
   await remove(ref(rtdb, 'asamblea/conectados'));
   await set(ref(rtdb, RTDB_PATHS.acumulada), false);
@@ -191,10 +223,9 @@ export async function startSesion() {
   await assertStaff();
   if (localState.fase !== 'lobby') throw new Error('Debe estar en lobby');
   await writePhase('countdown');
-  // countdown de 5s en proyector, luego nextPregunta()
 }
 
-/** Avanzar a siguiente pregunta (o iniciar primera) */
+/** Avanzar a siguiente pregunta (o iniciar primera) — lee correcta de Firestore */
 export async function nextPregunta() {
   await assertStaff();
   const idx = localState.indice;
@@ -202,11 +233,15 @@ export async function nextPregunta() {
   if (idx >= cola.length) { await writePhase('podio'); return; }
 
   const p = cola[idx];
+  // Leer correcta de Firestore al lanzar
+  const fsSnap = await getDoc(doc(fsdb, 'preguntas', p.id));
+  const correcta = fsSnap.exists() ? (fsSnap.data().correcta ?? 0) : 0;
+
   const abreEn = serverNow();
   const cierraEn = abreEn + (p.duracion || 20) * 1000;
 
   // Guardar clave (correcta) solo para staff
-  await set(ref(rtdb, RTDB_PATHS.claves(p.id)), { correcta: p.correcta ?? 0 });
+  await set(ref(rtdb, RTDB_PATHS.claves(p.id)), { correcta });
 
   // Pregunta actual SIN correcta
   await set(ref(rtdb, RTDB_PATHS.preguntaActual), {
@@ -223,9 +258,19 @@ export async function nextPregunta() {
   await set(ref(rtdb, RTDB_PATHS.indice), idx + 1);
 
   await writePhase('pregunta');
+
+  // Programar cierre automático en cierraEn (host lo ejecuta)
+  if (isHost()) {
+    const delay = Math.max(0, cierraEn - serverNow());
+    setTimeout(async () => {
+      if (isHost() && (await getState()).fase === 'pregunta') {
+        await cerrarPregunta();
+      }
+    }, delay);
+  }
 }
 
-/** Cerrar pregunta actual (calcular puntos, guardar resumen) — idempotente */
+/** Cerrar pregunta actual (calcular puntos, guardar resumen) — idempotente, SUMA a puntos de sesión */
 export async function cerrarPregunta() {
   await assertStaff();
   if (localState.fase !== 'pregunta') throw new Error('No hay pregunta activa');
@@ -236,22 +281,31 @@ export async function cerrarPregunta() {
   const correcta = claveSnap.val()?.correcta ?? 0;
   const abreEn = q.abreEn;
 
-  // Calcular puntos por participante
-  const puntos = {};
-  const resumen = [];
+  // Calcular puntos por participante de ESTA pregunta
+  const deltaPuntos = {};
+  const resumenNuevo = [];
   Object.entries(respuestas).forEach(([uid, r]) => {
     const esCorrecta = r.idx === correcta;
-    const rapidez = Math.max(0, 1 - (r.ts - abreEn) / (q.duracion * 1000)); // 0..1
+    const rapidez = Math.max(0, 1 - (r.ts - abreEn) / (q.duracion * 1000));
     const pts = esCorrecta ? Math.round(1000 + 500 * rapidez) : 0;
-    puntos[uid] = (puntos[uid] || 0) + pts;
-    resumen.push({ uid, nombre: r.nombre, esCorrecta, pts, ts: r.ts });
+    deltaPuntos[uid] = pts;
+    resumenNuevo.push({ uid, nombre: r.nombre, esCorrecta, pts, ts: r.ts });
   });
 
-  // Guardar puntos acumulados de la sesión
-  await set(ref(rtdb, RTDB_PATHS.puntos.replace('${uid}', '')), puntos);
-  // Resumen para ranking/podio
-  resumen.sort((a, b) => b.pts - a.pts);
-  await set(ref(rtdb, RTDB_PATHS.resumen), resumen.slice(0, 20));
+  // SUMA atómica a puntos de sesión (transacción por uid)
+  for (const [uid, delta] of Object.entries(deltaPuntos)) {
+    if (delta <= 0) continue;
+    await runTransaction(ref(rtdb, RTDB_PATHS.puntos(uid)), (current) => (current || 0) + delta);
+  }
+
+  // Resumen acumulado = top de puntos totales de sesión
+  // Leer puntos actuales de todos
+  const puntosSnap = await get(ref(rtdb, RTDB_PATHS.puntosRoot));
+  const puntosTotales = puntosSnap.val() || {};
+  const ranking = Object.entries(puntosTotales)
+    .map(([uid, pts]) => ({ uid, pts, nombre: resumenNuevo.find(r => r.uid === uid)?.nombre || uid }))
+    .sort((a, b) => b.pts - a.pts);
+  await set(ref(rtdb, RTDB_PATHS.resumen), ranking.slice(0, 20));
 
   // Revelar correcta en preguntaActual
   await update(ref(rtdb, RTDB_PATHS.preguntaActual), { correcta, estado: 'revelada' });
@@ -265,16 +319,31 @@ export async function mostrarRanking() {
   await writePhase('ranking');
 }
 
-/** Finalizar sesión: acumular rankingGlobal + snapshot Firestore + podio — idempotente */
+/** Finalizar sesión: acumular rankingGlobal + snapshot Firestore + podio — idempotente, atómico en acumulada */
 export async function finalizarSesion() {
-  await assertStaff();
-  if (localState.acumulada) return; // idempotente
+  await assertCoordinator(); // solo coordinador finaliza y escribe historico
+  if (localState.acumulada) return;
+
+  // Transacción atómica sobre acumulada: solo uno pasa
+  await runTransaction(ref(rtdb, RTDB_PATHS.acumulada), (current) => {
+    if (current === true) return; // ya hecho
+    return true;
+  });
 
   // 1. Acumular en rankingGlobal con transacción atómica por uid
+  // Usar MISMA clave que datos existentes (email sanitizado)
   const puntosSesion = localState.puntos;
+  // Leer miembros para email/nombre/foto
+  const membersSnap = await getDocs(collection(fsdb, 'members'));
+  const memberByUid = {};
+  membersSnap.forEach(d => { memberByUid[d.id] = d.data(); });
+
   for (const [uid, pts] of Object.entries(puntosSesion)) {
-    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(uid)), (current) => {
-      const prev = (current || { pts: 0 });
+    if (!pts) continue;
+    const m = memberByUid[uid];
+    const key = m?.email ? m.email.replace(/[.#$[\]]/g, '_') : uid;
+    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(key)), (current) => {
+      const prev = current || { pts: 0, nombre: m?.nombre || 'Anónimo', email: m?.email || '', fotoUrl: m?.fotoUrl || '' };
       return { ...prev, pts: (prev.pts || 0) + pts, ultimaAsamblea: serverNow() };
     });
   }
@@ -287,25 +356,27 @@ export async function finalizarSesion() {
     puntosSesion,
     resumen: localState.resumen,
     totalPreguntas: localState.cola.length,
-    creadoEn: fsTS
+    creadoEn: fsTS()
   });
   await setDoc(doc(fsdb, 'historico', String(hoy.getFullYear()), 'asambleas_kahoot', hoyStr), {
     fecha: hoyStr,
     puntosSesion,
     resumen: localState.resumen,
     totalPreguntas: localState.cola.length,
-    creadoEn: fsTS
+    creadoEn: fsTS()
   });
 
-  // 3. Marcar acumulada y fase podio
-  await set(ref(rtdb, RTDB_PATHS.acumulada), true);
+  // 3. Fase podio
   await writePhase('podio');
 }
 
-/** Apagar asamblea (reset completo) */
+/** Apagar asamblea (reset suave — no borra nodo padre para no romper reglas viejas) */
 export async function apagarAsamblea() {
   await assertStaff();
-  await remove(ref(rtdb, 'asamblea'));
+  await remove(ref(rtdb, 'asamblea/sesion'));
+  await remove(ref(rtdb, 'asamblea/preguntaActual'));
+  await remove(ref(rtdb, 'asamblea/respuestas'));
+  await remove(ref(rtdb, 'asamblea/conectados'));
   await writePhase('apagada');
 }
 
@@ -313,17 +384,19 @@ export async function apagarAsamblea() {
 
 /** Registrar conexión (lobby) */
 export async function conectar(uid, nombre) {
-  await set(ref(rtdb, RTDB_PATHS.conectados(uid)), { nombre, ts: rtdbTS });
+  await set(ref(rtdb, RTDB_PATHS.conectados(uid)), { nombre, ts: rtdbTS() });
   onDisconnect(ref(rtdb, RTDB_PATHS.conectados(uid))).remove();
 }
 
-/** Responder: write-once en respuestas/{qid}/{uid} */
+/** Responder: write-once en respuestas/{qid}/{uid} con serverTimestamp */
 export async function responder(qid, uid, idx) {
   const r = ref(rtdb, RTDB_PATHS.respuesta(qid, uid));
   const snap = await get(r);
   if (snap.exists()) throw new Error('Ya respondiste');
   if (localState.fase !== 'pregunta') throw new Error('Pregunta cerrada');
-  await set(r, { idx, ts: serverNow(), nombre: (await getUserName(uid)) });
+  // Validar que qid coincide con pregunta actual
+  if (localState.preguntaActual?.id !== qid) throw new Error('Pregunta inválida');
+  await set(r, { idx, ts: rtdbTS(), nombre: (await getUserName(uid)) });
 }
 async function getUserName(uid) {
   const snap = await getDoc(doc(fsdb, 'members', uid));

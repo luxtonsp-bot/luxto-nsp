@@ -49,8 +49,8 @@ service cloud.firestore {
     match /historico/{anio}/{collection}/{docId} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
     // Docs de año (historico/2026) y doc raíz: necesarios para collectionGroup('historico') y listados de años
     match /historico/{anio} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
-    match /suggestions/{id} { allow read: if true; allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
-    match /feedback/{id} { allow read: if true; allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
+    match /suggestions/{id} { allow read: if isStaff(); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
+    match /feedback/{id} { allow read: if isStaff(); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
     match /attendance_log/{docId} { allow read: if isAuth() && resource.data.uid == request.auth.uid; allow write: if false; }
     // Banco de preguntas (contiene "correcta" — solo staff read/write)
     match /preguntas/{id} {
