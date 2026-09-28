@@ -157,24 +157,35 @@ async function assertCoordinator() {
   if (!user || !(await isCoordinator(user.uid))) throw new Error('Solo coordinador');
 }
 
-/** Registrar este cliente como host (solo uno gana) */
+/** Registrar este cliente como host (solo uno gana) — transacción atómica + onDisconnect */
 export async function claimHost() {
   await assertStaff();
   const uid = auth.currentUser.uid;
-  const r = ref(rtdb, RTDB_PATHS.hostUid);
-  const snap = await get(r);
-  if (snap.exists() && snap.val() !== uid) return false;
-  await set(r, uid);
-  return true;
+  const hostRef = ref(rtdb, RTDB_PATHS.hostUid);
+
+  // Transacción atómica: solo escribe si está vacío o es el mismo uid
+  const result = await runTransaction(hostRef, (current) => {
+    if (current === null || current === uid) return uid;
+    return current; // aborta, devuelve valor actual
+  });
+
+  const won = result.committed && result.snapshot.val() === uid;
+  if (won) {
+    // Auto-liberar si cierra pestaña / pierde conexión
+    onDisconnect(hostRef).remove();
+  }
+  return won;
 }
 
-/** Liberar host */
+/** Liberar host (solo si soy yo) */
 export async function releaseHost() {
   await assertStaff();
   const uid = auth.currentUser.uid;
-  const r = ref(rtdb, RTDB_PATHS.hostUid);
-  const snap = await get(r);
-  if (snap.val() === uid) await remove(r);
+  const hostRef = ref(rtdb, RTDB_PATHS.hostUid);
+  await runTransaction(hostRef, (current) => {
+    if (current === uid) return null; // libera
+    return current; // no toca
+  });
 }
 
 /** Verificar si soy el host actual */
@@ -223,6 +234,36 @@ export async function startSesion() {
   await assertStaff();
   if (localState.fase !== 'lobby') throw new Error('Debe estar en lobby');
   await writePhase('countdown');
+
+  // El host agenda countdown → pregunta (5s) y cierre automático
+  if (isHost()) scheduleHostActions();
+}
+
+/** Agenda acciones del host: countdown→pregunta y cierre a cierraEn */
+function scheduleHostActions() {
+  const idx = localState.indice;
+  const cola = localState.cola;
+  if (idx >= cola.length) return;
+
+  const p = cola[idx];
+  const abreEn = serverNow();
+  const cierraEn = abreEn + (p.duracion || 20) * 1000;
+
+  // countdown → pregunta (5s)
+  const toPregunta = Math.max(0, 5000);
+  setTimeout(async () => {
+    if (isHost() && (await getState()).fase === 'countdown') {
+      await nextPregunta();
+    }
+  }, toPregunta);
+
+  // Cierre automático en cierraEn
+  const toClose = Math.max(0, cierraEn - serverNow());
+  setTimeout(async () => {
+    if (isHost() && (await getState()).fase === 'pregunta') {
+      await cerrarPregunta();
+    }
+  }, toClose + 5000); // suma los 5s del countdown
 }
 
 /** Avanzar a siguiente pregunta (o iniciar primera) — lee correcta de Firestore */
@@ -259,7 +300,7 @@ export async function nextPregunta() {
 
   await writePhase('pregunta');
 
-  // Programar cierre automático en cierraEn (host lo ejecuta)
+  // El host agenda cierre automático en cierraEn
   if (isHost()) {
     const delay = Math.max(0, cierraEn - serverNow());
     setTimeout(async () => {
@@ -270,14 +311,24 @@ export async function nextPregunta() {
   }
 }
 
-/** Cerrar pregunta actual (calcular puntos, guardar resumen) — idempotente, SUMA a puntos de sesión */
+/** Cerrar pregunta actual (calcular puntos, guardar resumen) — IDEMPOTENTE */
 export async function cerrarPregunta() {
   await assertStaff();
   if (localState.fase !== 'pregunta') throw new Error('No hay pregunta activa');
 
   const q = localState.preguntaActual;
-  const respuestas = localState.respuestas[q.id] || {};
-  const claveSnap = await get(ref(rtdb, RTDB_PATHS.claves(q.id)));
+  const qid = q.id;
+
+  // Marca idempotente: transacción en sesion/cerradas/{qid}
+  const cerradaRef = ref(rtdb, `asamblea/sesion/cerradas/${qid}`);
+  const txResult = await runTransaction(cerradaRef, (current) => {
+    if (current === true) return; // ya cerrada
+    return true;
+  });
+  if (!txResult.committed) return; // otro lo hizo
+
+  const respuestas = localState.respuestas[qid] || {};
+  const claveSnap = await get(ref(rtdb, RTDB_PATHS.claves(qid)));
   const correcta = claveSnap.val()?.correcta ?? 0;
   const abreEn = q.abreEn;
 
@@ -292,18 +343,20 @@ export async function cerrarPregunta() {
     resumenNuevo.push({ uid, nombre: r.nombre, esCorrecta, pts, ts: r.ts });
   });
 
-  // SUMA atómica a puntos de sesión (transacción por uid)
+  // SUMA atómica a puntos de sesión (transacción por uid) — guarda {pts, nombre}
   for (const [uid, delta] of Object.entries(deltaPuntos)) {
     if (delta <= 0) continue;
-    await runTransaction(ref(rtdb, RTDB_PATHS.puntos(uid)), (current) => (current || 0) + delta);
+    await runTransaction(ref(rtdb, RTDB_PATHS.puntos(uid)), (current) => {
+      const prev = current || { pts: 0, nombre: resumenNuevo.find(r => r.uid === uid)?.nombre || uid };
+      return { pts: prev.pts + delta, nombre: prev.nombre };
+    });
   }
 
   // Resumen acumulado = top de puntos totales de sesión
-  // Leer puntos actuales de todos
   const puntosSnap = await get(ref(rtdb, RTDB_PATHS.puntosRoot));
   const puntosTotales = puntosSnap.val() || {};
   const ranking = Object.entries(puntosTotales)
-    .map(([uid, pts]) => ({ uid, pts, nombre: resumenNuevo.find(r => r.uid === uid)?.nombre || uid }))
+    .map(([uid, data]) => ({ uid, pts: data.pts, nombre: data.nombre }))
     .sort((a, b) => b.pts - a.pts);
   await set(ref(rtdb, RTDB_PATHS.resumen), ranking.slice(0, 20));
 
@@ -319,26 +372,25 @@ export async function mostrarRanking() {
   await writePhase('ranking');
 }
 
-/** Finalizar sesión: acumular rankingGlobal + snapshot Firestore + podio — idempotente, atómico en acumulada */
+/** Finalizar sesión: acumular rankingGlobal + snapshot Firestore + podio — IDEMPOTENTE REAL */
 export async function finalizarSesion() {
   await assertCoordinator(); // solo coordinador finaliza y escribe historico
-  if (localState.acumulada) return;
 
-  // Transacción atómica sobre acumulada: solo uno pasa
-  await runTransaction(ref(rtdb, RTDB_PATHS.acumulada), (current) => {
+  // Transacción atómica sobre acumulada: revisa committed
+  const txResult = await runTransaction(ref(rtdb, RTDB_PATHS.acumulada), (current) => {
     if (current === true) return; // ya hecho
     return true;
   });
+  if (!txResult.committed) return; // otro lo hizo o falló
 
-  // 1. Acumular en rankingGlobal con transacción atómica por uid
-  // Usar MISMA clave que datos existentes (email sanitizado)
+  // 1. Acumular en rankingGlobal con transacción atómica por uid (email-sanitized key)
   const puntosSesion = localState.puntos;
-  // Leer miembros para email/nombre/foto
   const membersSnap = await getDocs(collection(fsdb, 'members'));
   const memberByUid = {};
   membersSnap.forEach(d => { memberByUid[d.id] = d.data(); });
 
-  for (const [uid, pts] of Object.entries(puntosSesion)) {
+  for (const [uid, data] of Object.entries(puntosSesion)) {
+    const pts = data?.pts;
     if (!pts) continue;
     const m = memberByUid[uid];
     const key = m?.email ? m.email.replace(/[.#$[\]]/g, '_') : uid;

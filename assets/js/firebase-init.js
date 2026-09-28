@@ -68,7 +68,7 @@ export function esc(str) {
 // Timestamp del servidor (Firestore)
 export const fsTS = serverTimestamp;
 
-// Timestamp del servidor (RTDB) — función, no const
+// Timestamp del servidor (RTDB) — función que devuelve el sentinel
 export function rtdbTS() { return rtdbServerTS; }
 
 // Offset de tiempo servidor RTDB (para timers precisos)

@@ -3,6 +3,7 @@
     ".read": false,
     ".write": false,
     "asamblea": {
+      ".read": true,
       ".write": false,
       "sesion": {
         ".write": "root.child('admins').child(auth.uid).exists()",
@@ -31,9 +32,6 @@
         },
         "acumulada": {
           ".write": "root.child('admins').child(auth.uid).exists()"
-        },
-        "hostUid": {
-          ".write": "root.child('admins').child(auth.uid).exists()"
         }
       },
       "preguntaActual": {
@@ -43,24 +41,18 @@
       "respuestas": {
         "$qid": {
           "$uid": {
-            ".validate": "newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && newData.child('ts').val() === now && !data.exists() && $qid === root.child('asamblea').child('preguntaActual').child('id').val()",
-            ".write": "auth.uid === $uid && root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' && now < root.child('asamblea').child('preguntaActual').child('cierraEn').val()"
+            ".write": "auth.uid === $uid && root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && !data.exists() && now < root.child('asamblea').child('preguntaActual').child('cierraEn').val()"
           }
         }
       },
       "conectados": {
         "$uid": {
-          ".write": "auth.uid === $uid",
-          ".read": true
+          ".write": "auth.uid === $uid"
         }
-      },
-      "resumen": {
-        ".read": true,
-        ".write": "root.child('admins').child(auth.uid).exists()"
       }
     },
     "rankingGlobal": {
-      "$key": {
+      "$uid": {
         ".read": true,
         ".write": "root.child('admins').child(auth.uid).exists()"
       }
@@ -70,22 +62,6 @@
         ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
         ".write": "root.child('admins').child(auth.uid).exists()"
       }
-    },
-    "borradores": {
-      ".read": true,
-      ".write": "root.child('admins').child(auth.uid).exists()"
-    },
-    "activa": {
-      ".read": true,
-      ".write": "root.child('admins').child(auth.uid).exists()"
-    },
-    "estado": {
-      ".read": true,
-      ".write": "root.child('admins').child(auth.uid).exists()"
-    },
-    "preguntaNum": {
-      ".read": true,
-      ".write": "root.child('admins').child(auth.uid).exists()"
     }
   }
 }

@@ -165,6 +165,12 @@ function escucharAsamblea() {
     actualizarEstadoUI(activa, state);
   });
 
+  // Listener cola
+  engineOn('cola', () => renderColaSesion());
+
+  // Listener índice
+  engineOn('indice', () => renderColaSesion());
+
   // Listener preguntaActual
   engineOn('preguntaActual', (state) => {
     const p = state.preguntaActual;
@@ -205,6 +211,8 @@ function actualizarEstadoUI(activa, state) {
   const sub = document.getElementById("estadoSub");
   const btnFin = document.getElementById("btnFinalizar");
   const btnReset = document.getElementById("btnResetRanking");
+  const btnIniciar = document.getElementById("btnIniciarSesion");
+  const colaCard = document.getElementById("cola-sesion-card");
 
   if (!label || !sub) return;
 
@@ -227,12 +235,31 @@ function actualizarEstadoUI(activa, state) {
     sub.textContent = faseLabels[state.fase] || "Los miembros ya pueden ingresar a la asamblea";
     if (btnFin) btnFin.style.display = esCoordinador ? "inline-flex" : "none";
     if (btnReset) btnReset.style.display = "inline-flex";
+    // Mostrar botón "Iniciar sesión" solo en lobby y si soy host
+    if (btnIniciar) {
+      if (state.fase === 'lobby' && isHost()) {
+        btnIniciar.hidden = false;
+      } else {
+        btnIniciar.hidden = true;
+      }
+    }
+    // Mostrar cola de sesión si hay preguntas cargadas
+    if (colaCard) {
+      if (state.cola && state.cola.length > 0) {
+        colaCard.hidden = false;
+        renderColaSesion();
+      } else {
+        colaCard.hidden = true;
+      }
+    }
   } else {
     label.textContent = "⚫ Inactivo";
     label.className = "estado-label off";
     sub.textContent = "Activa el modo, sube preguntas, y controla todo desde el proyector";
     if (btnFin) btnFin.style.display = "none";
     if (btnReset) btnReset.style.display = "none";
+    if (btnIniciar) btnIniciar.hidden = true;
+    if (colaCard) colaCard.hidden = true;
   }
 }
 
@@ -273,13 +300,13 @@ window.loadPreguntasBanco = async function () {
     }
     container.innerHTML = preguntas.map(p => `
       <div class="banco-item" style="background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:8px; display:flex; gap:12px; align-items:flex-start;">
-        <input type="checkbox" data-id="${p.id}" style="margin-top:4px;">
+        <input type="checkbox" data-id="${esc(p.id)}" style="margin-top:4px;">
         <div style="flex:1;">
           <div style="font-weight:600; margin-bottom:4px;">${esc(p.texto)}</div>
-          <div style="font-size:12px; color:var(--muted);">${(p.opciones || []).map((op,i)=>`${String.fromCharCode(65+i)}. ${op}`).join(' · ')}</div>
+          <div style="font-size:12px; color:var(--muted);">${(p.opciones || []).map((op,i)=>`${String.fromCharCode(65+i)}. ${esc(op)}`).join(' · ')}</div>
           <div style="font-size:11px; color:var(--muted);">⏱ ${p.duracion}s · ${p.correcta != null ? 'Correcta: '+String.fromCharCode(65+p.correcta) : 'Sin correcta'}</div>
         </div>
-        <button class="btn btn-danger" style="font-size:11px;padding:6px 10px;" onclick="deletePreguntaAdmin('${p.id}')">🗑</button>
+        <button class="btn btn-danger" style="font-size:11px;padding:6px 10px;" onclick="deletePreguntaAdmin('${esc(p.id)}')">🗑</button>
       </div>
     `).join('');
   } catch (e) {
@@ -329,6 +356,10 @@ window.cargarColaSesion = async function () {
     await setSesionCola(selected);
     toast(`✅ ${selected.length} preguntas cargadas a la sesión`, "ok");
     window.loadPreguntasBanco();
+    // Mostrar cola card
+    const colaCard = document.getElementById("cola-sesion-card");
+    if (colaCard) colaCard.hidden = false;
+    renderColaSesion();
   } catch (e) {
     toast("Error: " + e.message, "err");
   }
@@ -340,13 +371,32 @@ window.iniciarSesion = async function () {
   try {
     await startSesion();
     toast("🟢 Sesión iniciada — cuenta regresiva", "ok");
-    setTimeout(async () => {
-      if (isHost()) await nextPregunta();
-    }, 5000);
+    // El host agenda countdown→pregunta y cierre automático via engine
   } catch (e) {
     toast("Error: " + e.message, "err");
   }
 };
+
+/* ── Mostrar cola de preguntas seleccionadas (orden) ───────────── */
+function renderColaSesion() {
+  const state = engineState();
+  const container = document.getElementById("cola-sesion");
+  if (!container) return;
+  const cola = state.cola || [];
+  const idx = state.indice || 0;
+  if (cola.length === 0) {
+    container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay preguntas en la sesión. Carga desde el banco.</p>';
+    return;
+  }
+  container.innerHTML = cola.map((p, i) => `
+    <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:${i < idx ? 'rgba(45,186,111,.1)' : i === idx ? 'rgba(245,197,24,.1)' : 'rgba(255,255,255,.04)'}; border:1px solid ${i < idx ? 'var(--ok)' : i === idx ? 'var(--y)' : 'var(--border)'}; border-radius:8px; margin-bottom:6px;">
+      <span style="font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--y); min-width:28px;">${i + 1}</span>
+      <span style="flex:1; font-weight:600;">${esc(p.texto)}</span>
+      <span style="font-size:12px; color:var(--muted);">⏱ ${p.duracion}s</span>
+      ${i < idx ? '<span style="color:var(--ok); font-weight:700;">✓</span>' : i === idx ? '<span class="live-badge">EN VIVO</span>' : ''}
+    </div>
+  `).join('');
+}
 
 /* ── Lanzar/avanzar pregunta (usa engine) ───────────────────── */
 window.lanzarPregunta = async function () {
