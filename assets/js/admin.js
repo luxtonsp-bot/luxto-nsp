@@ -89,19 +89,8 @@ onAuthStateChanged(auth, async (user) => {
       const rol = memberSnap.data().rol;
       // Roles con acceso al panel admin: servidor, apoyo, coordinador
       if (rol !== "servidor" && rol !== "apoyo" && rol !== "coordinador") throw new Error("Not authorized");
-      // Si es coordinador, mostrar tabs de gestión
-      if (rol === "coordinador") {
-        document.getElementById("gestion-lideres").style.display = "block";
-        document.getElementById("sugerencias-feedback").style.display = "block";
-        document.getElementById("tab-gestion-lideres").style.display = "inline-flex";
-        document.getElementById("tab-sugerencias-feedback").style.display = "inline-flex";
-      } else {
-        // Servidor/Apoyo: solo modo asamblea
-        document.getElementById("gestion-lideres").style.display = "none";
-        document.getElementById("sugerencias-feedback").style.display = "none";
-        document.getElementById("tab-gestion-lideres").style.display = "none";
-        document.getElementById("tab-sugerencias-feedback").style.display = "none";
-      }
+      // Aplicar permisos según rol (centralizado)
+      applyRolePermissions(rol);
       // Guardar rol para usar en UI (botón finalizar asamblea)
       window._userRol = rol;
     } catch (e) {
@@ -112,11 +101,7 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     // Admin hardcodeado → tratar como coordinador
     window._userRol = "coordinador";
-    // Mostrar tabs de coordinador
-    document.getElementById("gestion-lideres").style.display = "block";
-    document.getElementById("sugerencias-feedback").style.display = "block";
-    document.getElementById("tab-gestion-lideres").style.display = "inline-flex";
-    document.getElementById("tab-sugerencias-feedback").style.display = "inline-flex";
+    applyRolePermissions("coordinador");
   }
   inicializar();
 });
@@ -849,4 +834,32 @@ window.onAdminTabChange = function (tabName) {
     if (window.loadSuggestions) window.loadSuggestions();
     if (window.loadFeedback) window.loadFeedback();
   }
+};
+
+/* ── Permisos por rol (centralizado) ── */
+function applyRolePermissions(rol) {
+  const isCoord = rol === "coordinador";
+  // Botones de tabs: usar hidden (respeta CSS [hidden]{display:none!important})
+  const tabs = ["tab-gestion-lideres", "tab-sugerencias-feedback"];
+  tabs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !isCoord;
+  });
+  // Paneles: NO tocar style.display — solo CSS .tab-content/.active los controla
+  // Guardar rol para validar en openTab
+  window._userRol = rol;
+}
+
+/* ── openTab protegido ── */
+window.openTab = function(evt, tabName) {
+  // Bloquear tabs de coordinador si no es coordinador
+  const restricted = ["gestion-lideres", "sugerencias-feedback"];
+  if (restricted.includes(tabName) && window._userRol !== "coordinador") {
+    return; // No hace nada
+  }
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+  document.getElementById(tabName).classList.add('active');
+  evt.currentTarget.classList.add('active');
+  if (window.onAdminTabChange) window.onAdminTabChange(tabName);
 };
