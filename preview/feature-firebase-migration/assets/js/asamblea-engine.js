@@ -46,7 +46,8 @@ let localState = {
   puntos: {},
   resumen: [],
   acumulada: false,
-  hostUid: null
+  hostUid: null,
+  sesionId: null
 };
 
 const listeners = new Map(); // path -> { off, callbacks[] }
@@ -126,6 +127,12 @@ export async function initAsambleaEngine() {
   onValue(ref(rtdb, RTDB_PATHS.hostUid), snap => {
     localState.hostUid = snap.val();
     notify('hostUid');
+  });
+
+  // Listener sesionId
+  onValue(ref(rtdb, RTDB_PATHS.sesionId), snap => {
+    localState.sesionId = snap.val();
+    notify('sesionId');
   });
 }
 
@@ -221,11 +228,15 @@ export async function setSesionCola(preguntaIds) {
     const p = snap.data();
     preguntas.push({ id: snap.id, texto: p.texto, opciones: p.opciones, duracion: p.duracion });
   }
+  // Generar sesionId único para esta sesión (timestamp + random)
+  const sesionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  await set(ref(rtdb, RTDB_PATHS.sesionId), sesionId);
   await set(ref(rtdb, RTDB_PATHS.cola), preguntas);
   await set(ref(rtdb, RTDB_PATHS.indice), 0);
   await writePhase('lobby');
   await remove(ref(rtdb, 'asamblea/respuestas'));
   await remove(ref(rtdb, 'asamblea/conectados'));
+  await remove(ref(rtdb, 'asamblea/sesion/cerradas')); // limpiar idempotency keys de sesiones previas
   await set(ref(rtdb, RTDB_PATHS.acumulada), false);
 }
 
@@ -237,6 +248,9 @@ export async function startSesion() {
 
   // El host agenda countdown → pregunta (5s) y cierre automático
   if (isHost()) scheduleHostActions();
+
+  // Late host join: si alguien se une como host y ya pasó countdown, lanzar pregunta
+  // Esto se maneja en el listener de fase en admin.js/proyector.js
 }
 
 /** Agenda acciones del host: countdown→pregunta y cierre a cierraEn */
@@ -266,10 +280,50 @@ function scheduleHostActions() {
   }, toClose + 5000); // suma los 5s del countdown
 }
 
+/** Verificar y actuar si el host se une tarde (fase countdown/pregunta ya avanzada) */
+export async function checkLateHostJoin() {
+  if (!isHost()) return;
+  const state = getState();
+  if (state.fase === 'countdown') {
+    // Verificar si ya pasó el tiempo de countdown (5s)
+    const idx = state.indice;
+    const cola = state.cola;
+    if (idx < cola.length) {
+      const p = cola[idx];
+      const abreEn = p.abreEn || 0;
+      const now = serverNow();
+      if (now >= abreEn + 5000) {
+        // Ya debería haber pasado a pregunta, forzar nextPregunta
+        await nextPregunta();
+      }
+    }
+  } else if (state.fase === 'pregunta') {
+    // Verificar si ya pasó cierraEn
+    const p = state.preguntaActual;
+    if (p && p.cierraEn && serverNow() >= p.cierraEn) {
+      await cerrarPregunta();
+    }
+  }
+}
+
 /** Avanzar a siguiente pregunta (o iniciar primera) — lee correcta de Firestore */
 export async function nextPregunta() {
   await assertStaff();
-  const idx = localState.indice;
+  // Validar fase: solo desde lobby, revelada, ranking
+  if (!['lobby', 'revelada', 'ranking'].includes(localState.fase)) {
+    throw new Error(`No se puede lanzar pregunta desde fase: ${localState.fase}`);
+  }
+
+  // Transacción atómica sobre índice para evitar double-click
+  const idxRef = ref(rtdb, RTDB_PATHS.indice);
+  const txResult = await runTransaction(idxRef, (current) => {
+    const idx = current || 0;
+    if (idx >= (localState.cola?.length || 0)) return; // ya no hay más
+    return idx + 1;
+  });
+  if (!txResult.committed) return; // otro lo hizo o falló
+
+  const idx = txResult.snapshot.val() - 1;
   const cola = localState.cola;
   if (idx >= cola.length) { await writePhase('podio'); return; }
 
@@ -295,9 +349,6 @@ export async function nextPregunta() {
     cierraEn
   });
 
-  // Avanzar índice
-  await set(ref(rtdb, RTDB_PATHS.indice), idx + 1);
-
   await writePhase('pregunta');
 
   // El host agenda cierre automático en cierraEn
@@ -315,12 +366,13 @@ export async function nextPregunta() {
 export async function cerrarPregunta() {
   await assertStaff();
   if (localState.fase !== 'pregunta') throw new Error('No hay pregunta activa');
+  if (!localState.sesionId) throw new Error('sesionId no disponible');
 
   const q = localState.preguntaActual;
   const qid = q.id;
 
-  // Marca idempotente: transacción en sesion/cerradas/{qid}
-  const cerradaRef = ref(rtdb, `asamblea/sesion/cerradas/${qid}`);
+  // Marca idempotente: transacción en sesion/cerradas/{sesionId}/{qid}
+  const cerradaRef = ref(rtdb, RTDB_PATHS.cerradas(localState.sesionId, qid));
   const txResult = await runTransaction(cerradaRef, (current) => {
     if (current === true) return; // ya cerrada
     return true;

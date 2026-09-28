@@ -69,7 +69,7 @@ export function esc(str) {
 export const fsTS = serverTimestamp;
 
 // Timestamp del servidor (RTDB) — función que devuelve el sentinel
-export function rtdbTS() { return rtdbServerTS; }
+export function rtdbTS() { return rtdbServerTS(); }
 
 // Offset de tiempo servidor RTDB (para timers precisos)
 let serverTimeOffset = 0;
