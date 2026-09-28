@@ -10,8 +10,55 @@
  *   - Snapshot histórico al finalizar asamblea (asambleas_kahoot + historico)
  */
 
-import { auth, fsdb, rtdb, esc, serverNow, RTDB_PATHS, isStaff, isCoordinator, ref, onValue, set, update, remove, get, push, runTransaction, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, getDocs, serverTimestamp, writeBatch, onAuthStateChanged, signOut } from './firebase-init.js';
-import { initAsambleaEngine, on as engineOn, getState as engineState, claimHost, releaseHost, isHost, setSesionCola, startSesion, nextPregunta, cerrarPregunta, mostrarRanking, finalizarSesion, apagarAsamblea, listPreguntas, savePregunta, deletePregunta } from './asamblea-engine.js';
+import {
+  auth,
+  fsdb,
+  rtdb,
+  esc,
+  serverNow,
+  rtdbTS,
+  RTDB_PATHS,
+  isStaff,
+  isCoordinator,
+  ref,
+  onValue,
+  set,
+  update,
+  remove,
+  get,
+  push,
+  runTransaction,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  serverTimestamp,
+  writeBatch,
+  onAuthStateChanged,
+  signOut
+} from './firebase-init.js';
+import {
+  initAsambleaEngine,
+  on as engineOn,
+  getState as engineState,
+  claimHost,
+  releaseHost,
+  isHost,
+  setSesionCola,
+  startSesion,
+  nextPregunta,
+  cerrarPregunta,
+  mostrarRanking,
+  finalizarSesion,
+  apagarAsamblea,
+  listPreguntas,
+  savePregunta,
+  deletePregunta
+} from './asamblea-engine.js';
 
 /* ── Admins hardcodeados (seguridad temporal, migrar a reglas de Firestore en el futuro) ── */
 const ADMINS = [
@@ -75,24 +122,6 @@ async function inicializar() {
     toast("Error al inicializar panel", "err");
   }
 }
-  await signOut(auth);
-  window.location.href = "index.html";
-};
-
-async function inicializar() {
-  try {
-    // Inicializar engine de asamblea
-    await initAsambleaEngine();
-    // Registrar como host (solo uno gana)
-    await claimHost();
-    escucharAsamblea();
-    escucharBorradores();
-    escucharRankingGlobal();
-  } catch (e) {
-    console.error("Error inicializando:", e);
-    toast("Error al inicializar panel", "err");
-  }
-}
 
 /* ── Utils ───────────────────────────────────────────── */
 function toast(msg, tipo = "") {
@@ -115,7 +144,6 @@ function convertirUrlDrive(url) {
 
 function avatarFallbackAdmin(nombre) {
   const inicial = (nombre || "?").charAt(0).toUpperCase();
-  // Base64 data URI — evita problemas de escape de # / http://
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='#2a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='#F5C518'>${inicial}</text></svg>`;
   return "data:image/svg+xml;base64," + btoa(svg);
 }
@@ -125,42 +153,6 @@ function escaparHTML(str) {
   div.textContent = str;
   return div.innerHTML;
 }
-
-/* ── Auth ────────────────────────────────────────────── */
-onAuthStateChanged(auth, async (user) => {
-  if (!user) { window.location.href = "login.html"; return; }
-
-  // Verificar si es admin (hardcodeado por ahora)
-  if (!ADMINS.includes(user.email)) {
-    // Permitir servidores, apoyos y coordinadores (verificar en Firestore)
-    try {
-      const memberSnap = await getDoc(doc(fsdb, "members", user.uid));
-      if (!memberSnap.exists()) throw new Error("No member doc");
-      const rol = memberSnap.data().rol;
-      // Roles con acceso al panel admin: servidor, apoyo, coordinador
-      if (rol !== "servidor" && rol !== "apoyo" && rol !== "coordinador") throw new Error("Not authorized");
-      // Aplicar permisos según rol (centralizado)
-      applyRolePermissions(rol);
-      // Guardar rol para usar en UI (botón finalizar asamblea)
-      window._userRol = rol;
-    } catch (e) {
-      toast("Acceso restringido", "err");
-      setTimeout(() => window.location.href = "dashboard.html", 2000);
-      return;
-    }
-  } else {
-    // Admin hardcodeado → tratar como coordinador
-    window._userRol = "coordinador";
-    applyRolePermissions("coordinador");
-  }
-  inicializar();
-});
-
-window.cerrarSesion = async () => {
-  await releaseHost();
-  await signOut(auth);
-  window.location.href = "index.html";
-};
 
 /* ── Escuchar estado de la asamblea (RTDB via engine) ───────────────── */
 function escucharAsamblea() {
@@ -216,14 +208,12 @@ function actualizarEstadoUI(activa, state) {
 
   if (!label || !sub) return;
 
-  // Verificar si es coordinador (para botón finalizar)
   let esCoordinador = false;
   try {
     esCoordinador = window._userRol === "coordinador";
   } catch (e) { /* ignore */ }
 
   if (activa) {
-    // Mostrar fase actual
     const faseLabels = {
       lobby: '🟡 Lobby — esperando participantes',
       countdown: '🟠 Cuenta regresiva...',
@@ -253,7 +243,6 @@ window.toggleModoAsamblea = async function (activa) {
   document.getElementById("toggleAsamblea").checked = activa;
   try {
     if (activa) {
-      // Crear nueva sesión en lobby
       await set(ref(rtdb, RTDB_PATHS.fase), 'lobby');
       await remove(ref(rtdb, 'asamblea/respuestas'));
       await remove(ref(rtdb, 'asamblea/conectados'));
@@ -312,7 +301,6 @@ window.savePreguntaAdmin = async function () {
     await savePregunta({ texto, opciones, correcta, duracion });
     toast("✅ Pregunta guardada en banco", "ok");
     window.loadPreguntasBanco();
-    // Limpiar formulario
     document.getElementById("npTexto").value = "";
     ["opA","opB","opC","opD"].forEach(id => document.getElementById(id).value = "");
     document.querySelector('input[name="correcta"][value="0"]').checked = true;
@@ -352,7 +340,6 @@ window.iniciarSesion = async function () {
   try {
     await startSesion();
     toast("🟢 Sesión iniciada — cuenta regresiva", "ok");
-    // Countdown 5s en proyector, luego nextPregunta()
     setTimeout(async () => {
       if (isHost()) await nextPregunta();
     }, 5000);
@@ -395,10 +382,8 @@ window.siguientePregunta = async function () {
       toast("Error: " + e.message, "err");
     }
   } else {
-    // En fase pregunta o revelada, cerrar y avanzar
     try {
       await cerrarPregunta();
-      // Auto-avanzar a siguiente pregunta tras 2s
       setTimeout(async () => {
         if (isHost()) await nextPregunta();
       }, 2000);
@@ -410,7 +395,6 @@ window.siguientePregunta = async function () {
 
 /* ── Finalizar asamblea (con snapshot) — usa engine ─────────────────── */
 window.finalizarAsamblea = async function () {
-  // Solo coordinadores pueden finalizar
   try {
     const userSnap = await getDoc(doc(fsdb, "members", auth.currentUser.uid));
     if (!userSnap.exists() || userSnap.data().rol !== "coordinador") {
@@ -428,52 +412,6 @@ window.finalizarAsamblea = async function () {
   try {
     await finalizarSesion();
     toast("🏁 Asamblea finalizada · Snapshot guardado · RankingGlobal actualizado", "ok");
-  } catch (e) {
-    console.error(e);
-    toast("Error al finalizar asamblea", "err");
-  }
-};
-    const hoy = new Date();
-    const hoyStr = hoy.toISOString().split("T")[0]; // YYYY-MM-DD
-
-    await remove(ref(rtdb, "asamblea/respuestas"));
-    await update(ref(rtdb, "asamblea"), {
-      activa: false,
-      estado: "finalizada",
-      "preguntaActual/estado": "esperando"
-    });
-
-    // 2. Guardar snapshot en Firestore (asambleas_kahoot/{fecha})
-    const rankingSnap = await get(ref(rtdb, "rankingGlobal"));
-    const rankingData = rankingSnap.val() || {};
-
-    const preguntasSnap = await get(ref(rtdb, "borradores"));
-    const preguntasData = preguntasSnap.val() || {};
-
-    await setDoc(doc(fsdb, "asambleas_kahoot", hoyStr), {
-      fecha: hoyStr,
-      rankingGlobal: rankingData,
-      totalPreguntas: preguntaNumActual,
-      creadoEn: serverTimestamp()
-    });
-
-    // 3. Copiar a historico/{anio}/asambleas_kahoot/{fecha}
-    try {
-      await setDoc(doc(fsdb, "historico", String(hoy.getFullYear()), "asambleas_kahoot", hoyStr), {
-        fecha: hoyStr,
-        rankingGlobal: rankingData,
-        totalPreguntas: preguntaNumActual,
-        creadoEn: serverTimestamp()
-      });
-    } catch (historicoError) {
-      // Si falla el write a historico (ej. reglas de seguridad), avisar pero no deshacer lo anterior
-      console.error("Error guardando en histórico:", historicoError);
-      toast("Asamblea finalizada, pero no se pudo guardar en histórico (¿falta permiso de coordinador?)", "warn");
-      return;
-    }
-
-    document.getElementById("rankingCard").classList.remove("visible");
-    toast("🏁 Asamblea finalizada · Snapshot guardado", "ok");
   } catch (e) {
     console.error(e);
     toast("Error al finalizar asamblea", "err");
@@ -502,9 +440,9 @@ function mostrarRespuestasLive(resps, p) {
   lista.innerHTML = resps.map(r =>
     '<div class="resp-item">' +
       '<img class="resp-item-foto" src="' + avatarFallbackAdmin(r.nombre || "?") + '" alt="">' +
-      '<div class="resp-item-nombre">' + escaparHTML(r.nombre || r.email || "Anónimo") + '</div>' +
-      '<div class="resp-item-resp">' + (letras[r.respuesta] || "?") + '</div>' +
-      '<div class="resp-item-pts">' + (r.correcta ? "+" + (r.pts || 1) : "0") + '</div>' +
+      '<div class="resp-item-nombre">' + escaparHTML(r.nombre || "Anónimo") + '</div>' +
+      '<div class="resp-item-resp">' + (letras[r.idx] || "?") + '</div>' +
+      '<div class="resp-item-pts">' + (r.idx === p.correcta ? "+" + (r.pts || 1) : "0") + '</div>' +
     '</div>'
   ).join("");
 }
@@ -515,8 +453,8 @@ function actualizarRanking(respuestas) {
   const pts = {};
   Object.values(respuestas).forEach(bloque => {
     Object.values(bloque).forEach(r => {
-      const uid = r.uid || r.email || "anon";
-      pts[uid] = (pts[uid] || 0) + (r.correcta ? (r.pts || 1) : 0);
+      const uid = r.uid || "anon";
+      pts[uid] = (pts[uid] || 0) + (r.idx === r.correcta ? (r.pts || 1) : 0);
     });
   });
 
@@ -591,7 +529,6 @@ window.reiniciarRanking = async function () {
   const ok = confirm("¿Reiniciar el ranking de ESTA asamblea? Se borrarán todas las respuestas acumuladas.");
   if (!ok) return;
   await remove(ref(rtdb, "asamblea/respuestas"));
-  preguntaNumActual = 0;
   document.getElementById("statConectados").textContent = "0";
   document.getElementById("statAciertos").textContent = "0";
   document.getElementById("rankingCard").classList.remove("visible");
@@ -606,7 +543,6 @@ window.reiniciarRankingGlobal = async function () {
   if (!ok2) return;
   await remove(ref(rtdb, "rankingGlobal"));
   await remove(ref(rtdb, "asamblea/respuestas"));
-  preguntaNumActual = 0;
   toast("♻️ Ranking global reiniciado", "ok");
 };
 
@@ -705,7 +641,6 @@ window.loadMembersByRole = async function () {
       }
     });
 
-    // Ordenar alfabéticamente
     Object.values(roles).forEach(arr => arr.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "")));
 
     const roleLabels = { miembro: "Miembros", servidor: "Servidores", apoyo: "Apoyos", coordinador: "Coordinadores" };
@@ -811,10 +746,12 @@ window.updateMemberRole = async function (memberId, newRole) {
       fechaActualizacionRol: serverTimestamp()
     });
 
-    // Sincronizar /admins RTDB: write si servidor/apoyo/coordinador, remove si miembro
+    // Sincronizar /admins RTDB
     const staffRoles = ["servidor", "apoyo", "coordinador"];
     if (staffRoles.includes(newRole)) {
-      await set(ref(rtdb, RTDB_PATHS.admins(memberId)), { email: (await getDoc(doc(fsdb, "members", memberId))).data().email, rol: newRole, ts: rtdbTS });
+      const memberSnap = await getDoc(doc(fsdb, "members", memberId));
+      const email = memberSnap.exists() ? memberSnap.data().email : '';
+      await set(ref(rtdb, RTDB_PATHS.admins(memberId)), { email, rol: newRole, ts: rtdbTS() });
     } else {
       await remove(ref(rtdb, RTDB_PATHS.admins(memberId)));
     }
@@ -838,10 +775,6 @@ window.updateMemberRole = async function (memberId, newRole) {
 };
 
 /* ── Sugerencias y Feedback ────────────────────────── */
-// Los docs migrados del Excel usan campos en inglés: name, suggestion, comment, rating,
-// created_at (ISO string), date_sent/week, assembly_date.
-// Los nuevos (desde la web) usan: tema, descripcion, comentario, puntuacion, createdAt (Timestamp).
-// Estas helpers leen ambos esquemas.
 function sugerenciaTema(d)  { return d.tema || d.suggestion_tema || "Sin tema"; }
 function sugerenciaDesc(d)  { return d.descripcion || d.suggestion || "Sin descripción"; }
 function feedbackComent(d)  { return d.comentario || d.comment || "Sin comentario"; }
@@ -852,7 +785,6 @@ function feedbackPuntos(d)  {
   return n;
 }
 function docFecha(d) {
-  // createdAt (Timestamp modular), created_at (ISO string) o fechaCreacion (Timestamp compat)
   if (d.createdAt?.seconds) return new Date(d.createdAt.seconds * 1000).toLocaleString();
   if (d.fechaCreacion?.seconds) return new Date(d.fechaCreacion.seconds * 1000).toLocaleString();
   if (d.created_at) {
@@ -876,7 +808,6 @@ window.loadSuggestions = async function loadSuggestions() {
       return;
     }
 
-    // Ordenar por fecha descendente en cliente (los docs tienen created_at de tipos distintos)
     const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     docs.sort((a, b) => {
       const fa = a.createdAt?.seconds || (a.created_at ? new Date(a.created_at).getTime() / 1000 : 0) || 0;
@@ -914,7 +845,6 @@ window.loadFeedback = async function loadFeedback() {
       return;
     }
 
-    // Ordenar por fecha descendente en cliente
     const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     docs.sort((a, b) => {
       const fa = a.createdAt?.seconds || (a.created_at ? new Date(a.created_at).getTime() / 1000 : 0) || 0;
@@ -950,29 +880,27 @@ window.onAdminTabChange = function (tabName) {
   } else if (tabName === 'sugerencias-feedback') {
     if (window.loadSuggestions) window.loadSuggestions();
     if (window.loadFeedback) window.loadFeedback();
+  } else if (tabName === 'asamblea') {
+    if (window.loadPreguntasBanco) window.loadPreguntasBanco();
   }
 };
 
 /* ── Permisos por rol (centralizado) ── */
 function applyRolePermissions(rol) {
   const isCoord = rol === "coordinador";
-  // Botones de tabs: usar hidden (respeta CSS [hidden]{display:none!important})
   const tabs = ["tab-gestion-lideres", "tab-sugerencias-feedback"];
   tabs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.hidden = !isCoord;
   });
-  // Paneles: NO tocar style.display — solo CSS .tab-content/.active los controla
-  // Guardar rol para validar en openTab
   window._userRol = rol;
 }
 
 /* ── openTab protegido ── */
 window.openTab = function(evt, tabName) {
-  // Bloquear tabs de coordinador si no es coordinador
   const restricted = ["gestion-lideres", "sugerencias-feedback"];
   if (restricted.includes(tabName) && window._userRol !== "coordinador") {
-    return; // No hace nada
+    return;
   }
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));

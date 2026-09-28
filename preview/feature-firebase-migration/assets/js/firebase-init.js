@@ -4,9 +4,41 @@
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy, limit, getDocs, serverTimestamp, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getDatabase, ref, onValue, set, update, remove, push, serverTimestamp as rtdbTS, get, onDisconnect, startAt, endAt, query as rtdbQuery, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  serverTimestamp,
+  writeBatch,
+  runTransaction
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getDatabase,
+  ref,
+  onValue,
+  set,
+  update,
+  remove,
+  push,
+  serverTimestamp as rtdbServerTS,
+  get as rtdbGet,
+  onDisconnect,
+  runTransaction as rtdbRunTransaction
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
@@ -36,16 +68,21 @@ export function esc(str) {
 // Timestamp del servidor (Firestore)
 export const fsTS = serverTimestamp;
 
-// Timestamp del servidor (RTDB)
-export const rtdbTS = rtdbTS;
+// Timestamp del servidor (RTDB) — función, no const
+export function rtdbTS() { return rtdbServerTS; }
 
 // Offset de tiempo servidor RTDB (para timers precisos)
 let serverTimeOffset = 0;
 export async function syncServerTime() {
   try {
-    const offsetRef = ref(rtdb, '.info/serverTimeOffset');
-    const snap = await get(offsetRef);
-    serverTimeOffset = snap.val() || 0;
+    await new Promise((resolve) => {
+      const offsetRef = ref(rtdb, '.info/serverTimeOffset');
+      const unsub = onValue(offsetRef, (snap) => {
+        serverTimeOffset = snap.val() || 0;
+        unsub();
+        resolve();
+      });
+    });
   } catch (e) {
     console.warn('No se pudo sincronizar serverTimeOffset:', e);
     serverTimeOffset = 0;
@@ -58,7 +95,7 @@ export function serverNow() {
 // Transacción RTDB genérica
 export async function rtdbTx(path, updater) {
   const r = ref(rtdb, path);
-  await runTransaction(r, (current) => updater(current || null));
+  await rtdbRunTransaction(r, (current) => updater(current || null));
 }
 
 // Batch Firestore genérico
@@ -102,9 +139,38 @@ export const RTDB_PATHS = {
   respuesta: (qid, uid) => `asamblea/respuestas/${qid}/${uid}`,
   conectados: (uid) => `asamblea/conectados/${uid}`,
   puntos: (uid) => `asamblea/sesion/puntos/${uid}`,
+  puntosRoot: 'asamblea/sesion/puntos',
   resumen: 'asamblea/sesion/resumen',
   acumulada: 'asamblea/sesion/acumulada',
   rankingGlobal: (uid) => `rankingGlobal/${uid}`,
+  rankingGlobalRoot: 'rankingGlobal',
   admins: (uid) => `admins/${uid}`,
   hostUid: 'asamblea/sesion/hostUid',
+};
+
+/* ── Re-export de SDK para consumidores ─────────────────────── */
+export {
+  // RTDB
+  ref,
+  onValue,
+  set,
+  update,
+  remove,
+  rtdbGet as get,
+  push,
+  onDisconnect,
+  rtdbRunTransaction as runTransaction,
+  // Firestore
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  // Auth
+  onAuthStateChanged,
+  signOut
 };
