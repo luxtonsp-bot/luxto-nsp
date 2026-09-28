@@ -1,0 +1,99 @@
+{
+  "firestore": {
+    "members": {
+      "count": 10,
+      "fields": [
+        "id",
+        "email",
+        "name",
+        "rol",
+        "estadoAnioActual",
+        "birthDate",
+        "fotoDriveId",
+        "uid",
+        "fechaNacimiento",
+        "fechaIngresoGrupo",
+        "nombre",
+        "fotoThumb"
+      ]
+    },
+    "asambleas": {
+      "count": 10,
+      "fields": [
+        "id",
+        "fecha",
+        "observacion",
+        "hayAsamblea",
+        "horaInicio"
+      ]
+    },
+    "asistencia/2026/2026-09-20": {
+      "count": 0,
+      "fields": []
+    },
+    "tablas_definiciones": {
+      "count": 5,
+      "fields": [
+        "id",
+        "nombre",
+        "descripcion",
+        "año",
+        "columnas",
+        "creadorUID",
+        "fechaCreacion"
+      ]
+    },
+    "sugerencias": {
+      "count": 0,
+      "fields": []
+    },
+    "historico/2026/sugerencias": {
+      "count": 8,
+      "fields": [
+        "id",
+        "timestamp",
+        "semana",
+        "fechaEnvio",
+        "email",
+        "texto",
+        "nombre"
+      ]
+    },
+    "feedback": {
+      "count": 0,
+      "fields": []
+    },
+    "historico/2026/feedback": {
+      "count": 10,
+      "fields": [
+        "id",
+        "timestamp",
+        "email",
+        "fechaEnvio",
+        "calificacion",
+        "fechaAsamblea",
+        "comentario",
+        "nombre"
+      ]
+    }
+  },
+  "rtdb": {
+    "asamblea/preguntaActual": {
+      "exists": true,
+      "keys": 8
+    },
+    "asamblea/rankingGlobal": {
+      "exists": false,
+      "keys": 0
+    },
+    "asamblea/borradores": {
+      "exists": false,
+      "keys": 0
+    },
+    "asamblea/preguntaActual/opciones": {
+      "exists": true,
+      "keys": 4
+    }
+  },
+  "errors": []
+}

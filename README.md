@@ -305,16 +305,17 @@ las ramas de trabajo. Hecho una vez, no se vuelve a tocar.
 
 ---
 
-## ✅ ESTADO DEL PROYECTO (actualizado 2026-09-12)
+## ✅ ESTADO DEL PROYECTO (actualizado 2026-09-26)
 
 | Componente | Estado | Detalles |
 |------------|--------|----------|
 | **Migración de datos** | ✅ Completada | 1.125 documentos migrados a Firestore (modelo final) |
 | **Firestore rules** | ✅ Desplegadas | Reglas por rol (miembro/líder/coordinador) publicadas en Firebase + fix `historico/{anio}` para collectionGroup |
-| **GitHub Actions** | ✅ Configurados | Deploy preview + cumpleaños automático con secrets |
-| **Tardanzas** | ✅ Implementadas | `calcularTardanza()` con serverTimestamp, zona horaria Lima (UTC-5), tolerancia 10 min |
+| **GitHub Actions** | ✅ Configurados | Deploy preview + cumpleaños automático con secrets (workflow cumpleaños falla en `feature/firebase-migration` — pendiente revisar) |
+| **Tardanzas** | ✅ Implementadas y corregidas | `calcularTardanza()` con serverTimestamp, zona horaria Lima (UTC-5), tolerancia 10 min. Fixes: midnight crossover, doble offset UTC→Lima |
 | **Finalizar asamblea** | ✅ Solo coordinador | Validación server-side + UI oculta botón para líderes |
 | **Finalizar asistencia** | ✅ Solo activos | Filtra `estadoAnioActual === 'activo'` |
+| **Responsividad móvil** | ✅ Completa (12/12 páginas) | Breakpoints consistentes 780px (tablet) / 480px-640px (móvil) en `portal.css` + estilos inline |
 | **Fase 10 (Pruebas)** | ⬜ Pendiente | Validación final con coordinador en link de preview |
 
 ### 🎯 Próximos pasos inmediatos
@@ -376,6 +377,15 @@ las ramas de trabajo. Hecho una vez, no se vuelve a tocar.
 | `4203aab` | **B2**: `finalizeAttendance()` filtra `estadoAnioActual === 'activo'` | Ex-miembros dados de baja no acumulan ausencias |
 | `4ed008f` | **Rules**: `historico/{anio}` read para collectionGroup | `historial.html` dropdown de años carga sin permission-denied |
 | `4ed008f` | **Admin**: sugerencias/feedback leen esquema inglés (Excel) + español | `admin.html` pestaña Sugerencias/Feedback muestra datos migrados |
+
+### Fixes responsividad y tardanza (2026-09-26 — rama `feature/firebase-migration`)
+
+| Commit | Cambio | Impacto |
+|--------|--------|---------|
+| `2f5f085` | **feat(responsive)**: mobile breakpoints all 12 HTML pages | `portal.css` + 7 páginas inline: tabs, forms, cards, tables, grids apilados en móvil |
+| `1c78f06` | **fix(tardanza)**: correct timezone conversion (UTC→Lima) | Usa `getUTCHours()` + offset -300 min una sola vez |
+| `bf7b4b5` | **fix**: remove duplicate `LIMA_OFFSET_MIN` | Limpieza de constante duplicada |
+| `db9b622` | **fix**: correct midnight crossover logic | Elimina `if (diff < -720) diff += 1440` que convertía llegada temprano en tardanza falsa |
 
 ---
 

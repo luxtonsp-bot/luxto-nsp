@@ -1,0 +1,12 @@
+{
+  "name": "luxto-audit",
+  "private": true,
+  "type": "module",
+  "description": "Auditoría estática reproducible del portal LUXTO (PASO 0). No forma parte del sitio desplegado.",
+  "dependencies": {
+    "acorn": "^8.14.0",
+    "eslint": "^9.0.0",
+    "firebase": "10.12.0",
+    "jsdom": "^30.1.0"
+  }
+}

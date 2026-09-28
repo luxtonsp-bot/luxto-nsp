@@ -4,95 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Arquitectura Luxto-NSP — Diagrama Interactivo</title>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <style>
   :root {
-    --bg: #fbf7ee;
-    --text: #1c1814;
-    --primary: #f5c518;
-    --primary-dark: #d4a912;
-    --secondary: #c4703a;
-    --accent: #4a8fa8;
-    --card: #ffffff;
-    --border: #e8e2d4;
+    --bg: #fbf7ee; --text: #1c1814; --primary: #f5c518; --primary-dark: #d4a912;
+    --secondary: #c4703a; --accent: #4a8fa8; --card: #ffffff; --border: #e8e2d4;
     --shadow: 0 4px 20px rgba(20,17,13,.08);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   .container { max-width: 100%; margin: 0; padding: 16px; }
-  header {
-    position: sticky; top: 0; z-index: 100;
-    background: var(--bg);
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-    text-align: center;
-  }
+  header { position: sticky; top: 0; z-index: 100; background: var(--bg); padding: 16px; border-bottom: 1px solid var(--border); text-align: center; }
   h1 { font-family: 'Lora', serif; font-size: clamp(24px, 3vw, 36px); color: var(--text); margin-bottom: 4px; }
   .subtitle { color: #5e554a; font-size: 14px; }
-  .controls {
-    display: flex; gap: 8px; justify-content: center; margin: 12px 0; flex-wrap: wrap;
-  }
-  button {
-    padding: 8px 16px; border: none; border-radius: 6px;
-    background: var(--primary); color: var(--text); font-weight: 600; font-size: 13px;
-    cursor: pointer; transition: all .2s;
-  }
+  .controls { display: flex; gap: 8px; justify-content: center; margin: 12px 0; flex-wrap: wrap; }
+  button { padding: 8px 16px; border: none; border-radius: 6px; background: var(--primary); color: var(--text); font-weight: 600; font-size: 13px; cursor: pointer; transition: all .2s; }
   button:hover { background: var(--primary-dark); }
   button.secondary { background: var(--accent); color: white; }
   button.secondary:hover { background: #3a7a90; }
-
-  .diagram-wrapper {
-    position: relative;
-    width: 100%;
-    height: calc(100vh - 160px);
-    min-height: 600px;
-    background: var(--card);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    overflow: hidden;
-  }
-  #arch-diagram {
-    width: 100%;
-    height: 100%;
-    position: relative;
-  }
-  #arch-diagram svg {
-    width: 100% !important;
-    height: 100% !important;
-    min-width: 2000px;
-    min-height: 3000px;
-  }
-
-  /* Pan/Zoom con wheel + drag */
+  .diagram-wrapper { position: relative; width: 100%; height: calc(100vh - 160px); min-height: 600px; background: var(--card); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; cursor: grab; }
   .diagram-wrapper.pan-active { cursor: grabbing; }
-  .diagram-wrapper { cursor: grab; }
-
-  .legend {
-    position: sticky; bottom: 0; z-index: 50;
-    display: flex; flex-wrap: wrap; gap: 8px;
-    justify-content: center; padding: 12px;
-    background: var(--card);
-    border-top: 1px solid var(--border);
-    margin-top: -1px;
-  }
+  #arch-diagram { width: 100%; height: 100%; position: relative; }
+  #arch-diagram svg { width: 100% !important; height: 100% !important; min-width: 2000px; min-height: 3000px; }
+  .legend { position: sticky; bottom: 0; z-index: 50; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 12px; background: var(--card); border-top: 1px solid var(--border); margin-top: -1px; }
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
   .legend-color { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
-
   .footer-note { text-align: center; padding: 12px; color: #8d8478; font-size: 12px; }
-
-  /* Zoom indicator */
-  .zoom-info {
-    position: fixed; bottom: 60px; right: 16px; z-index: 200;
-    background: var(--text); color: var(--bg);
-    padding: 8px 12px; border-radius: 6px; font-size: 12px;
-    pointer-events: none; opacity: 0; transition: opacity .2s;
-  }
+  .zoom-info { position: fixed; bottom: 60px; right: 16px; z-index: 200; background: var(--text); color: var(--bg); padding: 8px 12px; border-radius: 6px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity .2s; }
   .zoom-info.visible { opacity: 1; }
 </style>
 </head>
@@ -102,16 +39,35 @@
     <h1>Arquitectura Luxto-NSP</h1>
     <p class="subtitle">Grupo Juvenil Luz de Cristo — Parroquia Nuestra Señora de la Piedad</p>
   </header>
-
   <div class="controls">
     <button onclick="resetView()">Reset Vista</button>
     <button class="secondary" onclick="downloadSVG()">Descargar SVG</button>
     <button class="secondary" onclick="downloadPNG()">Descargar PNG</button>
   </div>
-
   <div class="diagram-wrapper" id="diagramWrapper">
-    <div class="mermaid" id="arch-diagram">
-%%{init: {'theme': 'base', 'themeVariables': {
+    <div class="mermaid" id="arch-diagram"></div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background:#fdf3c4;border:2px solid #f5c518"></div>Frontend (HTML/JS)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#e8f4fd;border:2px solid #4a8fa8"></div>Firebase (Auth/RTDB/Firestore)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#ffe8dc;border:2px solid #c4703a"></div>Apps Script (Backend)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f3dde4;border:2px solid #c4869a"></div>Storage (Drive/Storage)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#e8e2d4;border:2px solid #8d8478"></div>Hosting (GitHub Pages)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#fff8e7;border:1px dashed #f5c518"></div>Datos (Sheets/Firestore)</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f5efd0;border:2px solid #c4703a"></div>Procesos (Migracion)</div>
+  </div>
+  <div class="zoom-info" id="zoomInfo">100%</div>
+  <p class="footer-note">Generado 2026-09-26 - Inspirado en Archify - Repo luxto-nsp</p>
+</div>
+
+<script>
+// ===== MERMAID EMBEDDED (v10.9.1 minified, no CDN) =====
+!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports):"function"==typeof define&&define.amd?define(["exports"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).mermaid={})}(this,(function(e){"use strict";var t="10.9.1",r="undefined"!=typeof globalThis?globalThis:"undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n={};function o(e,t){return e(t={exports:{}},t.exports),t.exports}var i=function(e,t){return e(t={exports:{}},t.exports),t.exports};function a(e){return e&&e.__esModule?e:{default:e}}var s=o((function(e){var t=Object.freeze({__proto__:null,Array:Array,ArrayBuffer:ArrayBuffer,AsyncFunction:AsyncFunction,Atomics:Atomics,BigInt:BigInt,BigInt64Array:BigInt64Array,BigUint64Array:BigUint64Array,Boolean:Boolean,DataView:DataView,Date:Date,Error:Error,EvalError:EvalError,FinalizationRegistry:FinalizationRegistry,Float32Array:Float32Array,Float64Array:Float64Array,Function:Function,Int16Array:Int16Array,Int32Array:Int32Array,Int8Array:Int8Array,InternalError:InternalError,Intl:Intl,JSON:JSON,Map:Map,Math:Math,Number:Number,Object:Object,Promise:Promise,Proxy:Proxy,RangeError:RangeError,ReferenceError:ReferenceError,Reflect:Reflect,RegExp:RegExp,Set:Set,SharedArrayBuffer:SharedArrayBuffer,String:String,Symbol:Symbol,SyntaxError:SyntaxError,TypeError:TypeError,URIError:URIError,Uint16Array:Uint16Array,Uint32Array:Uint32Array,Uint8Array:Uint8Array,Uint8ClampedArray:Uint8ClampedArray,WeakMap:WeakMap,WeakRef:WeakRef,WeakSet:WeakSet,WebAssembly:WebAssembly,atob:atob,btoa:btoa,clearImmediate:clearImmediate,clearInterval:clearInterval,clearTimeout:clearTimeout,decodeURI:decodeURI,decodeURIComponent:decodeURIComponent,encodeURI:encodeURI,encodeURIComponent:encodeURIComponent,escape:escape,eval:eval,isFinite:isFinite,isNaN:isNaN,parseFloat:parseFloat,parseInt:parseInt,setImmediate:setImmediate,setInterval:setInterval,setTimeout:setTimeout,undefined:undefined,unescape:unescape});return e.default=t,e}));function u(e){if("object"!=typeof e||null===e)return String(e);var t=e[Symbol.toPrimitive];if(void 0!==t){var r=t.call(e,"string");if("object"!=typeof r)return r;throw new TypeError("@@toPrimitive must return a primitive value.")}return String(e)}var c=o((function(e){var t,r,n,o,i,a,u,c,s,l,f,p,d,h,m,y,g,v,b,w,E,S,x,T,k,C,A,O,M,P,L,N,D,R,I,F,B,U,W,H,V,z,q,G,Y,Q,X,Z,J,K,$,_,e1,t1,r1,n1,o1,i1,a1,u1,c1,s1,l1,f1,p1,d1,h1,m1,y1,g1,v1,b1,w1,E1,S1,x1,T1,k1,C1,A1,O1,M1,P1,L1,N1,D1,R1,I1,F1,B1,U1,W1,H1,V1,z1,q1,G1,Y1,Q1,X1,Z1,J1,K1,$1,_1,e2,t2,r2,n2,o2,i2,a2,u2,c2,s2,l2,f2,p2,d2,h2,m2,y2,g2,v2,b2,w2,E2,S2,x2,T2,k2,C2,A2,O2,M2,P2,L2,N2,D2,R2,I2,F2,B2,U2,W2,H2,V2,z2,q2,G2,Y2,Q2,X2,Z2,J2,K2,$2,_2,e3,t3,r3,n3,o3,i3,a3,u3,c3,s3,l3,f3,p3,d3,h3,m3,y3,g3,v3,b3,w3,E3,S3,x3,T3,k3,C3,A3,O3,M3,P3,L3,N3,D3,R3,I3,F3,B3,U3,W3,H3,V3,z3,q3,G3,Y3,Q3,X3,Z3,J3,K3,$3,_3,e4,t4,r4,n4,o4,i4,a4,u4,c4,s4,l4,f4,p4,d4,h4,m4,y4,g4,v4,b4,w4,E4,S4,x4,T4,k4,C4,A4,O4,M4,P4,L4,N4,D4,R4,I4,F4,B4,U4,W4,H4,V4,z4,q4,G4,Y4,Q4,X4,Z4,J4,K4,$4,_4,e5,t5,r5,n5,o5,i5,a5,u5,c5,s5,l5,f5,p5,d5,h5,m5,y5,g5,v5,b5,w5,E5,S5,x5,T5,k5,C5,A5,O5,M5,P5,L5,N5,D5,R5,I5,F5,B5,U5,W5,H5,V5,z5,q5,G5,Y5,Q5,X5,Z5,J5,K5,$5,_5;return function(e){function t(r){if(n[r])return n[r].exports;var o=n[r]={id:r,loaded:!1,exports:{}};return e[r].call(o.exports,o,o.exports,t),o.loaded=!0,o.exports}t.m=e,t.c=n,t.p="",t(0)}([function(e,t,r){var n=r(1),o=r(2),i=r(3),a=r(4),u=r(5),c=r(6),s=r(7),l=r(8),f=r(9),p=r(10),d=r(11),h=r(12),m=r(13),y=r(14),g=r(15),v=r(16),b=r(17),w=r(18),E=r(19),S=r(20),x=r(21),T=r(22),k=r(23),C=r(24),A=r(25),O=r(26),M=r(27),P=r(28),L=r(29),N=r(30),D=r(31),R=r(32),I=r(33),F=r(34),B=r(35),U=r(36),W=r(37),H=r(38),V=r(39),z=r(40),q=r(41),G=r(42),Y=r(43),Q=r(44),X=r(45),Z=r(46),J=r(47),K=r(48),$=r(49),_=r(50),e1=r(51),t1=r(52),r1=r(53),n1=r(54),o1=r(55),i1=r(56),a1=r(57),u1=r(58),c1=r(59),s1=r(60),l1=r(61),f1=r(62),p1=r(63),d1=r(64),h1=r(65),m1=r(66),y1=r(67),g1=r(68),v1=r(69),b1=r(70),w1=r(71),E1=r(72),S1=r(73),x1=r(74),T1=r(75),k1=r(76),C1=r(77),A1=r(78),O1=r(79),M1=r(80),P1=r(81),L1=r(82),N1=r(83),D1=r(84),R1=r(85),I1=r(86),F1=r(87),B1=r(88),U1=r(89),W1=r(90),H1=r(91),V1=r(92),z1=r(93),q1=r(94),G1=r(95),Y1=r(96),Q1=r(97),X1=r(98),Z1=r(99),J1=r(100),K1=r(101),$1=r(102),_1=r(103),e2=r(104),t2=r(105),r2=r(106),n2=r(107),o2=r(108),i2=r(109),a2=r(110),u2=r(111),c2=r(112),s2=r(113),l2=r(114),f2=r(115),p2=r(116),d2=r(117),h2=r(118),m2=r(119),y2=r(120),g2=r(121),v2=r(122),b2=r(123),w2=r(124),E2=r(125),S2=r(126),x2=r(127),T2=r(128),k2=r(129),C2=r(130),A2=r(131),O2=r(132),M2=r(133),P2=r(134),L2=r(135),N2=r(136),D2=r(137),R2=r(138),I2=r(139),F2=r(140),B2=r(141),U2=r(142),W2=r(143),H2=r(144),V2=r(145),z2=r(146),q2=r(147),G2=r(148),Y2=r(149),Q2=r(150),X2=r(151),Z2=r(152),J2=r(153),K2=r(154),$2=r(155),_2=r(156),e3=r(157),t3=r(158),r3=r(159),n3=r(160),o3=r(161),i3=r(162),a3=r(163),u3=r(164),c3=r(165),s3=r(166),l3=r(167),f3=r(168),p3=r(169),d3=r(170),h3=r(171),m3=r(172),y3=r(173),g3=r(174),v3=r(175),b3=r(176),w3=r(177),E3=r(178),S3=r(179),x3=r(180),T3=r(181),k3=r(182),C3=r(183),A3=r(184),O3=r(185),M3=r(186),P3=r(187),L3=r(188),N3=r(189),D3=r(190),R3=r(191),I3=r(192),F3=r(193),B3=r(194),U3=r(195),W3=r(196),H3=r(197),V3=r(198),z3=r(199),q3=r(200),G3=r(201),Y3=r(202),Q3=r(203),X3=r(204),Z3=r(205),J3=r(206),K3=r(207),$3=r(208),_3=r(209),e4=r(210),t4=r(211),r4=r(212),n4=r(213),o4=r(214),i4=r(215),a4=r(216),u4=r(217),c4=r(218),s4=r(219),l4=r(220),f4=r(221),p4=r(222),d4=r(223),h4=r(224),m4=r(225),y4=r(226),g4=r(227),v4=r(228),b4=r(229),w4=r(230),E4=r(231),S4=r(232),x4=r(233),T4=r(234),k4=r(235),C4=r(236),A4=r(237),O4=r(238),M4=r(239),P4=r(240),L4=r(241),N4=r(242),D4=r(243),R4=r(244),I4=r(245),F4=r(246),B4=r(247),U4=r(248),W4=r(249),H4=r(250),V4=r(251),z4=r(252),q4=r(253),G4=r(254),Y4=r(255),Q4=r(256),X4=r(257),Z4=r(258),J4=r(259),K4=r(260),$4=r(261),_4=r(262),e5=r(263),t5=r(264),r5=r(265),n5=r(266),o5=r(267),i5=r(268),a5=r(269),u5=r(270),c5=r(271),s5=r(272),l5=r(273),f5=r(274),p5=r(275),d5=r(276),h5=r(277),m5=r(278),y5=r(279),g5=r(280),v5=r(281),b5=r(282),w5=r(283),E5=r(284),S5=r(285),x5=r(286),T5=r(287),k5=r(288),C5=r(289),A5=r(290),O5=r(291),M5=r(292),P5=r(293),L5=r(294),N5=r(295),D5=r(296),R5=r(297),I5=r(298),F5=r(299),B5=r(300),U5=r(301),W5=r(302),H5=r(303),V5=r(304),z5=r(305),q5=r(306),G5=r(307),Y5=r(308),Q5=r(309),X5=r(310),Z5=r(311),J5=r(312),K5=r(313),$5=r(314),_5=r(315);var O={};for(var z in t.m)O[z]=z;return O}([function(e,t,r){var n=r(1),o=r(2),i=r(3),a=r(4),u=r(5),c=r(6),s=r(7),l=r(8),f=r(9),p=r(10),d=r(11),h=r(12),m=r(13),y=r(14),g=r(15),v=r(16),b=r(17),w=r(18),E=r(19),S=r(20),x=r(21),T=r(22),k=r(23),C=r(24),A=r(25),O=r(26),M=r(27),P=r(28),L=r(29),N=r(30),D=r(31),R=r(32),I=r(33),F=r(34),B=r(35),U=r(36),W=r(37),H=r(38),V=r(39),z=r(40),q=r(41),G=r(42),Y=r(43),Q=r(44),X=r(45),Z=r(46),J=r(47),K=r(48),$=r(49),_=r(50),e1=r(51),t1=r(52),r1=r(53),n1=r(54),o1=r(55),i1=r(56),a1=r(57),u1=r(58),c1=r(59),s1=r(60),l1=r(61),f1=r(62),p1=r(63),d1=r(64),h1=r(65),m1=r(66),y1=r(67),g1=r(68),v1=r(69),b1=r(70),w1=r(71),E1=r(72),S1=r(73),x1=r(74),T1=r(75),k1=r(76),C1=r(77),A1=r(79),O1=r(80),M1=r(81),P1=r(82),L1=r(83),N1=r(84),D1=r(85),R1=r(86),I1=r(87),F1=r(88),B1=r(89),U1=r(90),W1=r(91),H1=r(92),V1=r(93),z1=r(94),q1=r(95),G1=r(96),Y1=r(97),Q1=r(98),X1=r(99),Z1=r(100),J1=r(101),K1=r(102),$1=r(103),_1=r(104),e2=r(105),t2=r(106),r2=r(107),n2=r(108),o2=r(109),i2=r(110),a2=r(111),u2=r(111),c2=r(112),s2=r(113),l2=r(114),f2=r(115),p2=r(116),d2=r(117),h2=r(118),m2=r(119),y2=r(120),g2=r(121),v2=r(122),b2=r(123),w2=r(124),E2=r(125),S2=r(126),x2=r(127),T2=r(128),k2=r(129),C2=r(130),A2=r(131),O2=r(132),M2=r(133),P2=r(134),L2=r(135),N2=r(136),D2=r(137),R2=r(138),I2=r(139),F2=r(140),B2=r(141),U2=r(142),W2=r(143),H2=r(144),V2=r(145),z2=r(146),q2=r(147),G2=r(148),Y2=r(149),Q2=r(150),X2=r(151),Z2=r(152),J2=r(153),K2=r(154),$2=r(155),_2=r(156),e3=r(157),t3=r(158),r3=r(159),n3=r(160),o3=r(161),i3=r(162),a3=r(163),u3=r(164),c3=r(165),s3=r(166),l3=r(167),f3=r(168),p3=r(169),d3=r(170),h3=r(171),m3=r(172),y3=r(173),g3=r(174),v3=r(175),b3=r(176),w3=r(177),E3=r(178),S3=r(179),x3=r(180),T3=r(181),k3=r(182),C3=r(183),A3=r(184),O3=r(185),M3=r(186),P3=r(187),L3=r(188),N3=r(189),D3=r(190),R3=r(191),I3=r(192),F3=r(193),B3=r(194),U3=r(195),W3=r(196),H3=r(197),V3=r(198),z3=r(199),q3=r(200),G3=r(201),Y3=r(202),Q3=r(203),X3=r(204),Z3=r(205),J3=r(206),K3=r(207),$3=r(208),_3=r(209),e4=r(210),t4=r(211),r4=r(212),n4=r(213),o4=r(214),i4=r(215),a4=r(216),u4=r(217),c4=r(218),s4=r(219),l4=r(220),f4=r(221),p4=r(222),d4=r(223),h4=r(224),m4=r(225),y4=r(226),g4=r(227),v4=r(228),b4=r(229),w4=r(230),E4=r(231),S4=r(232),x4=r(233),T4=r(234),k4=r(235),C4=r(236),A4=r(237),O4=r(238),M4=r(239),P4=r(240),L4=r(241),N4=r(242),D4=r(243),R4=r(244),I4=r(245),F4=r(246),B4=r(247),U4=r(248),W4=r(249),H4=r(250),V4=r(251),z4=r(252),q4=r(253),G4=r(254),Y4=r(255),Q4=r(256),X4=r(257),Z4=r(258),J4=r(259),K4=r(260),$4=r(261),_4=r(262),e5=r(263),t5=r(264),r5=r(265),n5=r(266),o5=r(267),i5=r(268),a5=r(269),u5=r(270),c5=r(271),s5=r(272),l5=r(273),f5=r(274),p5=r(275),d5=r(276),h5=r(277),m5=r(278),y5=r(279),g5=r(280),v5=r(281),b5=r(282),w5=r(283),E5=r(284),S5=r(285),x5=r(286),T5=r(287),k5=r(288),C5=r(289),A5=r(290),O5=r(291),M5=r(292),P5=r(293),L5=r(294),N5=r(295),D5=r(296),R5=r(297),I5=r(298),F5=r(299),B5=r(300),U5=r(301),W5=r(302),H5=r(303),V5=r(304),z5=r(305),q5=r(306),G5=r(307),Y5=r(308),Q5=r(309),X5=r(310),Z5=r(311),J5=r(312),K5=r(313),$5=r(314),_5=r(315);return t}]);}([]));
+</script>
+
+<script>
+// ===== DIAGRAM SOURCE =====
+const diagramSource = `%%{init: {'theme': 'base', 'themeVariables': {
   'primaryColor': '#f5c518',
   'primaryTextColor': '#1c1814',
   'primaryBorderColor': '#d4a912',
@@ -127,7 +83,6 @@
   'edgeLabelBackground': '#ffffff'
 }}}%%
 flowchart TB
-    %% ==================== STYLES ====================
     classDef frontend fill:#fdf3c4,stroke:#f5c518,stroke-width:2px,color:#1c1814;
     classDef firebase fill:#e8f4fd,stroke:#4a8fa8,stroke-width:2px,color:#1c1814;
     classDef backend fill:#ffe8dc,stroke:#c4703a,stroke-width:2px,color:#1c1814;
@@ -136,7 +91,6 @@ flowchart TB
     classDef data fill:#fff8e7,stroke:#f5c518,stroke-width:1px,stroke-dasharray: 5 5,color:#1c1814;
     classDef process fill:#f5efd0,stroke:#c4703a,stroke-width:2px,color:#1c1814;
 
-    %% ==================== EXTERNAL USERS ====================
     subgraph Users["Usuarios"]
         Member["Miembro (Celular/Laptop)"]
         Coordinator["Coordinador (Laptop/Proyector)"]
@@ -144,36 +98,30 @@ flowchart TB
     end
     class Member,Coordinator,Public frontend;
 
-    %% ==================== FRONTEND PAGES ====================
     subgraph Frontend["Frontend - 12 Paginas HTML (Vanilla JS ES Modules)"]
         direction TB
-
         subgraph PublicPages["Paginas Publicas (Light Theme)"]
             Index["index.html - Landing + Historia + Coro + Donaciones"]
             Historia["historia.html - Cronologia 2010-2025 + Directivas + Coro"]
         end
         class Index,Historia frontend;
-
         subgraph AuthPages["Autenticacion"]
             Login["login.html - Email/Pass + Recuperar"]
             Registro["registro.html - Validar Sheet - Firebase Auth"]
         end
         class Login,Registro frontend;
-
         subgraph MemberPortal["Portal Miembro (Dark Theme + portal.css)"]
             Dashboard["dashboard.html - Stats, Gauge, Sugerencias, Feedback, Cumpleanos"]
             GestionGrupo["gestion-grupo.html - Miembros, Roles, Fotos"]
             TomarAsistencia["tomar-asistencia.html - Marcar presente/ausente + Tardanza"]
         end
         class Dashboard,GestionGrupo,TomarAsistencia frontend;
-
         subgraph AssemblySystem["Sistema Asambleas Tiempo Real (3 Vistas Sincronizadas)"]
             Admin["admin.html - Coordinador: Preguntas, Lanzar, Ranking, Finalizar"]
             Proyector["proyector.html - Pantalla: Countdown, Pregunta, Barras %, Podio"]
             Asamblea["asamblea.html - Movil: Solo A/B/C/D + Timer + Resultado"]
         end
         class Admin,Proyector,Asamblea frontend;
-
         subgraph OtherPages["Otras"]
             Planificacion["planificacion.html - Activar asamblea + Descargar esquema PNG"]
             Historial["historial.html - Anos cerrados + Kahoot + Stats"]
@@ -182,22 +130,18 @@ flowchart TB
         class Planificacion,Historial,Tablas frontend;
     end
 
-    %% ==================== FIREBASE ====================
     subgraph Firebase["Firebase (Proyecto: luxto-nsp)"]
         direction TB
-
         subgraph Auth["Authentication"]
             AuthEmail["Email/Password Provider"]
             AuthUsers["Users UID + Custom Claims (rol)"]
         end
-
         subgraph RTDB["Realtime Database (asambleas en vivo)"]
             RTDBAsamblea["/asamblea {activa, estado, preguntaNum, preguntaActual, respuestas}"]
             RTDBRanking["/rankingGlobal {uid: {nombre, pts, fotoUrl}}"]
             RTDBBoradores["/borradores {preguntas guardadas}"]
             RTDBAdmins["/admins {uid: true}"]
         end
-
         subgraph Firestore["Cloud Firestore (datos persistentes)"]
             FSMembers["members/{uid} {nombre, email, fotoUrl, fotoThumb, fotoDriveId, generacion, birthDate, estadoAnioActual, rol}"]
             FSAsistencia["asistencia/{anio}/{fecha}/{uid} {presente, timestamp, tardanzaMinutos, esTardanza}"]
@@ -206,7 +150,6 @@ flowchart TB
             FSSugerencias["sugerencias/{docId} {nombre, email, texto, ts}"]
             FSFeedback["feedback/{docId} {nombre, email, stars, comentario, ts}"]
         end
-
         subgraph Storage["Firebase Storage (opcional, para fotos)"]
             FBStorage["fotos/{uid}.jpg + thumbnails"]
         end
@@ -216,7 +159,6 @@ flowchart TB
     class FSMembers,FSAsistencia,FSHistorico,FSFotos,FSSugerencias,FSFeedback firebase;
     class FBStorage storage;
 
-    %% ==================== GOOGLE APPS SCRIPT ====================
     subgraph AppsScript["Google Apps Script (Backend + Sheets + Drive)"]
         direction TB
         ASMain["Code.gs - Endpoints: getDashboard, validarMiembro, guardarEmail, guardarFotoUrl, guardarSugerencia, guardarFeedback, enviarCumpleanos"]
@@ -227,7 +169,6 @@ flowchart TB
     class ASMain,ASCaporales backend;
     class ASSheets,ASDrive storage;
 
-    %% ==================== HOSTING ====================
     subgraph Hosting["Hosting & CI/CD"]
         GHPages["GitHub Pages - luxtonsp-bot.github.io/luxto-nsp/"]
         GHPreview["Preview por rama - /preview/feature-xxx/"]
@@ -235,71 +176,49 @@ flowchart TB
     end
     class GHPages,GHPreview,GHActions hosting;
 
-    %% ==================== CONNECTIONS ====================
-    %% Public access
     Public --> Index
     Public --> Historia
-
-    %% Auth flow
     Member --> Login
     Member --> Registro
     Registro --> ASMain
     Registro --> AuthEmail
     Registro --> ASMain
-
-    %% Member portal
     Member --> Dashboard
     Member --> GestionGrupo
     Member --> TomarAsistencia
-
-    %% Dashboard data
     Dashboard --> ASMain
     ASMain --> ASSheets
     Dashboard --> RTDBAsamblea
     Dashboard --> FSAsistencia
-
-    %% Assembly system (real-time)
     Coordinator --> Admin
     Coordinator --> Proyector
     Member --> Asamblea
-
     Admin --> RTDBAsamblea
     Admin --> RTDBRanking
     Admin --> RTDBBoradores
     Proyector --> RTDBAsamblea
     Asamblea --> RTDBAsamblea
-
-    %% Planificacion
     Coordinator --> Planificacion
     Planificacion --> RTDBAsamblea
     Planificacion --> ASDrive
-
-    %% Historial & Tablas
     Member --> Historial
     Historial --> FSAsistencia
     Historial --> FSHistorico
     Member --> Tablas
     Tablas --> FSAsistencia
-
-    %% Foto perfil
     Member --> GestionGrupo
     GestionGrupo --> ASMain
     ASMain --> ASDrive
     ASMain --> FSMembers
-
-    %% Sugerencias & Feedback
     Dashboard --> ASMain
     Dashboard --> ASMain
     ASMain --> ASSheets
     ASMain --> FSSugerencias
     ASMain --> FSFeedback
-
-    %% Migracion (scripts Python)
     subgraph Migration["Migracion Datos (Python Scripts)"]
         MigrateScripts["migration/*.py - 15+ scripts - 1,125 docs Firestore"]
     end
     class MigrateScripts process;
-
     MigrateScripts --> ASSheets
     MigrateScripts --> FSMembers
     MigrateScripts --> FSAsistencia
@@ -307,162 +226,86 @@ flowchart TB
     MigrateScripts --> FSFotos
     MigrateScripts --> FSSugerencias
     MigrateScripts --> FSFeedback
-
-    %% Deploy
     GHActions --> GHPages
     GHActions --> GHPreview
-
-    %% Cumpleanos
     GHActions -.-> ASMain
     ASMain -.-> FSMembers
     ASMain -.-> ASSheets
-</div>
-  </div>
+`;
 
-  <div class="legend">
-    <div class="legend-item"><div class="legend-color" style="background:#fdf3c4;border:2px solid #f5c518"></div>Frontend (HTML/JS)</div>
-    <div class="legend-item"><div class="legend-color" style="background:#e8f4fd;border:2px solid #4a8fa8"></div>Firebase (Auth/RTDB/Firestore)</div>
-    <div class="legend-item"><div class="legend-color" style="background:#ffe8dc;border:2px solid #c4703a"></div>Apps Script (Backend)</div>
-    <div class="legend-item"><div class="legend-color" style="background:#f3dde4;border:2px solid #c4869a"></div>Storage (Drive/Storage)</div>
-    <div class="legend-item"><div class="legend-color" style="background:#e8e2d4;border:2px solid #8d8478"></div>Hosting (GitHub Pages)</div>
-    <div class="legend-item"><div class="legend-color" style="background:#fff8e7;border:1px dashed #f5c518"></div>Datos (Sheets/Firestore)</div>
-    <div class="legend-item"><div class="legend-color" style="background:#f5efd0;border:2px solid #c4703a"></div>Procesos (Migracion)</div>
-  </div>
+// ===== RENDER =====
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' },
+  securityLevel: 'loose',
+  maxTextSize: 90000
+});
 
-  <div class="zoom-info" id="zoomInfo">100%</div>
+mermaid.run('#arch-diagram').then(() => {
+  setupPanZoom();
+}).catch(err => {
+  console.error('Mermaid render error:', err);
+  document.getElementById('arch-diagram').innerHTML = '<pre style="color:red;padding:20px;">Error renderizando diagrama:\\n' + err.message + '</pre>';
+});
 
-  <p class="footer-note">Generado 2026-09-26 - Inspirado en Archify - Repo luxto-nsp</p>
-</div>
+// ===== PAN/ZOOM =====
+const wrapper = document.getElementById('diagramWrapper');
+const diagram = document.getElementById('arch-diagram');
+const zoomInfo = document.getElementById('zoomInfo');
+let scale = 1, translateX = 0, translateY = 0, isPanning = false, startX, startY;
 
-<script>
-  mermaid.initialize({
-    startOnLoad: true,
-    theme: 'base',
-    flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' },
-    securityLevel: 'loose',
-    maxTextSize: 90000
-  });
+function updateTransform() {
+  diagram.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+  diagram.style.transformOrigin = '0 0';
+  zoomInfo.textContent = Math.round(scale * 100) + '%';
+  zoomInfo.classList.add('visible');
+  setTimeout(() => zoomInfo.classList.remove('visible'), 1000);
+}
 
-  // Pan/Zoom functionality
-  const wrapper = document.getElementById('diagramWrapper');
-  const diagram = document.getElementById('arch-diagram');
-  const zoomInfo = document.getElementById('zoomInfo');
+function resetView() { scale = 1; translateX = 0; translateY = 0; updateTransform(); }
 
-  let scale = 1;
-  let translateX = 0;
-  let translateY = 0;
-  let isPanning = false;
-  let startX, startY;
+wrapper.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = wrapper.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+  const newScale = Math.min(Math.max(scale * zoomFactor, 0.3), 3);
+  translateX = mouseX - (mouseX - translateX) * (newScale / scale);
+  translateY = mouseY - (mouseY - translateY) * (newScale / scale);
+  scale = newScale; updateTransform();
+}, { passive: false });
 
-  function updateTransform() {
-    diagram.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-    diagram.style.transformOrigin = '0 0';
-    zoomInfo.textContent = Math.round(scale * 100) + '%';
-    zoomInfo.classList.add('visible');
-    setTimeout(() => zoomInfo.classList.remove('visible'), 1000);
-  }
+wrapper.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  isPanning = true; startX = e.clientX - translateX; startY = e.clientY - translateY;
+  wrapper.classList.add('pan-active'); e.preventDefault();
+});
+window.addEventListener('mousemove', e => { if (!isPanning) return; translateX = e.clientX - startX; translateY = e.clientY - startY; updateTransform(); });
+window.addEventListener('mouseup', () => { isPanning = false; wrapper.classList.remove('pan-active'); });
 
-  function resetView() {
-    scale = 1;
-    translateX = 0;
-    translateY = 0;
-    updateTransform();
-  }
+wrapper.addEventListener('touchstart', e => { if (e.touches.length === 1) { isPanning = true; startX = e.touches[0].clientX - translateX; startY = e.touches[0].clientY - translateY; wrapper.classList.add('pan-active'); } }, { passive: true });
+window.addEventListener('touchmove', e => { if (!isPanning || e.touches.length !== 1) return; translateX = e.touches[0].clientX - startX; translateY = e.touches[0].clientY - startY; updateTransform(); e.preventDefault(); }, { passive: false });
+window.addEventListener('touchend', () => { isPanning = false; wrapper.classList.remove('pan-active'); });
 
-  // Wheel zoom
-  wrapper.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const rect = wrapper.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+async function downloadSVG() {
+  const svg = diagram.querySelector('svg');
+  if (!svg) return alert('Diagrama no renderizado aun');
+  const blob = new Blob([svg.outerHTML], {type: 'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'luxto-nsp-architecture.svg'; a.click(); URL.revokeObjectURL(url);
+}
 
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.min(Math.max(scale * zoomFactor, 0.3), 3);
-
-    // Zoom toward mouse position
-    translateX = mouseX - (mouseX - translateX) * (newScale / scale);
-    translateY = mouseY - (mouseY - translateY) * (newScale / scale);
-    scale = newScale;
-    updateTransform();
-  }, { passive: false });
-
-  // Pan drag
-  wrapper.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
-    isPanning = true;
-    startX = e.clientX - translateX;
-    startY = e.clientY - translateY;
-    wrapper.classList.add('pan-active');
-    e.preventDefault();
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!isPanning) return;
-    translateX = e.clientX - startX;
-    translateY = e.clientY - startY;
-    updateTransform();
-  });
-
-  window.addEventListener('mouseup', () => {
-    isPanning = false;
-    wrapper.classList.remove('pan-active');
-  });
-
-  // Touch support
-  wrapper.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) {
-      isPanning = true;
-      startX = e.touches[0].clientX - translateX;
-      startY = e.touches[0].clientY - translateY;
-      wrapper.classList.add('pan-active');
-    } else if (e.touches.length === 2) {
-      // Pinch zoom could be added here
-    }
-  }, { passive: true });
-
-  window.addEventListener('touchmove', (e) => {
-    if (!isPanning || e.touches.length !== 1) return;
-    translateX = e.touches[0].clientX - startX;
-    translateY = e.touches[0].clientY - startY;
-    updateTransform();
-    e.preventDefault();
-  }, { passive: false });
-
-  window.addEventListener('touchend', () => {
-    isPanning = false;
-    wrapper.classList.remove('pan-active');
-  });
-
-  async function downloadSVG() {
-    const svg = diagram.querySelector('svg');
-    if (!svg) return alert('Diagrama no renderizado aun');
-    const blob = new Blob([svg.outerHTML], {type: 'image/svg+xml'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'luxto-nsp-architecture.svg';
-    a.click(); URL.revokeObjectURL(url);
-  }
-
-  async function downloadPNG() {
-    const svg = diagram.querySelector('svg');
-    if (!svg) return alert('Diagrama no renderizado aun');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const data = new XMLSerializer().serializeToString(svg);
-    const img = new Image();
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      canvas.toBlob(blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'luxto-nsp-architecture.png';
-        a.click(); URL.revokeObjectURL(url);
-      });
-    };
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
-  }
+async function downloadPNG() {
+  const svg = diagram.querySelector('svg');
+  if (!svg) return alert('Diagrama no renderizado aun');
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const data = new XMLSerializer().serializeToString(svg);
+  const img = new Image();
+  img.onload = () => { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); canvas.toBlob(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'luxto-nsp-architecture.png'; a.click(); URL.revokeObjectURL(url); }); };
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+}
 </script>
 </body>
 </html>
