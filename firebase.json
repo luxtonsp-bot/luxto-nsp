@@ -4,33 +4,5 @@
   },
   "database": {
     "rules": "database.rules.json"
-  },
-  "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**",
-      "scripts/**",
-      "migration/**",
-      "*.py",
-      "*.md",
-      "*.json",
-      "luxto-nsp-*.png",
-      "luxto-nsp-firebase-adminsdk-*.json",
-      "*.zip",
-      "*.log",
-      "tools/**",
-      "appscript/**",
-      "docs/**",
-      "*.patch",
-      "*.html"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
   }
 }
