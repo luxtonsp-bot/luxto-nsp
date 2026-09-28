@@ -21,3 +21,5 @@ __pycache__/
 node_modules/
 .env
 migration/relink_report.json
+luxto-nsp-firebase-adminsdk-*.json
+package.json
