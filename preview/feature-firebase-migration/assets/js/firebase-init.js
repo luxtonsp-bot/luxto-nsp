@@ -109,11 +109,21 @@ export function fsBatch() {
 // Verificar si usuario es staff (servidor/apoyo/coordinador)
 export async function isStaff(uid) {
   try {
+    console.log('isStaff: Consultando documento members/', uid);
     const snap = await getDoc(doc(fsdb, 'members', uid));
-    if (!snap.exists()) return false;
-    const rol = snap.data().rol;
+    console.log('isStaff: Documento existe:', snap.exists());
+    if (!snap.exists()) {
+      console.warn('isStaff: No existe documento de miembro para', uid);
+      return false;
+    }
+    const data = snap.data();
+    const rol = data.rol;
+    console.log('isStaff: Rol del usuario:', rol, '| Data:', data);
     return rol === 'servidor' || rol === 'apoyo' || rol === 'coordinador';
-  } catch { return false; }
+  } catch (e) {
+    console.error('isStaff error:', e);
+    return false;
+  }
 }
 export async function isCoordinator(uid) {
   try {

@@ -160,7 +160,17 @@ export function on(path, callback) {
 /** Verificar permiso staff (llamar antes de cada acción) */
 async function assertStaff() {
   const user = auth.currentUser;
-  if (!user || !(await isStaff(user.uid))) throw new Error('Solo staff');
+  console.log('assertStaff: Verificando permisos para usuario:', user?.uid, user?.email);
+  if (!user) {
+    console.error('assertStaff: No hay usuario autenticado');
+    throw new Error('No autenticado');
+  }
+  const staffCheck = await isStaff(user.uid);
+  console.log('assertStaff: isStaff resultado:', staffCheck);
+  if (!staffCheck) {
+    console.error('assertStaff: Usuario no tiene permisos de staff');
+    throw new Error('Solo staff - usuario sin permisos');
+  }
 }
 
 /** Verificar permiso coordinador */
@@ -219,8 +229,17 @@ export async function deletePregunta(id) {
   await deleteDoc(doc(fsdb, 'preguntas', id));
 }
 export async function listPreguntas() {
-  const snap = await getDocs(query(collection(fsdb, 'preguntas'), orderBy('updatedAt', 'desc')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    // Intentar primero con orderBy updatedAt
+    const snap = await getDocs(query(collection(fsdb, 'preguntas'), orderBy('updatedAt', 'desc')));
+    const preguntas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (preguntas.length > 0) return preguntas;
+  } catch (e) {
+    console.warn('listPreguntas: orderBy updatedAt falló, probando sin orderBy:', e.message);
+  }
+  // Fallback: sin orderBy (para documentos antiguos sin updatedAt)
+  const snap = await getDocs(collection(fsdb, 'preguntas'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
 }
 
 /** Cargar preguntas seleccionadas a la sesión (cola) — sin correcta */

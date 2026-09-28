@@ -120,9 +120,27 @@ async function inicializar() {
     escucharRankingGlobal();
     // Verificar late host join
     setTimeout(() => checkLateHostJoin(), 1000);
+
+    // Debug: mostrar rol del usuario
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        const fsdb = getFirestore();
+        const memberSnap = await getDoc(doc(fsdb, "members", user.uid));
+        if (memberSnap.exists()) {
+          const data = memberSnap.data();
+          console.log('inicializar: Usuario autenticado:', user.email, '| Rol:', data.rol, '| Nombre:', data.nombre);
+        } else {
+          console.warn('inicializar: No existe documento members para', user.uid);
+        }
+      } catch (e) {
+        console.error('inicializar: Error obteniendo rol:', e);
+      }
+    }
   } catch (e) {
     console.error("Error inicializando:", e);
-    toast("Error al inicializar panel", "err");
+    toast("Error al inicializar panel: " + e.message, "err");
   }
 }
 
@@ -342,10 +360,17 @@ window.toggleModoAsamblea = async function (activa) {
 
 /* ── Banco de preguntas (UI para admin) ───────────────────── */
 window.loadPreguntasBanco = async function () {
+  const container = document.getElementById("preguntas-banco");
+  if (!container) return;
+
+  // Mostrar estado de carga
+  container.innerHTML = '<p style="color:var(--muted); font-style:italic;">Cargando banco de preguntas...</p>';
+
   try {
+    console.log('loadPreguntasBanco: Iniciando carga...');
     const preguntas = await listPreguntas();
-    const container = document.getElementById("preguntas-banco");
-    if (!container) return;
+    console.log('loadPreguntasBanco: Preguntas cargadas:', preguntas.length);
+
     if (preguntas.length === 0) {
       container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay preguntas en el banco. Crea una nueva.</p>';
       return;
@@ -362,8 +387,9 @@ window.loadPreguntasBanco = async function () {
       </div>
     `).join('');
   } catch (e) {
-    console.error(e);
-    toast("Error cargando banco", "err");
+    console.error('loadPreguntasBanco error:', e);
+    container.innerHTML = `<p style="color:var(--err);">Error cargando banco: ${e.message}</p>`;
+    toast("Error cargando banco: " + e.message, "err");
   }
 };
 
