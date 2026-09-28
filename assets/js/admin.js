@@ -760,7 +760,7 @@ function docFecha(d) {
 }
 function docNombre(d) { return d.nombre || d.name || "Anónimo"; }
 
-window.loadSuggestions = async function () {
+window.loadSuggestions = async function loadSuggestions() {
   try {
     const container = document.getElementById("suggestions-list");
     if (!container) return;
@@ -798,7 +798,7 @@ window.loadSuggestions = async function () {
   }
 };
 
-window.loadFeedback = async function () {
+window.loadFeedback = async function loadFeedback() {
   try {
     const container = document.getElementById("feedback-list");
     if (!container) return;
