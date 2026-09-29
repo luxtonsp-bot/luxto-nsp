@@ -558,16 +558,26 @@ export async function createKahootSession({ titulo, fechaAsamblea, preguntaIds =
 /** Listar sesiones KAHOOT con filtros opcionales */
 export async function listKahootSessions({ fechaAsamblea, estado } = {}) {
   await assertStaff();
-  let q = query(collection(fsdb, 'kahoot_sessions'), orderBy('creadoEn', 'desc'));
-  const snap = await getDocs(q);
+  try {
+    // Intentar con orderBy creadoEn (requiere índice compuesto)
+    let q = query(collection(fsdb, 'kahoot_sessions'), orderBy('creadoEn', 'desc'));
+    const snap = await getDocs(q);
+    let sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (sessions.length > 0) {
+      if (fechaAsamblea) sessions = sessions.filter(s => s.fechaAsamblea === fechaAsamblea);
+      if (estado) sessions = sessions.filter(s => s.estado === estado);
+      return sessions;
+    }
+  } catch (e) {
+    console.warn('listKahootSessions: orderBy creadoEn falló, probando sin orderBy:', e.message);
+  }
+  // Fallback: sin orderBy (para documentos sin creadoEn o índice faltante)
+  const snap = await getDocs(collection(fsdb, 'kahoot_sessions'));
   let sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-  if (fechaAsamblea) {
-    sessions = sessions.filter(s => s.fechaAsamblea === fechaAsamblea);
-  }
-  if (estado) {
-    sessions = sessions.filter(s => s.estado === estado);
-  }
+  // Ordenar en cliente por creadoEn descendente
+  sessions.sort((a, b) => (b.creadoEn?.seconds || 0) - (a.creadoEn?.seconds || 0));
+  if (fechaAsamblea) sessions = sessions.filter(s => s.fechaAsamblea === fechaAsamblea);
+  if (estado) sessions = sessions.filter(s => s.estado === estado);
   return sessions;
 }
 
