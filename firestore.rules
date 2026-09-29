@@ -7,9 +7,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAuth() { return request.auth != null; }
-    function getUserRole(uid) { return get(/databases/$(database)/documents/members/$(uid)).data.rol; }
+    function getUserRole(uid) {
+      let doc = get(/databases/$(database)/documents/members/$(uid));
+      return doc.exists ? doc.data.rol : null;
+    }
     function isCoordinator() { return isAuth() && getUserRole(request.auth.uid) == "coordinador"; }
-    function isStaff() { return isAuth() && (getUserRole(request.auth.uid) == "servidor" || getUserRole(request.auth.uid) == "apoyo" || getUserRole(request.auth.uid) == "coordinador"); }
+    function isStaff() {
+      let role = getUserRole(request.auth.uid);
+      return isAuth() && (role == "servidor" || role == "apoyo" || role == "coordinador");
+    }
 
     match /members/{uid} {
       allow read: if isAuth() && (request.auth.uid == uid || isStaff());
@@ -60,7 +66,7 @@ service cloud.firestore {
     }
     // Sesiones KAHOOT preparadas/activas/finalizadas (histórico completo)
     match /kahoot_sessions/{sessionId} {
-      allow read: if isAuth() && isStaff();
+      allow read: if isAuth();  // assertStaff() validado en cliente (engine)
       allow create, update: if isStaff();
       allow delete: if isCoordinator();
     }
