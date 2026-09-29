@@ -58,5 +58,17 @@ service cloud.firestore {
       allow create, update: if isStaff();
       allow delete: if isCoordinator();
     }
+    // Sesiones KAHOOT preparadas/activas/finalizadas (histórico completo)
+    match /kahoot_sessions/{sessionId} {
+      allow read: if isAuth() && isStaff();
+      allow create, update: if isStaff();
+      allow delete: if isCoordinator();
+    }
+    // Histórico anual de sesiones KAHOOT completadas
+    match /historico/{anio}/kahoot_sessions/{sessionId} {
+      allow read: if isAuth();
+      allow create, update: if isCoordinator();
+      allow delete: if false;
+    }
   }
 }

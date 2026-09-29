@@ -11,6 +11,7 @@ import {
   rtdbTx,
   syncServerTime,
   RTDB_PATHS,
+  KAHOOT_RTDB_PATHS,
   fsdb,
   fsTS,
   isStaff,
@@ -29,6 +30,7 @@ import {
   orderBy,
   getDocs,
   setDoc,
+  updateDoc,
   runTransaction,
   deleteDoc,
   rtdbServerTS,
@@ -508,7 +510,273 @@ export async function apagarAsamblea() {
   await remove(ref(rtdb, 'asamblea/preguntaActual'));
   await remove(ref(rtdb, 'asamblea/respuestas'));
   await remove(ref(rtdb, 'asamblea/conectados'));
+  await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
+  await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActivaData));
   await writePhase('apagada');
+}
+
+/* ── KAHOOT SESSIONS (Firestore) ────────────────────────────── */
+
+/** Crear nueva sesión KAHOOT en borrador */
+export async function createKahootSession({ titulo, fechaAsamblea, preguntaIds = [] }) {
+  await assertStaff();
+  if (!titulo?.trim()) throw new Error('Título requerido');
+  if (!fechaAsamblea) throw new Error('Fecha de asamblea requerida');
+
+  const preguntas = [];
+  for (let i = 0; i < preguntaIds.length; i++) {
+    const id = preguntaIds[i];
+    const snap = await getDoc(doc(fsdb, 'preguntas', id));
+    if (!snap.exists()) throw new Error(`Pregunta ${id} no existe`);
+    const p = snap.data();
+    preguntas.push({
+      bancoId: id,
+      texto: p.texto,
+      opciones: p.opciones,
+      correcta: p.correcta ?? 0,
+      duracion: p.duracion ?? 20,
+      orden: i + 1
+    });
+  }
+
+  const anio = new Date(fechaAsamblea).getFullYear();
+  const sessionRef = doc(collection(fsdb, 'kahoot_sessions'));
+  await setDoc(sessionRef, {
+    titulo: titulo.trim(),
+    fechaAsamblea,
+    anio,
+    creadoPor: auth.currentUser.uid,
+    creadoEn: fsTS(),
+    actualizadoEn: fsTS(),
+    estado: 'borrador',
+    preguntas,
+    resultados: null
+  });
+  return sessionRef.id;
+}
+
+/** Listar sesiones KAHOOT con filtros opcionales */
+export async function listKahootSessions({ fechaAsamblea, estado } = {}) {
+  await assertStaff();
+  let q = query(collection(fsdb, 'kahoot_sessions'), orderBy('creadoEn', 'desc'));
+  const snap = await getDocs(q);
+  let sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (fechaAsamblea) {
+    sessions = sessions.filter(s => s.fechaAsamblea === fechaAsamblea);
+  }
+  if (estado) {
+    sessions = sessions.filter(s => s.estado === estado);
+  }
+  return sessions;
+}
+
+/** Obtener sesión KAHOOT completa */
+export async function getKahootSession(sessionId) {
+  await assertStaff();
+  const snap = await getDoc(doc(fsdb, 'kahoot_sessions', sessionId));
+  if (!snap.exists()) throw new Error('Sesión KAHOOT no encontrada');
+  return { id: snap.id, ...snap.data() };
+}
+
+/** Agregar preguntas a una sesión KAHOOT existente (solo en estado borrador/preparada) */
+export async function addQuestionsToKahootSession(sessionId, preguntaIds) {
+  await assertStaff();
+  const session = await getKahootSession(sessionId);
+  if (session.estado === 'activa' || session.estado === 'finalizada') {
+    throw new Error('No se pueden agregar preguntas a una sesión activa o finalizada');
+  }
+
+  const preguntasExistentes = session.preguntas || [];
+  const nextOrden = preguntasExistentes.length + 1;
+  const nuevasPreguntas = [];
+
+  for (let i = 0; i < preguntaIds.length; i++) {
+    const id = preguntaIds[i];
+    // Evitar duplicados
+    if (preguntasExistentes.some(p => p.bancoId === id)) continue;
+    const snap = await getDoc(doc(fsdb, 'preguntas', id));
+    if (!snap.exists()) throw new Error(`Pregunta ${id} no existe`);
+    const p = snap.data();
+    nuevasPreguntas.push({
+      bancoId: id,
+      texto: p.texto,
+      opciones: p.opciones,
+      correcta: p.correcta ?? 0,
+      duracion: p.duracion ?? 20,
+      orden: nextOrden + i
+    });
+  }
+
+  if (nuevasPreguntas.length === 0) return { added: 0, total: preguntasExistentes.length };
+
+  const todasPreguntas = [...preguntasExistentes, ...nuevasPreguntas];
+  await updateDoc(doc(fsdb, 'kahoot_sessions', sessionId), {
+    preguntas: todasPreguntas,
+    actualizadoEn: fsTS()
+  });
+  return { added: nuevasPreguntas.length, total: todasPreguntas.length };
+}
+
+/** Activar sesión KAHOOT: copia preguntas a RTDB, marca "activa" */
+export async function activateKahootSession(sessionId) {
+  await assertStaff();
+  const session = await getKahootSession(sessionId);
+  if (session.estado === 'finalizada') throw new Error('Sesión ya finalizada');
+
+  // Generar sesionId único para RTDB
+  const sesionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  // Preparar preguntas para RTDB (SIN correcta)
+  const preguntasRTDB = session.preguntas.map(p => ({
+    id: p.bancoId,
+    texto: p.texto,
+    opciones: p.opciones,
+    duracion: p.duracion
+  }));
+
+  // Limpiar sesión anterior en RTDB
+  await remove(ref(rtdb, 'asamblea/respuestas'));
+  await remove(ref(rtdb, 'asamblea/conectados'));
+  await remove(ref(rtdb, 'asamblea/sesion/cerradas'));
+  await set(ref(rtdb, RTDB_PATHS.acumulada), false);
+  await set(ref(rtdb, RTDB_PATHS.sesionId), sesionId);
+  await set(ref(rtdb, RTDB_PATHS.cola), preguntasRTDB);
+  await set(ref(rtdb, RTDB_PATHS.indice), 0);
+  await writePhase('lobby');
+
+  // Guardar referencia de sesión activa en RTDB (para proyector/celulares)
+  await set(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva), sessionId);
+  await set(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActivaData), {
+    sessionId,
+    titulo: session.titulo,
+    fechaAsamblea: session.fechaAsamblea,
+    preguntas: session.preguntas  // CON correcta para proyector
+  });
+
+  // Actualizar estado en Firestore
+  await updateDoc(doc(fsdb, 'kahoot_sessions', sessionId), {
+    estado: 'activa',
+    actualizadoEn: fsTS(),
+    sesionIdRTDB: sesionId
+  });
+
+  return { sessionId, sesionId };
+}
+
+/** Finalizar sesión KAHOOT: guarda resultados completos + histórico */
+export async function finalizeKahootSession() {
+  await assertCoordinator();
+
+  // Obtener sesión activa desde RTDB
+  const sesionActivaSnap = await get(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
+  const sessionId = sesionActivaSnap.val();
+  if (!sessionId) throw new Error('No hay sesión KAHOOT activa');
+
+  const session = await getKahootSession(sessionId);
+  if (session.estado === 'finalizada') throw new Error('Sesión ya finalizada');
+
+  // Verificar que no se haya finalizado ya (idempotencia)
+  const txResult = await runTransaction(ref(rtdb, RTDB_PATHS.acumulada), (current) => {
+    if (current === true) return;
+    return true;
+  });
+  if (!txResult.committed) return; // ya finalizado por otro
+
+  // 1. Acumular en rankingGlobal (igual que finalizarSesion actual)
+  const puntosSesion = localState.puntos;
+  const membersSnap = await getDocs(collection(fsdb, 'members'));
+  const memberByUid = {};
+  membersSnap.forEach(d => { memberByUid[d.id] = d.data(); });
+
+  for (const [uid, data] of Object.entries(puntosSesion)) {
+    const pts = data?.pts;
+    if (!pts) continue;
+    const m = memberByUid[uid];
+    const key = m?.email ? m.email.replace(/[.#$[\]]/g, '_') : uid;
+    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(key)), (current) => {
+      const prev = current || { pts: 0, nombre: m?.nombre || 'Anónimo', email: m?.email || '', fotoUrl: m?.fotoUrl || '' };
+      return { ...prev, pts: (prev.pts || 0) + pts, ultimaAsamblea: serverNow() };
+    });
+  }
+
+  // 2. Construir resultados completos
+  const respuestasPorPregunta = {};
+  for (const [qid, respuestas] of Object.entries(localState.respuestas || {})) {
+    const claveSnap = await get(ref(rtdb, RTDB_PATHS.claves(qid)));
+    const correcta = claveSnap.val()?.correcta ?? 0;
+    const abreEn = localState.preguntaActual?.abreEn; // aprox
+
+    respuestasPorPregunta[qid] = {};
+    for (const [uid, r] of Object.entries(respuestas)) {
+      const esCorrecta = r.idx === correcta;
+      const rapidez = Math.max(0, 1 - (r.ts - (abreEn || r.ts)) / 20000); // fallback 20s
+      const pts = esCorrecta ? Math.round(1000 + 500 * rapidez) : 0;
+      respuestasPorPregunta[qid][uid] = {
+        idx: r.idx,
+        ts: r.ts,
+        pts,
+        correcta: esCorrecta,
+        nombre: r.nombre
+      };
+    }
+  }
+
+  // Ranking final
+  const puntosSnap = await get(ref(rtdb, RTDB_PATHS.puntosRoot));
+  const puntosTotales = puntosSnap.val() || {};
+  const rankingFinal = Object.entries(puntosTotales)
+    .map(([uid, data]) => ({ uid, pts: data.pts, nombre: data.nombre }))
+    .sort((a, b) => b.pts - a.pts)
+    .map((r, i) => ({ ...r, posicion: i + 1 }));
+
+  const resultados = {
+    respuestasPorPregunta,
+    rankingFinal,
+    puntosPorParticipante: puntosTotales,
+    totalParticipantes: Object.keys(puntosTotales).length,
+    finalizadaEn: serverNow()
+  };
+
+  // 3. Actualizar sesión en Firestore con resultados
+  await updateDoc(doc(fsdb, 'kahoot_sessions', sessionId), {
+    estado: 'finalizada',
+    actualizadoEn: fsTS(),
+    resultados
+  });
+
+  // 4. Snapshot en histórico anual (nueva subcolección)
+  const anio = session.anio || new Date().getFullYear();
+  await setDoc(doc(fsdb, 'historico', String(anio), 'kahoot_sessions', sessionId), {
+    ...session,
+    resultados,
+    finalizadaEn: fsTS()
+  });
+
+  // 5. Snapshot diario simple (existente - mantener compatibilidad)
+  const hoy = new Date();
+  const hoyStr = hoy.toISOString().split('T')[0];
+  await setDoc(doc(fsdb, 'asambleas_kahoot', hoyStr), {
+    fecha: hoyStr,
+    puntosSesion,
+    resumen: localState.resumen,
+    totalPreguntas: session.preguntas.length,
+    kahootSessionId: sessionId,
+    creadoEn: fsTS()
+  });
+  await setDoc(doc(fsdb, 'historico', String(hoy.getFullYear()), 'asambleas_kahoot', hoyStr), {
+    fecha: hoyStr,
+    puntosSesion,
+    resumen: localState.resumen,
+    totalPreguntas: session.preguntas.length,
+    kahootSessionId: sessionId,
+    creadoEn: fsTS()
+  });
+
+  // 6. Fase podio
+  await writePhase('podio');
+
+  return { sessionId, resultados };
 }
 
 /* ── ACCIONES PARTICIPANTE (celular) ─────────────────────── */

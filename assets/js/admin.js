@@ -58,7 +58,14 @@ import {
   listPreguntas,
   savePregunta,
   deletePregunta,
-  checkLateHostJoin
+  checkLateHostJoin,
+  // KAHOOT Sessions
+  createKahootSession,
+  listKahootSessions,
+  getKahootSession,
+  activateKahootSession,
+  finalizeKahootSession,
+  addQuestionsToKahootSession
 } from './asamblea-engine.js';
 
 /* ── Admins hardcodeados (seguridad temporal, migrar a reglas de Firestore en el futuro) ── */
@@ -120,6 +127,11 @@ async function inicializar() {
     escucharRankingGlobal();
     // Verificar late host join
     setTimeout(() => checkLateHostJoin(), 1000);
+
+    // Cargar sesiones KAHOOT preparadas
+    if (window.loadKahootSessions) await window.loadKahootSessions();
+    // Cargar banco de preguntas
+    if (window.loadPreguntasBanco) await window.loadPreguntasBanco();
 
     // Debug: mostrar rol del usuario
     const user = auth.currentUser;
@@ -1000,6 +1012,250 @@ window.loadFeedback = async function loadFeedback() {
   }
 };
 
+/* ── KAHOOT Sessions: Preparar, Activar, Finalizar ─────────── */
+
+// Variable para guardar el ID de la sesión KAHOOT que se está preparando
+let _kahootSessionEnPreparacion = null;
+
+window.crearKahootSession = async function () {
+  const titulo = document.getElementById("kahootTitulo").value.trim();
+  const fecha = document.getElementById("kahootFecha").value;
+  if (!titulo) { toast("Escribe un título para el KAHOOT", "err"); return; }
+  if (!fecha) { toast("Selecciona una fecha", "err"); return; }
+  try {
+    toast("Creando sesión KAHOOT...", "");
+    const sessionId = await createKahootSession({ titulo, fechaAsamblea: fecha, creadoPor: auth.currentUser.uid });
+    _kahootSessionEnPreparacion = sessionId;
+    toast(`✅ KAHOOT "${titulo}" creado`, "ok");
+    document.getElementById("kahootTitulo").value = "";
+    document.getElementById("kahootFecha").value = "";
+    await window.loadKahootSessions();
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  }
+};
+
+window.loadKahootSessions = async function () {
+  const select = document.getElementById("kahootSessionSelect");
+  if (!select) return;
+  try {
+    select.innerHTML = '<option value="">-- Cargando sesiones... --</option>';
+    const sessions = await listKahootSessions();
+    select.innerHTML = '<option value="">-- Seleccionar sesión KAHOOT --</option>';
+    if (sessions.length === 0) {
+      select.innerHTML += '<option value="" disabled>No hay sesiones preparadas</option>';
+      return;
+    }
+    sessions.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      const fechaStr = s.fechaAsamblea ? ` (${s.fechaAsamblea})` : "";
+      opt.textContent = `${s.titulo}${fechaStr} — ${s.preguntas ? s.preguntas.length : 0} preguntas`;
+      select.appendChild(opt);
+    });
+    // Si hay una sesión en preparación, seleccionarla
+    if (_kahootSessionEnPreparacion) {
+      select.value = _kahootSessionEnPreparacion;
+      _kahootSessionEnPreparacion = null;
+      window.verKahootSession();
+    }
+    // Habilitar botones
+    const btnCargar = document.getElementById("btnCargarKahoot");
+    const btnVer = document.getElementById("btnVerKahoot");
+    if (btnCargar) btnCargar.style.display = "inline-flex";
+    if (btnVer) btnVer.style.display = "inline-flex";
+  } catch (e) {
+    console.error(e);
+    select.innerHTML = '<option value="">Error cargando sesiones</option>';
+    toast("Error cargando sesiones: " + e.message, "err");
+  }
+};
+
+window.verKahootSession = async function () {
+  const select = document.getElementById("kahootSessionSelect");
+  const infoDiv = document.getElementById("kahootSessionInfo");
+  const btnAgregar = document.getElementById("btnAgregarAlKahoot");
+  const countSpan = document.getElementById("kahootPreguntasCount");
+  if (!select || !select.value) { toast("Selecciona una sesión primero", "err"); return; }
+  try {
+    const session = await getKahootSession(select.value);
+    if (!session) { toast("Sesión no encontrada", "err"); return; }
+    // Mostrar info
+    const estadoLabel = session.estado === 'preparada' ? '🟡 Preparada' :
+                        session.estado === 'activa' ? '🟢 Activa' :
+                        session.estado === 'finalizada' ? '🔵 Finalizada' : session.estado;
+    infoDiv.innerHTML = `
+      <strong>${esc(session.titulo)}</strong> ${session.fechaAsamblea ? ` — ${session.fechaAsamblea}` : ''}<br>
+      Estado: ${estadoLabel} · Preguntas: ${session.preguntas ? session.preguntas.length : 0} · Creado: ${session.creadoEn ? new Date(session.creadoEn.seconds * 1000).toLocaleString() : 'N/A'}
+    `;
+    infoDiv.style.display = "block";
+    // Actualizar contador de preguntas en la sesión
+    if (countSpan) countSpan.textContent = `${session.preguntas ? session.preguntas.length : 0} preguntas en esta sesión`;
+    // Mostrar botón agregar si está en estado preparada
+    if (btnAgregar) btnAgregar.style.display = session.estado === 'preparada' ? "inline-flex" : "none";
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  }
+};
+
+window.agregarPreguntasAKahoot = async function () {
+  const select = document.getElementById("kahootSessionSelect");
+  if (!select || !select.value) { toast("Selecciona una sesión KAHOOT primero", "err"); return; }
+  const selected = Array.from(document.querySelectorAll('#preguntas-banco input[type=checkbox]:checked')).map(el => el.dataset.id);
+  if (selected.length === 0) { toast("Selecciona al menos una pregunta del banco", "err"); return; }
+  try {
+    toast(`Agregando ${selected.length} preguntas...`, "");
+    const result = await addQuestionsToKahootSession(select.value, selected);
+    toast(`✅ ${result.added} preguntas agregadas al KAHOOT (total: ${result.total})`, "ok");
+    window.verKahootSession();
+    window.loadPreguntasBanco(); // recargar banco para desmarcar
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  }
+};
+
+window.activarKahootSession = async function () {
+  const select = document.getElementById("kahootSessionSelect");
+  if (!select || !select.value) { toast("Selecciona una sesión KAHOOT primero", "err"); return; }
+  try {
+    toast("Activando sesión KAHOOT...", "");
+    await activateKahootSession(select.value);
+    toast("✅ Sesión KAHOOT activada — lista en proyector y celulares", "ok");
+    // Cambiar a vista de control sesión activa
+    window.loadKahootSessions();
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  }
+};
+
+window.finalizarKahootSession = async function () {
+  // Solo coordinadores pueden finalizar
+  try {
+    const userSnap = await getDoc(doc(fsdb, "members", auth.currentUser.uid));
+    if (!userSnap.exists() || userSnap.data().rol !== "coordinador") {
+      toast("Solo los coordinadores pueden finalizar el KAHOOT", "err");
+      return;
+    }
+  } catch (e) {
+    toast("Error verificando permisos", "err");
+    return;
+  }
+  const ok = confirm("¿Finalizar el KAHOOT activo? Se guardará el snapshot histórico completo y se actualizará el ranking global.");
+  if (!ok) return;
+  try {
+    await finalizeKahootSession();
+    toast("🏁 KAHOOT finalizado · Snapshot histórico guardado · RankingGlobal actualizado", "ok");
+    // Recargar lista de sesiones y historial
+    window.loadKahootSessions();
+    window.loadKahootHistorial();
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  }
+};
+
+window.loadKahootHistorial = async function () {
+  const container = document.getElementById("kahoot-historial");
+  if (!container) return;
+  container.innerHTML = '<p style="color:var(--muted); font-style:italic;">Cargando historial...</p>';
+  try {
+    // Leer del histórico anual (colección historico/{anio}/kahoot_sessions)
+    const { collection, query, orderBy, getDocs, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const { fsdb } = await import('./firebase-init.js');
+    const anioActual = new Date().getFullYear();
+    const histRef = collection(fsdb, "historico", String(anioActual), "kahoot_sessions");
+    const snap = await getDocs(query(histRef, orderBy("finalizadoEn", "desc")));
+    const sesiones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (sesiones.length === 0) {
+      container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay KAHOOTs finalizados este año.</p>';
+      return;
+    }
+    container.innerHTML = sesiones.map(s => `
+      <div class="banco-item" style="background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div style="flex:1; min-width:200px;">
+            <div style="font-weight:600; margin-bottom:4px;">${esc(s.titulo)}</div>
+            <div style="font-size:12px; color:var(--muted);">
+              Fecha: ${s.fechaAsamblea || 'N/A'} · Finalizado: ${s.finalizadoEn ? new Date(s.finalizadoEn.seconds * 1000).toLocaleString() : 'N/A'} · ${s.preguntas ? s.preguntas.length : 0} preguntas · ${s.participantes ? Object.keys(s.participantes).length : 0} participantes
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-ghost" onclick="verDetalleKahootHistorico('${s.id}')" style="font-size:12px;">👁️ Ver detalle</button>
+            <button class="btn btn-primary" onclick="reusarPreguntasKahoot('${s.id}')" style="font-size:12px;">♻️ Reutilizar preguntas</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error(e);
+    container.innerHTML = `<p style="color:var(--err);">Error cargando historial: ${e.message}</p>`;
+    toast("Error cargando historial: " + e.message, "err");
+  }
+};
+
+window.verDetalleKahootHistorico = async function (sessionId) {
+  try {
+    const { collection, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const { fsdb } = await import('./firebase-init.js');
+    const anioActual = new Date().getFullYear();
+    const snap = await getDoc(doc(fsdb, "historico", String(anioActual), "kahoot_sessions", sessionId));
+    if (!snap.exists()) { toast("Sesión no encontrada", "err"); return; }
+    const s = snap.data();
+    let html = `<h4 style="margin-bottom:12px; color:var(--y);">${esc(s.titulo)}</h4>`;
+    html += `<p style="color:var(--muted); margin-bottom:16px;">Fecha: ${s.fechaAsamblea || 'N/A'} · Finalizado: ${s.finalizadoEn ? new Date(s.finalizadoEn.seconds * 1000).toLocaleString() : 'N/A'}</p>`;
+    html += `<p><strong>Ranking final:</strong></p><ul style="margin-left:20px;">`;
+    if (s.rankingFinal && s.rankingFinal.length > 0) {
+      s.rankingFinal.forEach((r, i) => {
+        html += `<li>${i+1}. ${esc(r.nombre || r.uid)} — ${r.pts} pts</li>`;
+      });
+    } else {
+      html += `<li>No hay ranking</li>`;
+    }
+    html += `</ul>`;
+    html += `<p><strong>Preguntas (${s.preguntas ? s.preguntas.length : 0}):</strong></p><ul style="margin-left:20px;">`;
+    if (s.preguntas && s.preguntas.length > 0) {
+      s.preguntas.forEach((p, i) => {
+        html += `<li>${i+1}. ${esc(p.texto)} (⏱ ${p.duracion}s) — Correcta: ${String.fromCharCode(65 + (p.correcta || 0))}</li>`;
+      });
+    } else {
+      html += `<li>Sin preguntas</li>`;
+    }
+    html += `</ul>`;
+    alert(html); // Simple, usar modal en el futuro
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  }
+};
+
+window.reusarPreguntasKahoot = async function (sessionId) {
+  try {
+    const { collection, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const { fsdb } = await import('./firebase-init.js');
+    const anioActual = new Date().getFullYear();
+    const snap = await getDoc(doc(fsdb, "historico", String(anioActual), "kahoot_sessions", sessionId));
+    if (!snap.exists()) { toast("Sesión no encontrada", "err"); return; }
+    const s = snap.data();
+    if (!s.preguntas || s.preguntas.length === 0) { toast("Esta sesión no tiene preguntas", "err"); return; }
+    // Crear nueva sesión KAHOOT con estas preguntas
+    const nuevoTitulo = prompt("Título para la nueva sesión (reutilizando preguntas):", s.titulo + " (reutilizado)");
+    if (!nuevoTitulo) return;
+    const nuevaFecha = prompt("Fecha para la nueva sesión (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+    if (!nuevaFecha) return;
+    const sessionId = await createKahootSession({ titulo: nuevoTitulo, fechaAsamblea: nuevaFecha, creadoPor: auth.currentUser.uid, preguntaIds: s.preguntas.map(p => p.bancoId) });
+    _kahootSessionEnPreparacion = sessionId;
+    toast(`✅ Nueva sesión creada con ${s.preguntas.length} preguntas reutilizadas`, "ok");
+    window.loadKahootSessions();
+  } catch (e) {
+    console.error(e);
+    toast("Error: " + e.message, "err");
+  }
+};
+
 /* ── Tab change handler (called from inline script) ────────── */
 window.onAdminTabChange = function (tabName) {
   if (tabName === 'gestion-lideres') {
@@ -1010,6 +1266,8 @@ window.onAdminTabChange = function (tabName) {
     if (window.loadFeedback) window.loadFeedback();
   } else if (tabName === 'asamblea') {
     if (window.loadPreguntasBanco) window.loadPreguntasBanco();
+    if (window.loadKahootSessions) window.loadKahootSessions();
+    if (window.loadKahootHistorial) window.loadKahootHistorial();
   }
 };
 
