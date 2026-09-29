@@ -741,15 +741,18 @@ window.cargarBorrador = async function (key) {
     const snap = await get(ref(rtdb, "borradores/" + key));
     const p = snap.val();
     if (!p) return;
-    document.getElementById("npTexto").value = p.texto;
+    const npTexto = document.getElementById("npTexto");
+    if (npTexto) npTexto.value = p.texto || "";
     ["opA", "opB", "opC", "opD"].forEach((id, i) => {
-      document.getElementById(id).value = (p.opciones && p.opciones[i]) ? p.opciones[i] : "";
+      const el = document.getElementById(id);
+      if (el) el.value = (p.opciones && p.opciones[i]) ? p.opciones[i] : "";
     });
     if (p.correcta != null) {
       const r = document.querySelector(`input[name="correcta"][value="${p.correcta}"]`);
       if (r) r.checked = true;
     }
-    document.getElementById("npDuracion").value = p.duracion || 20;
+    const npDuracion = document.getElementById("npDuracion");
+    if (npDuracion) npDuracion.value = p.duracion || 20;
     toast("Pregunta cargada ✓", "ok");
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (e) {
