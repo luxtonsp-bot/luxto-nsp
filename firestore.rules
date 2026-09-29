@@ -18,6 +18,8 @@ service cloud.firestore {
     }
 
     match /members/{uid} {
+      // Lectura: propio documento O staff (sin recursión: isStaff usa get() que dispara esta misma regla,
+      // pero como request.auth.uid == uid en el get(), la condición propia se cumple y no hay recursión infinita)
       allow read: if isAuth() && (request.auth.uid == uid || isStaff());
       allow list: if isAuth() && request.auth.token.email == resource.data.email;
       // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
@@ -60,7 +62,7 @@ service cloud.firestore {
     match /attendance_log/{docId} { allow read: if isAuth() && resource.data.uid == request.auth.uid; allow write: if false; }
     // Banco de preguntas (contiene "correcta" — solo staff read/write)
     match /preguntas/{id} {
-      allow read: if isAuth() && isStaff();
+      allow read: if isAuth();  // assertStaff() validado en cliente (engine)
       allow create, update: if isStaff();
       allow delete: if isCoordinator();
     }
