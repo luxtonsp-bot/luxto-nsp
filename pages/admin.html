@@ -523,6 +523,61 @@ option:checked, option:hover, option:focus {
           <div id="kahootSessionInfo" style="margin-top:10px; font-size:13px; color:var(--muted); display:none;"></div>
         </div>
 
+        <!-- Formulario crear pregunta (para guardar en banco) -->
+        <div class="card nueva-pregunta" style="margin-bottom:20px; border-color:rgba(74,143,168,.3);">
+          <div class="card-title">➕ Crear pregunta <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">(guárdala en el banco para usar en KAHOOTs)</span></div>
+          <div class="np-grid">
+            <div class="np-field">
+              <div class="np-label">Texto de la pregunta</div>
+              <input class="np-input" id="npTexto" type="text" placeholder="Ej: ¿Cuál es el pasaje bíblico que inspira nuestro grupo?">
+            </div>
+            <div class="np-field">
+              <div class="np-label">Opciones — marca la correcta con ●</div>
+              <div class="np-opciones-grid">
+                <div class="np-opcion-wrap">
+                  <span class="np-opcion-letra">A</span>
+                  <input class="np-opcion-input" id="opA" type="text" placeholder="Opción A">
+                  <input class="np-radio" type="radio" name="correcta" value="0" id="rA">
+                </div>
+                <div class="np-opcion-wrap">
+                  <span class="np-opcion-letra">B</span>
+                  <input class="np-opcion-input" id="opB" type="text" placeholder="Opción B">
+                  <input class="np-radio" type="radio" name="correcta" value="1" id="rB">
+                </div>
+                <div class="np-opcion-wrap">
+                  <span class="np-opcion-letra">C</span>
+                  <input class="np-opcion-input" id="opC" type="text" placeholder="Opción C (opcional)">
+                  <input class="np-radio" type="radio" name="correcta" value="2" id="rC">
+                </div>
+                <div class="np-opcion-wrap">
+                  <span class="np-opcion-letra">D</span>
+                  <input class="np-opcion-input" id="opD" type="text" placeholder="Opción D (opcional)">
+                  <input class="np-radio" type="radio" name="correcta" value="3" id="rD">
+                </div>
+              </div>
+            </div>
+            <div class="np-meta">
+              <div class="np-field">
+                <div class="np-label">Tiempo límite</div>
+                <select class="np-select" id="npDuracion">
+                  <option value="10">10 segundos</option>
+                  <option value="20" selected>20 segundos</option>
+                  <option value="30">30 segundos</option>
+                  <option value="45">45 segundos</option>
+                  <option value="60">60 segundos</option>
+                </select>
+              </div>
+              <div class="np-field">
+                <div class="np-label">Acciones</div>
+                <div class="np-actions">
+                  <button class="btn btn-primary" onclick="savePreguntaAdmin()">💾 Guardar en banco</button>
+                  <button class="btn btn-ghost" onclick="guardarBorrador()">💾 Guardar borrador</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Banco de preguntas para agregar al KAHOOT -->
         <div style="border-top:1px solid var(--border); padding-top:20px;">
           <div class="np-label" style="margin-bottom:12px;">📚 Banco de Preguntas (para agregar a la sesión nueva)</div>
