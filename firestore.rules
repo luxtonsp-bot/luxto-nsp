@@ -18,10 +18,11 @@ service cloud.firestore {
     }
 
     match /members/{uid} {
-      // Lectura: propio documento O staff (sin recursión: isStaff usa get() que dispara esta misma regla,
-      // pero como request.auth.uid == uid en el get(), la condición propia se cumple y no hay recursión infinita)
+      // Lectura: propio documento O staff
       allow read: if isAuth() && (request.auth.uid == uid || isStaff());
-      allow list: if isAuth() && (request.auth.token.email == resource.data.email || isStaff());
+      // List: propio documento por email O staff (inline get para evitar recursión en list)
+      allow list: if isAuth() && (request.auth.token.email == resource.data.email ||
+        (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol in ["servidor", "apoyo", "coordinador"]));
       // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
       allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
       // Nadie puede crearse a sí mismo con un rol elevado; coordinador puede crear para nuevos
@@ -57,8 +58,8 @@ service cloud.firestore {
     match /historico/{anio}/{collection}/{docId} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
     // Docs de año (historico/2026) y doc raíz: necesarios para collectionGroup('historico') y listados de años
     match /historico/{anio} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
-    match /suggestions/{id} { allow read: if isStaff(); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
-    match /feedback/{id} { allow read: if isStaff(); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
+    match /suggestions/{id} { allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol in ["servidor", "apoyo", "coordinador"]); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
+    match /feedback/{id} { allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol in ["servidor", "apoyo", "coordinador"]); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
     match /attendance_log/{docId} { allow read: if isAuth() && resource.data.uid == request.auth.uid; allow write: if false; }
     // Banco de preguntas (contiene "correcta" — solo staff read/write)
     match /preguntas/{id} {
