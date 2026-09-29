@@ -21,7 +21,7 @@ service cloud.firestore {
       // Lectura: propio documento O staff (sin recursión: isStaff usa get() que dispara esta misma regla,
       // pero como request.auth.uid == uid en el get(), la condición propia se cumple y no hay recursión infinita)
       allow read: if isAuth() && (request.auth.uid == uid || isStaff());
-      allow list: if isAuth() && request.auth.token.email == resource.data.email;
+      allow list: if isAuth() && (request.auth.token.email == resource.data.email || isStaff());
       // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
       allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
       // Nadie puede crearse a sí mismo con un rol elevado; coordinador puede crear para nuevos
