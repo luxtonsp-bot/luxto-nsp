@@ -490,14 +490,63 @@ option:checked, option:hover, option:focus {
     <!-- ══ TAB: MODO ASAMBLEA ══ -->
     <div id="asamblea" class="tab-content active">
 
-      <div class="asamblea-estado">
+      <!-- ══ SECCIÓN A: PREPARAR KAHOOT ══ -->
+      <div class="card" style="margin-bottom:28px; border-color:rgba(245,197,24,.2);">
+        <div class="card-title">📝 Preparar KAHOOT <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">Crea la sesión con título, fecha y preguntas del banco</span></div>
 
+        <!-- Formulario crear sesión KAHOOT -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+          <div class="np-field">
+            <div class="np-label">Título del KAHOOT</div>
+            <input class="np-input" id="kahootTitulo" type="text" placeholder="Ej: KAHOOT Bienvenida Septiembre">
+          </div>
+          <div class="np-field">
+            <div class="np-label">Fecha de la asamblea</div>
+            <input class="np-input" id="kahootFecha" type="date">
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+          <button class="btn btn-primary" onclick="crearKahootSession()">➕ Crear sesión KAHOOT</button>
+          <button class="btn btn-ghost" onclick="loadKahootSessions()">🔄 Recargar lista</button>
+        </div>
+
+        <!-- Selector de sesión preparada -->
+        <div style="margin-bottom:20px; padding:16px; background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:12px;">
+          <div class="np-label" style="margin-bottom:8px;">Sesión KAHOOT preparada para hoy</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <select class="np-select" id="kahootSessionSelect" style="flex:1; min-width:200px;">
+              <option value="">-- Seleccionar sesión KAHOOT --</option>
+            </select>
+            <button class="btn btn-primary" id="btnCargarKahoot" onclick="activarKahootSession()" style="display:none;">📥 Cargar en sesión activa</button>
+            <button class="btn btn-warn" id="btnVerKahoot" onclick="verKahootSession()" style="display:none;">👁️ Ver detalles</button>
+          </div>
+          <div id="kahootSessionInfo" style="margin-top:10px; font-size:13px; color:var(--muted); display:none;"></div>
+        </div>
+
+        <!-- Banco de preguntas para agregar al KAHOOT -->
+        <div style="border-top:1px solid var(--border); padding-top:20px;">
+          <div class="np-label" style="margin-bottom:12px;">📚 Banco de Preguntas (para agregar a la sesión nueva)</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <button class="btn btn-primary" onclick="loadPreguntasBanco()">🔄 Recargar banco</button>
+          </div>
+          <div class="hist-lista" id="preguntas-banco" style="max-height:300px;">
+            <div class="hist-vacio">Cargando banco...</div>
+          </div>
+          <div style="margin-top:12px; display:flex; gap:8px;">
+            <button class="btn btn-ok" id="btnAgregarAlKahoot" onclick="agregarPreguntasAKahoot()" style="display:none;">➕ Agregar seleccionadas al KAHOOT actual</button>
+            <span id="kahootPreguntasCount" style="align-self:center; color:var(--muted); font-size:13px;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SECCIÓN B: CONTROL SESIÓN ACTIVA ══ -->
+      <div class="asamblea-estado">
         <div class="card toggle-card">
           <div class="card-title">Estado del modo asamblea</div>
           <div class="toggle-row">
             <div class="toggle-info">
               <div class="estado-label off" id="estadoLabel">⚫ Inactivo</div>
-              <div class="estado-sub" id="estadoSub">Activa el modo, sube preguntas, y controla todo desde el proyector</div>
+              <div class="estado-sub" id="estadoSub">Activa el modo, carga una sesión KAHOOT, y controla todo desde el proyector</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
               <button class="btn btn-primary" id="btnTomarControl" hidden onclick="tomarControl()">
@@ -507,13 +556,13 @@ option:checked, option:hover, option:focus {
                 🟢 Iniciar sesión
               </button>
               <button class="btn btn-danger" id="btnResetRanking" style="display:none;" onclick="reiniciarRanking()">
-                🔄 Reiniciar ranking
+                🔄 Reiniciar ranking sesión
               </button>
               <button class="btn btn-danger" id="btnResetGlobal" onclick="reiniciarRankingGlobal()" title="Borra el acumulado histórico de todas las asambleas">
                 ♻️ Reiniciar ranking global
               </button>
-              <button class="btn btn-warn" id="btnFinalizar" style="display:none;" onclick="finalizarAsamblea()">
-                🏁 Finalizar asamblea
+              <button class="btn btn-warn" id="btnFinalizar" style="display:none;" onclick="finalizarKahootSession()">
+                🏁 Finalizar KAHOOT
               </button>
               <label class="toggle">
                 <input type="checkbox" id="toggleAsamblea" onchange="toggleModoAsamblea(this.checked)">
@@ -530,7 +579,7 @@ option:checked, option:hover, option:focus {
           <div class="stats-live">
             <div class="stat-live">
               <div class="stat-live-num" id="statConectados">0</div>
-              <div class="stat-live-label">Respuestas</div>
+              <div class="stat-live-label">Conectados</div>
             </div>
             <div class="stat-live">
               <div class="stat-live-num" id="statPreguntas">0</div>
@@ -574,69 +623,14 @@ option:checked, option:hover, option:focus {
         <div class="rank-lista" id="rankLista"></div>
       </div>
 
-      <div class="card nueva-pregunta">
-        <div class="card-title">➕ Crear pregunta <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">(guárdala, el proyector la lanzará)</span></div>
-        <div class="np-grid">
-          <div class="np-field">
-            <div class="np-label">Texto de la pregunta</div>
-            <input class="np-input" id="npTexto" type="text"
-              placeholder="Ej: ¿Cuál es el pasaje bíblico que inspira nuestro grupo?">
-          </div>
-          <div class="np-field">
-            <div class="np-label">Opciones — marca la correcta con ●</div>
-            <div class="np-opciones-grid">
-              <div class="np-opcion-wrap">
-                <span class="np-opcion-letra">A</span>
-                <input class="np-opcion-input" id="opA" type="text" placeholder="Opción A">
-                <input class="np-radio" type="radio" name="correcta" value="0" id="rA">
-              </div>
-              <div class="np-opcion-wrap">
-                <span class="np-opcion-letra">B</span>
-                <input class="np-opcion-input" id="opB" type="text" placeholder="Opción B">
-                <input class="np-radio" type="radio" name="correcta" value="1" id="rB">
-              </div>
-              <div class="np-opcion-wrap">
-                <span class="np-opcion-letra">C</span>
-                <input class="np-opcion-input" id="opC" type="text" placeholder="Opción C (opcional)">
-                <input class="np-radio" type="radio" name="correcta" value="2" id="rC">
-              </div>
-              <div class="np-opcion-wrap">
-                <span class="np-opcion-letra">D</span>
-                <input class="np-opcion-input" id="opD" type="text" placeholder="Opción D (opcional)">
-                <input class="np-radio" type="radio" name="correcta" value="3" id="rD">
-              </div>
-            </div>
-          </div>
-          <div class="np-meta">
-            <div class="np-field">
-              <div class="np-label">Tiempo límite</div>
-              <select class="np-select" id="npDuracion">
-                <option value="10">10 segundos</option>
-                <option value="20" selected>20 segundos</option>
-                <option value="30">30 segundos</option>
-                <option value="45">45 segundos</option>
-                <option value="60">60 segundos</option>
-              </select>
-            </div>
-            <div class="np-field">
-              <div class="np-label">Acciones</div>
-              <div class="np-actions">
-                <button class="btn btn-primary" onclick="savePreguntaAdmin()">💾 Guardar en banco</button>
-                <button class="btn btn-primary" onclick="lanzarPregunta()">🚀 Lanzar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      <!-- Historial de sesiones KAHOOT finalizadas -->
       <div class="card historial">
-        <div class="card-title">📋 Banco de Preguntas <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">(marca para cargar a la sesión)</span></div>
+        <div class="card-title">📜 Historial KAHOOTs finalizados <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">Resultados completos guardados</span></div>
         <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="loadPreguntasBanco()">🔄 Recargar banco</button>
-          <button class="btn btn-ok" onclick="cargarColaSesion()">📥 Cargar seleccionadas a la sesión</button>
+          <button class="btn btn-primary" onclick="loadKahootHistorial()">🔄 Recargar historial</button>
         </div>
-        <div class="hist-lista" id="preguntas-banco" style="max-height:400px;">
-          <div class="hist-vacio">Cargando banco...</div>
+        <div class="hist-lista" id="kahoot-historial" style="max-height:400px;">
+          <div class="hist-vacio">Cargando historial...</div>
         </div>
       </div>
 

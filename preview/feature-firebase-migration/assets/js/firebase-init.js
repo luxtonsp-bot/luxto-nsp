@@ -163,6 +163,12 @@ export const RTDB_PATHS = {
   cerradas: (sid, qid) => `asamblea/sesion/cerradas/${sid}/${qid}`,
 };
 
+/* ── Rutas RTDB para KAHOOT Sessions (nuevo) ───────────────── */
+export const KAHOOT_RTDB_PATHS = {
+  sesionActiva: 'kahoot/sesionActiva',           // sessionId de la sesión activa actualmente
+  sesionActivaData: 'kahoot/sesionActivaData',   // datos completos de la sesión activa (para proyector/celulares)
+};
+
 /* ── Re-export de SDK para consumidores ─────────────────────── */
 export {
   // RTDB
