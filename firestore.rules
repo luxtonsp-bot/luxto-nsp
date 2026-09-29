@@ -64,8 +64,8 @@ service cloud.firestore {
     // Banco de preguntas (contiene "correcta" — solo staff read/write)
     match /preguntas/{id} {
       allow read: if isAuth();  // assertStaff() validado en cliente (engine)
-      allow create, update: if isStaff();
-      allow delete: if isCoordinator();
+      allow create, update: if isAuth() && (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol in ["servidor", "apoyo", "coordinador"]);
+      allow delete: if isAuth() && (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol == "coordinador");
     }
     // Sesiones KAHOOT preparadas/activas/finalizadas (histórico completo)
     match /kahoot_sessions/{sessionId} {
