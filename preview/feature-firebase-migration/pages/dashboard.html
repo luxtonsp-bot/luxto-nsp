@@ -580,7 +580,7 @@ textarea:focus{border-color:var(--o);background:white;}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, query, where, getDocs, collection, addDoc, writeBatch, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
@@ -1109,9 +1109,25 @@ function renderTardanzaChart() {
 
 /* ── Verificar modo asamblea ────────────────────────── */
 function verificarModoAsamblea() {
+  const contenedor = document.getElementById("modoAsamblea");
+  if (!contenedor) return;
+
+  let legacyActiva = false;
+  let faseActiva = false;
+
+  const syncVisibility = () => {
+    contenedor.classList.toggle("visible", legacyActiva || faseActiva);
+  };
+
   onValue(ref(rtdb, "asamblea/activa"), (snap) => {
-    const activa = snap.val() === true;
-    document.getElementById("modoAsamblea").classList.toggle("visible", activa);
+    legacyActiva = snap.val() === true;
+    syncVisibility();
+  });
+
+  onValue(ref(rtdb, "asamblea/sesion/fase"), (snap) => {
+    const fase = snap.val() || "apagada";
+    faseActiva = fase !== "apagada";
+    syncVisibility();
   });
 }
 
