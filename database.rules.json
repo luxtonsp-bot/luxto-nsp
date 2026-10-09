@@ -93,8 +93,8 @@
         }
       },
       "borradores": {
-        ".read": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
-        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
+        ".read": "auth != null && (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador' || root.child('members').child(auth.uid).child('rol').val() === 'servidor' || root.child('members').child(auth.uid).child('rol').val() === 'apoyo' || root.child('members').child(auth.uid).child('rol').val() === 'coordinador')",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador' || root.child('members').child(auth.uid).child('rol').val() === 'servidor' || root.child('members').child(auth.uid).child('rol').val() === 'apoyo' || root.child('members').child(auth.uid).child('rol').val() === 'coordinador')"
       }
     },
     "preguntaActual": {
