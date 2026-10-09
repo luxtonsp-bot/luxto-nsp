@@ -4,7 +4,7 @@
  */
 
 import { esc } from './esc.js';
-import { isStateAllowedForAction } from './phase-guards.js';
+import { isStateAllowedForAction, getSessionCleanupPaths } from './phase-guards.js';
 
 let passed = 0;
 let failed = 0;
@@ -91,6 +91,15 @@ console.log("\n=== asamblea-engine: phase guard against stale local state ===");
 assert(isStateAllowedForAction("countdown", ["lobby", "countdown", "revelada", "ranking"]) === true, "countdown should be allowed for a live action");
 assert(isStateAllowedForAction("pregunta", ["lobby", "countdown", "revelada", "ranking"]) === false, "pregunta should not be allowed from a drained state guard");
 assert(isStateAllowedForAction("revelada", ["revelada", "ranking"]) === true, "revelada should allow ranking transition");
+
+console.log("\n=== asamblea-engine: session cleanup clears accumulated state ===");
+const cleanupPaths = getSessionCleanupPaths();
+assert(cleanupPaths.includes('asamblea/preguntaActual'), 'cleanup should include active question');
+assert(cleanupPaths.includes('asamblea/respuestas'), 'cleanup should include answers');
+assert(cleanupPaths.includes('asamblea/conectados'), 'cleanup should include connected users');
+assert(cleanupPaths.includes('asamblea/sesion/puntos'), 'cleanup should include accumulated points');
+assert(cleanupPaths.includes('asamblea/sesion/resumen'), 'cleanup should include session summary');
+assert(cleanupPaths.includes('asamblea/sesion/cerradas'), 'cleanup should include closure keys');
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
