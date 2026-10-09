@@ -3,8 +3,8 @@
     ".read": false,
     ".write": false,
     "asamblea": {
-      ".read": false,
-      ".write": false,
+      ".read": "auth != null",
+      ".write": "auth != null",
       "sesion": {
         "fase": {
           ".read": "auth != null",
