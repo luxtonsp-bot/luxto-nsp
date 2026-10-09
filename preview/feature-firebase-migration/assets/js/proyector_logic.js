@@ -124,7 +124,7 @@ async function leerPreguntaNum() {
 // ═══════════════════════════════════════════
 
 function escucharBorradores() {
-  onValue(ref(db, "borradores"), (snap) => {
+  onValue(ref(db, "asamblea/borradores"), (snap) => {
     const data = snap.val();
     if (!data) { colaPreguntas = []; actualizarBotones(); return; }
     colaPreguntas = Object.entries(data)
