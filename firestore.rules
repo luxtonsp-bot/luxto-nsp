@@ -22,7 +22,7 @@ service cloud.firestore {
       // Lectura: propio documento O staff
       allow read: if isAuth() && (request.auth.uid == uid || isStaff());
       // List: staff puede listar, miembro solo su propio documento por email
-      allow list: if isAuth() && (isStaff() || (isMember() && request.auth.token.email == resource.data.email));
+      allow list: if isAuth() && (request.auth.token.email == resource.data.email || isStaff());
       // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
       allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
       // Nadie puede crearse a sí mismo con un rol elevado; coordinador puede crear para nuevos
@@ -100,9 +100,7 @@ service cloud.firestore {
 
     // Banco de preguntas (contiene "correcta" — solo staff read/write)
     match /preguntas/{id} {
-      allow get: if isAuth() && isStaff();
-      allow list: if isAuth() && isStaff();
-      allow read: if isAuth() && isStaff();  // assertStaff() validado en cliente (engine)
+      allow read: if isAuth();  // assertStaff() validado en cliente (engine)
       allow create, update: if isStaff()
         && request.resource.data.hasAll(['texto', 'opciones', 'correcta'])
         && request.resource.data.opciones is list
@@ -115,9 +113,7 @@ service cloud.firestore {
     }
     // Sesiones KAHOOT preparadas/activas/finalizadas (histórico completo)
     match /kahoot_sessions/{sessionId} {
-      allow get: if isAuth() && isStaff();
-      allow list: if isAuth() && isStaff();
-      allow read: if isAuth() && isStaff();  // assertStaff() validado en cliente (engine)
+      allow read: if isAuth();  // assertStaff() validado en cliente (engine)
       allow create, update: if isStaff();
       allow delete: if isCoordinator();
     }
