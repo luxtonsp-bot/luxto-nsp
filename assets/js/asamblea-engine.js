@@ -36,7 +36,7 @@ import {
   rtdbServerTS,
   writeBatch
 } from './firebase-init.js';
-import { isStateAllowedForAction } from './phase-guards.js';
+import { isStateAllowedForAction, getSessionCleanupPaths } from './phase-guards.js';
 
 const PHASES = ['apagada', 'lobby', 'countdown', 'pregunta', 'revelada', 'ranking', 'podio'];
 
@@ -191,6 +191,17 @@ async function assertAllowedPhase(allowedPhases, actionName) {
   }
 }
 
+async function clearSessionRuntimeState() {
+  const cleanupPaths = getSessionCleanupPaths();
+  for (const path of cleanupPaths) {
+    try {
+      await remove(ref(rtdb, path));
+    } catch (error) {
+      console.warn(`clearSessionRuntimeState: no se pudo limpiar ${path}:`, error.message);
+    }
+  }
+}
+
 /** Verificar permiso coordinador */
 async function assertCoordinator() {
   const user = auth.currentUser;
@@ -274,10 +285,7 @@ export async function setSesionCola(preguntaIds) {
   const sesionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   // Todo en orden: limpiar → acumulada=false → cola → fase lobby
-  await remove(ref(rtdb, 'asamblea/respuestas'));
-  await remove(ref(rtdb, 'asamblea/conectados'));
-  await remove(ref(rtdb, 'asamblea/sesion/cerradas')); // limpiar idempotency keys de sesiones previas
-  await set(ref(rtdb, RTDB_PATHS.acumulada), false);
+  await clearSessionRuntimeState();
   await set(ref(rtdb, RTDB_PATHS.sesionId), sesionId);
   await set(ref(rtdb, RTDB_PATHS.cola), preguntas);
   await set(ref(rtdb, RTDB_PATHS.indice), 0);
@@ -521,12 +529,9 @@ export async function apagarAsamblea() {
   await assertStaff();
   // SINGLE FINALIZATION: misma limpieza que finalizeKahootSession pero sin snapshots
   await writePhase('apagada');
-  await remove(ref(rtdb, 'asamblea/preguntaActual'));
-  await remove(ref(rtdb, 'asamblea/respuestas'));
-  await remove(ref(rtdb, 'asamblea/conectados'));
+  await clearSessionRuntimeState();
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.meta));
-  await remove(ref(rtdb, 'asamblea/sesion/cerradas'));
   await set(ref(rtdb, RTDB_PATHS.acumulada), false);
   await remove(ref(rtdb, RTDB_PATHS.sesionId));
   await remove(ref(rtdb, RTDB_PATHS.cola));
@@ -668,9 +673,7 @@ export async function activateKahootSession(sessionId) {
   const batch = ref(rtdb); // No hay batch nativo en RTDB, usamos transacciones secuenciales pero en orden correcto
 
   // 1. Limpiar sesión anterior
-  await remove(ref(rtdb, 'asamblea/respuestas'));
-  await remove(ref(rtdb, 'asamblea/conectados'));
-  await remove(ref(rtdb, 'asamblea/sesion/cerradas'));
+  await clearSessionRuntimeState();
 
   // 2. Inicializar nueva sesión (orden importante)
   await set(ref(rtdb, RTDB_PATHS.acumulada), false);
