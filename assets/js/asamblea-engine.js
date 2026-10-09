@@ -284,11 +284,12 @@ export async function setSesionCola(preguntaIds) {
   // Generar sesionId único para esta sesión (timestamp + random)
   const sesionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-  // Todo en orden: limpiar → acumulada=false → cola → fase lobby
+  // Todo en orden: limpiar → acumulada=false → cola → resumen → fase lobby
   await clearSessionRuntimeState();
   await set(ref(rtdb, RTDB_PATHS.sesionId), sesionId);
   await set(ref(rtdb, RTDB_PATHS.cola), preguntas);
   await set(ref(rtdb, RTDB_PATHS.indice), 0);
+  await set(ref(rtdb, RTDB_PATHS.resumen), []);
   await writePhase('lobby');
 }
 
@@ -813,9 +814,7 @@ export async function finalizeKahootSession() {
   // 6. SINGLE FINALIZATION: limpieza completa atómica
   // Orden: fase=apagada, luego limpiar nodos, por último limpiar meta/sesionActiva
   await writePhase('apagada');
-  await remove(ref(rtdb, 'asamblea/preguntaActual'));
-  await remove(ref(rtdb, 'asamblea/respuestas'));
-  await remove(ref(rtdb, 'asamblea/conectados'));
+  await clearSessionRuntimeState();
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.meta));
   // Nota: NO removemos asamblea/sesion completamente para no romper reglas legacy
