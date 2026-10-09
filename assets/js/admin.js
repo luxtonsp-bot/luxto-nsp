@@ -378,6 +378,7 @@ window.toggleModoAsamblea = async function (activa) {
   document.getElementById("toggleAsamblea").checked = activa;
   try {
     if (activa) {
+      await set(ref(rtdb, 'asamblea/activa'), true);
       await set(ref(rtdb, RTDB_PATHS.fase), 'lobby');
       await remove(ref(rtdb, 'asamblea/respuestas'));
       await remove(ref(rtdb, 'asamblea/conectados'));
@@ -385,6 +386,7 @@ window.toggleModoAsamblea = async function (activa) {
       await set(ref(rtdb, RTDB_PATHS.acumulada), false);
       toast("✅ Asamblea activada — lobby abierto", "ok");
     } else {
+      await set(ref(rtdb, 'asamblea/activa'), false);
       await apagarAsamblea();
       toast("Asamblea desactivada", "");
     }

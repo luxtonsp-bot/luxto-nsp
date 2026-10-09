@@ -45,6 +45,7 @@ let countdownStart = 0;
 
 /* ── Estado local (caché para listeners UI) ───────────────── */
 let localState = {
+  activa: false,
   fase: 'apagada',
   cola: [],
   indice: 0,
@@ -70,8 +71,12 @@ function notify(path) {
 async function writePhase(fase) {
   if (!PHASES.includes(fase)) throw new Error(`Fase inválida: ${fase}`);
   await set(ref(rtdb, RTDB_PATHS.fase), fase);
+  const activa = fase !== 'apagada';
   localState.fase = fase;
+  localState.activa = activa;
+  await set(ref(rtdb, 'asamblea/activa'), activa);
   notify('fase');
+  notify('activa');
 }
 
 /* ── API PÚBLICA ──────────────────────────────────────────── */
@@ -80,10 +85,18 @@ async function writePhase(fase) {
 export async function initAsambleaEngine() {
   await syncServerTime();
 
+  // Listener legacy activation flag used by dashboard/member flow
+  onValue(ref(rtdb, 'asamblea/activa'), snap => {
+    localState.activa = snap.val() === true;
+    notify('activa');
+  });
+
   // Listener fase
   onValue(ref(rtdb, RTDB_PATHS.fase), snap => {
     localState.fase = snap.val() || 'apagada';
+    localState.activa = localState.fase !== 'apagada';
     notify('fase');
+    notify('activa');
   });
 
   // Listener cola
