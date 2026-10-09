@@ -67,6 +67,7 @@ import {
   finalizeKahootSession,
   addQuestionsToKahootSession
 } from './asamblea-engine.js';
+import { createSerialQueue } from './serial-queue.js';
 
 /* ── Admins hardcodeados (seguridad temporal, migrar a reglas de Firestore en el futuro) ── */
 const ADMINS = [
@@ -101,7 +102,7 @@ async function syncCurrentUserAdminState() {
   }
 }
 
-let toggleEnProceso = false;
+const asambleaToggleQueue = createSerialQueue();
 let rankingGlobalListener = null;
 
 /* ── Auth ────────────────────────────────────────────── */
@@ -218,8 +219,9 @@ function escucharAsamblea() {
   // Listener de fase
   engineOn('fase', (state) => {
     const activa = state.fase !== 'apagada';
-    if (!toggleEnProceso) {
-      document.getElementById("toggleAsamblea").checked = activa;
+    const toggleInput = document.getElementById("toggleAsamblea");
+    if (toggleInput && toggleInput.checked !== activa) {
+      toggleInput.checked = activa;
     }
     actualizarEstadoUI(activa, state);
   });
@@ -373,28 +375,37 @@ window.tomarControl = async function () {
 
 /* ── Toggle asamblea ───────────────────────────────────── */
 window.toggleModoAsamblea = async function (activa) {
-  if (toggleEnProceso) return;
-  toggleEnProceso = true;
-  document.getElementById("toggleAsamblea").checked = activa;
+  const toggleInput = document.getElementById("toggleAsamblea");
+  if (!toggleInput) return;
+
+  const desiredState = !!activa;
+  if (toggleInput.checked === desiredState) return;
+
+  toggleInput.checked = desiredState;
+
   try {
-    if (activa) {
-      await set(ref(rtdb, 'asamblea/activa'), true);
-      await set(ref(rtdb, RTDB_PATHS.fase), 'lobby');
-      await remove(ref(rtdb, 'asamblea/respuestas'));
-      await remove(ref(rtdb, 'asamblea/conectados'));
-      await set(ref(rtdb, RTDB_PATHS.indice), 0);
-      await set(ref(rtdb, RTDB_PATHS.acumulada), false);
-      toast("✅ Asamblea activada — lobby abierto", "ok");
-    } else {
-      await set(ref(rtdb, 'asamblea/activa'), false);
-      await apagarAsamblea();
-      toast("Asamblea desactivada", "");
-    }
+    await asambleaToggleQueue.enqueue(async () => {
+      if (desiredState) {
+        await set(ref(rtdb, 'asamblea/activa'), true);
+        await set(ref(rtdb, RTDB_PATHS.fase), 'lobby');
+        await Promise.all([
+          remove(ref(rtdb, 'asamblea/respuestas')),
+          remove(ref(rtdb, 'asamblea/conectados'))
+        ]);
+        await Promise.all([
+          set(ref(rtdb, RTDB_PATHS.indice), 0),
+          set(ref(rtdb, RTDB_PATHS.acumulada), false)
+        ]);
+        toast("✅ Asamblea activada — lobby abierto", "ok");
+      } else {
+        await set(ref(rtdb, 'asamblea/activa'), false);
+        await apagarAsamblea();
+        toast("Asamblea desactivada", "");
+      }
+    });
   } catch (e) {
     console.error(e);
     toast("Error: " + e.message, "err");
-  } finally {
-    toggleEnProceso = false;
   }
 };
 
