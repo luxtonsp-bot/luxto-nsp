@@ -379,9 +379,7 @@ window.loadPreguntasBanco = async function () {
   container.innerHTML = '<p style="color:var(--muted); font-style:italic;">Cargando banco de preguntas...</p>';
 
   try {
-    console.log('loadPreguntasBanco: Iniciando carga...');
     const preguntas = await listPreguntas();
-    console.log('loadPreguntasBanco: Preguntas cargadas:', preguntas.length);
 
     if (preguntas.length === 0) {
       container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay preguntas en el banco. Crea una nueva.</p>';
@@ -393,7 +391,7 @@ window.loadPreguntasBanco = async function () {
         <div style="flex:1;">
           <div style="font-weight:600; margin-bottom:4px;">${esc(p.texto)}</div>
           <div style="font-size:12px; color:var(--muted);">${(p.opciones || []).map((op,i)=>`${String.fromCharCode(65+i)}. ${esc(op)}`).join(' · ')}</div>
-          <div style="font-size:11px; color:var(--muted);">⏱ ${p.duracion}s · ${p.correcta != null ? 'Correcta: '+String.fromCharCode(65+p.correcta) : 'Sin correcta'}</div>
+          <div style="font-size:11px; color:var(--muted);">⏱ ${p.duracion}s</div>
         </div>
         <button class="btn btn-danger" style="font-size:11px;padding:6px 10px;" onclick="deletePreguntaAdmin('${esc(p.id)}')">🗑</button>
       </div>

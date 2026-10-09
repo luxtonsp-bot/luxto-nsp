@@ -65,7 +65,7 @@ export function esc(str) {
     .replace(/</g, '<')
     .replace(/>/g, '>')
     .replace(/"/g, '"')
-    .replace(/'/g, "'");
+    .replace(/'/g, '\'');
 }
 
 // Timestamp del servidor (Firestore)
@@ -109,21 +109,11 @@ export function fsBatch() {
 // Verificar si usuario es staff (servidor/apoyo/coordinador)
 export async function isStaff(uid) {
   try {
-    console.log('isStaff: Consultando documento members/', uid);
     const snap = await getDoc(doc(fsdb, 'members', uid));
-    console.log('isStaff: Documento existe:', snap.exists());
-    if (!snap.exists()) {
-      console.warn('isStaff: No existe documento de miembro para', uid);
-      return false;
-    }
-    const data = snap.data();
-    const rol = data.rol;
-    console.log('isStaff: Rol del usuario:', rol, '| Data:', data);
+    if (!snap.exists()) return false;
+    const rol = snap.data().rol;
     return rol === 'servidor' || rol === 'apoyo' || rol === 'coordinador';
-  } catch (e) {
-    console.error('isStaff error:', e);
-    return false;
-  }
+  } catch { return false; }
 }
 export async function isCoordinator(uid) {
   try {
@@ -166,7 +156,7 @@ export const RTDB_PATHS = {
 /* ── Rutas RTDB para KAHOOT Sessions (nuevo) ───────────────── */
 export const KAHOOT_RTDB_PATHS = {
   sesionActiva: 'kahoot/sesionActiva',           // sessionId de la sesión activa actualmente
-  sesionActivaData: 'kahoot/sesionActivaData',   // datos completos de la sesión activa (para proyector/celulares)
+  meta: 'asamblea/sesion/meta',                   // {sessionId, titulo} para proyector/celulares
 };
 
 /* ── Re-export de SDK para consumidores ─────────────────────── */
