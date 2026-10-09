@@ -18,11 +18,10 @@ service cloud.firestore {
     }
 
     match /members/{uid} {
-      // Lectura: propio documento O staff
-      allow read: if isAuth() && (request.auth.uid == uid || isStaff());
-      // List: propio documento por email O staff (inline get para evitar recursión en list)
-      allow list: if isAuth() && (request.auth.token.email == resource.data.email ||
-        (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol in ["servidor", "apoyo", "coordinador"]));
+      // En esta app interna, los miembros y líderes se autentican con Firebase Auth y necesitan
+      // leer/listar la colección para cargar el panel de administración y cambiar roles.
+      allow read: if isAuth();
+      allow list: if isAuth();
       // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
       allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
       // Nadie puede crearse a sí mismo con un rol elevado; coordinador puede crear para nuevos
