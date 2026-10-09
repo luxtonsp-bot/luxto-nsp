@@ -1274,12 +1274,32 @@ window.onAdminTabChange = function (tabName) {
 
 /* ── Permisos por rol (centralizado) ── */
 function applyRolePermissions(rol) {
+  const currentTab = document.querySelector('.tab-content.active')?.id || 'asamblea';
   const isCoord = rol === "coordinador";
-  const tabs = ["tab-gestion-lideres", "tab-sugerencias-feedback"];
-  tabs.forEach(id => {
+  const buttonIds = ["tab-gestion-lideres", "tab-sugerencias-feedback"];
+  buttonIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.hidden = !isCoord;
   });
+
+  const restricted = new Set(["gestion-lideres", "sugerencias-feedback"]);
+  document.querySelectorAll('.tab-content').forEach(el => {
+    const shouldBeVisible = !restricted.has(el.id) || isCoord;
+    el.hidden = !shouldBeVisible;
+    el.classList.toggle('active', el.id === (isCoord ? currentTab : 'asamblea'));
+  });
+
+  document.querySelectorAll('.tab-button').forEach(el => {
+    const isActive = el.getAttribute('onclick')?.includes(`'${currentTab}'`) || el.classList.contains('active');
+    el.classList.toggle('active', isActive && (el.hidden !== true));
+  });
+
+  if (!isCoord && document.getElementById('asamblea')) {
+    document.getElementById('asamblea').classList.add('active');
+    const btn = document.querySelector(".tab-button[onclick*='asamblea']");
+    if (btn) btn.classList.add('active');
+  }
+
   window._userRol = rol;
 }
 
@@ -1287,11 +1307,28 @@ function applyRolePermissions(rol) {
 window.openTab = function(evt, tabName) {
   const restricted = ["gestion-lideres", "sugerencias-feedback"];
   if (restricted.includes(tabName) && window._userRol !== "coordinador") {
+    if (document.getElementById('asamblea')) {
+      document.getElementById('asamblea').classList.add('active');
+      const defaultBtn = document.querySelector(".tab-button[onclick*='asamblea']");
+      if (defaultBtn) defaultBtn.classList.add('active');
+    }
     return;
   }
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-  document.getElementById(tabName).classList.add('active');
-  evt.currentTarget.classList.add('active');
+
+  document.querySelectorAll('.tab-content').forEach(el => {
+    const isAllowed = !restricted.includes(el.id) || window._userRol === "coordinador";
+    el.hidden = !isAllowed;
+    el.classList.toggle('active', isAllowed && el.id === tabName);
+  });
+
+  document.querySelectorAll('.tab-button').forEach(el => {
+    const onclick = el.getAttribute('onclick') || '';
+    const isSelected = onclick.includes(`'${tabName}'`);
+    el.classList.toggle('active', isSelected);
+  });
+
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add('active');
+  }
   if (window.onAdminTabChange) window.onAdminTabChange(tabName);
 };
