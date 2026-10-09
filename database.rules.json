@@ -3,135 +3,159 @@
     ".read": false,
     ".write": false,
 
-    /* ── LEGACY PATHS (old app: asamblea/activa, estado, preguntaNum, borradores) ── */
+    /* ── NUEVAS RUTAS (asamblea/sesion/*) ── */
     "asamblea": {
       ".read": false,
       ".write": false,
-      "activa": {
-        ".read": "auth != null",
-        ".write": "root.child('admins').child(auth.uid).exists()"
-      },
-      "estado": {
-        ".read": "auth != null",
-        ".write": "root.child('admins').child(auth.uid).exists()"
-      },
-      "preguntaNum": {
-        ".read": "auth != null",
-        ".write": "root.child('admins').child(auth.uid).exists()"
-      },
-      "preguntaActual": {
-        ".read": "auth != null",
-        ".write": "root.child('admins').child(auth.uid).exists()"
-      },
-      "respuestas": {
-        "$qid": {
-          "$uid": {
-            ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
-            ".write": "auth.uid === $uid && root.child('asamblea').child('estado').val() === 'activa' && !data.exists() && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && (now < root.child('asamblea').child('preguntaActual').child('cierraEn').val() || !root.child('asamblea').child('preguntaActual').child('cierraEn').exists())"
-          }
-        }
-      },
-      "conectados": {
-        "$uid": {
-          ".read": "auth != null",
-          ".write": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()"
-        }
-      },
-      "borradores": {
-        ".read": "root.child('admins').child(auth.uid).exists()",
-        ".write": "root.child('admins').child(auth.uid).exists()"
-      },
-
-      /* ── NEW PATHS (new engine: asamblea/sesion/*) ── */
       "sesion": {
         "fase": {
           ".read": "auth != null",
-          ".write": "root.child('admins').child(auth.uid).exists()"
+          ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
         },
         "cola": {
           ".read": "auth != null",
-          ".write": "root.child('admins').child(auth.uid).exists()"
+          ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
         },
         "indice": {
           ".read": "auth != null",
-          ".write": "root.child('admins').child(auth.uid).exists()"
+          ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
         },
         "claves": {
           "$qid": {
-            ".read": "root.child('admins').child(auth.uid).exists()",
-            ".write": "root.child('admins').child(auth.uid).exists()"
+            ".read": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+            ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
           }
         },
         "puntos": {
           "$uid": {
             ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
-            ".write": "root.child('admins').child(auth.uid).exists()"
+            ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
           }
         },
         "resumen": {
           ".read": "auth != null",
-          ".write": "root.child('admins').child(auth.uid).exists()"
+          ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
         },
         "acumulada": {
-          ".read": "root.child('admins').child(auth.uid).exists()",
-          ".write": "root.child('admins').child(auth.uid).exists()"
+          ".read": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+          ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
         },
         "hostUid": {
           ".read": "auth != null",
-          ".write": "root.child('admins').child(auth.uid).exists()"
+          ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
+        },
+        "sesionId": {
+          ".read": "auth != null",
+          ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
         },
         "cerradas": {
           "$sid": {
             "$qid": {
-              ".read": "root.child('admins').child(auth.uid).exists()",
-              ".write": "root.child('admins').child(auth.uid).exists()"
+              ".read": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+              ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
             }
           }
+        },
+        "meta": {
+          ".read": "auth != null",
+          ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
         }
+      },
+
+      /* ── LEGACY PATHS (compatibilidad - solo lectura para staff, escritura coordinador) ── */
+      "activa": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
+      },
+      "estado": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
+      },
+      "preguntaNum": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
+      },
+      "preguntaActual": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+        ".validate": "newData.hasChildren(['id', 'texto', 'opciones', 'duracion', 'abreEn', 'cierraEn']) && newData.child('opciones').val().length >= 2 && newData.child('opciones').val().length <= 4 && newData.child('duracion').val() > 0 && newData.child('duracion').val() <= 300"
+      },
+
+      /* ── RESPUESTAS UNIFICADAS: ruta vieja (estado==='activa') O nueva (fase==='pregunta') ── */
+      "respuestas": {
+        "$qid": {
+          "$uid": {
+            ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
+            ".write": "auth.uid === $uid && (
+              /* Ruta nueva: fase === 'pregunta' + qid === preguntaActual.id + ts === now + now < cierraEn */
+              (root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' &&
+               $qid === root.child('asamblea').child('preguntaActual').child('id').val() &&
+               newData.child('ts').val() === now &&
+               newData.child('idx').isNumber() &&
+               newData.child('idx').val() >= 0 &&
+               newData.child('idx').val() <= 3 &&
+               !data.exists() &&
+               now < root.child('asamblea').child('preguntaActual').child('cierraEn').val())
+              ||
+              /* Ruta vieja: estado === 'activa' + same validations */
+              (root.child('asamblea').child('estado').val() === 'activa' &&
+               newData.child('ts').val() === now &&
+               newData.child('idx').isNumber() &&
+               newData.child('idx').val() >= 0 &&
+               newData.child('idx').val() <= 3 &&
+               !data.exists() &&
+               (now < root.child('asamblea').child('preguntaActual').child('cierraEn').val() || !root.child('asamblea').child('preguntaActual').child('cierraEn').exists()))
+            )",
+            ".validate": "newData.hasChildren(['idx', 'ts', 'nombre']) && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && newData.child('nombre').isString() && newData.child('nombre').val().length <= 80"
+          }
+        }
+      },
+
+      "conectados": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
+          ".validate": "newData.hasChildren(['nombre', 'ts']) && newData.child('nombre').isString() && newData.child('nombre').val().length <= 80 && newData.child('ts').isNumber()"
+        }
+      },
+
+      "borradores": {
+        ".read": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
       }
     },
 
-    /* ── NUEVAS RUTAS DE NIVEL SUPERIOR (new engine) ── */
+    /* ── NUEVAS RUTAS DE NIVEL SUPERIOR ── */
     "preguntaActual": {
       ".read": "auth != null",
-      ".write": "root.child('admins').child(auth.uid).exists()"
-    },
-
-    "respuestas": {
-      "$qid": {
-        "$uid": {
-          ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
-          ".write": "auth.uid === $uid && root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' && $qid === root.child('asamblea').child('preguntaActual').child('id').val() && newData.child('ts').val() === now && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && !data.exists() && now < root.child('asamblea').child('preguntaActual').child('cierraEn').val()"
-        }
-      }
-    },
-
-    "conectados": {
-      "$uid": {
-        ".read": "auth != null",
-        ".write": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()"
-      }
+      ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+      ".validate": "newData.hasChildren(['id', 'texto', 'opciones', 'duracion', 'abreEn', 'cierraEn']) && newData.child('opciones').val().length >= 2 && newData.child('opciones').val().length <= 4 && newData.child('duracion').val() > 0 && newData.child('duracion').val() <= 300"
     },
 
     "rankingGlobal": {
       ".read": "auth != null",
-      ".write": "root.child('admins').child(auth.uid).exists()",
+      ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
       "$uid": {
         ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
-        ".write": "root.child('admins').child(auth.uid).exists()"
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+        ".validate": "newData.hasChildren(['pts', 'nombre']) && newData.child('pts').isNumber() && newData.child('pts').val() >= 0 && newData.child('nombre').isString() && newData.child('nombre').val().length <= 80"
       }
     },
 
     "admins": {
       "$uid": {
-        ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
-        ".write": "root.child('admins').child(auth.uid).exists()"
+        ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+        ".validate": "newData.hasChildren(['rol']) && (newData.child('rol').val() === 'servidor' || newData.child('rol').val() === 'apoyo' || newData.child('rol').val() === 'coordinador')"
       }
     },
 
-    "borradores": {
-      ".read": "root.child('admins').child(auth.uid).exists()",
-      ".write": "root.child('admins').child(auth.uid).exists()"
+    /* ── KAHOOT ── */
+    "kahoot": {
+      "sesionActiva": {
+        ".read": "auth != null",
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'"
+      }
     }
   }
 }
