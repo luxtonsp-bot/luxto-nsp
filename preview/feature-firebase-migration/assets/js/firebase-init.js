@@ -72,7 +72,8 @@ export async function syncServerTime() {
   try {
     await new Promise((resolve) => {
       const offsetRef = ref(rtdb, '.info/serverTimeOffset');
-      const unsub = onValue(offsetRef, (snap) => {
+      let unsub = () => {};
+      unsub = onValue(offsetRef, (snap) => {
         serverTimeOffset = snap.val() || 0;
         unsub();
         resolve();
