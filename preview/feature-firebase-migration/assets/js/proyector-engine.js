@@ -9,7 +9,11 @@ import {
   getState as engineState,
   isHost,
   conectar,
-  responder
+  responder,
+  getRemainingTime,
+  getTimeToNextPhase,
+  isPreguntaEnTiempo,
+  serverNow
 } from './asamblea-engine.js';
 import { auth, onAuthStateChanged, rtdb, ref, onValue, set, onDisconnect, esc, KAHOOT_RTDB_PATHS } from './firebase-init.js';
 
@@ -310,7 +314,8 @@ function iniciarTimerPregunta(duracion, cierraEn) {
   numEl.textContent = duracion;
 
   timerInterval = setInterval(() => {
-    const now = Date.now();
+    // Timer Recovery: usar serverNow() en lugar de Date.now() para sincronización precisa
+    const now = serverNow();
     const remaining = Math.max(0, Math.ceil((cierraEn - now) / 1000));
     tiempoRestante = remaining;
     const pct = remaining / duracion;
