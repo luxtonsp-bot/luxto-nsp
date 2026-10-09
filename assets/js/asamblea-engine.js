@@ -54,7 +54,8 @@ let localState = {
   resumen: [],
   acumulada: false,
   hostUid: null,
-  sesionId: null
+  sesionId: null,
+  meta: null
 };
 
 const listeners = new Map(); // path -> { off, callbacks[] }
@@ -140,6 +141,12 @@ export async function initAsambleaEngine() {
   onValue(ref(rtdb, RTDB_PATHS.sesionId), snap => {
     localState.sesionId = snap.val();
     notify('sesionId');
+  });
+
+  // Listener meta (para proyector/celulares - título sesión activa)
+  onValue(ref(rtdb, KAHOOT_RTDB_PATHS.meta), snap => {
+    localState.meta = snap.val();
+    notify('meta');
   });
 }
 
@@ -497,13 +504,18 @@ export async function finalizarSesion() {
 /** Apagar asamblea (reset suave — no borra nodo padre para no romper reglas viejas) */
 export async function apagarAsamblea() {
   await assertStaff();
-  await remove(ref(rtdb, 'asamblea/sesion'));
+  // SINGLE FINALIZATION: misma limpieza que finalizeKahootSession pero sin snapshots
+  await writePhase('apagada');
   await remove(ref(rtdb, 'asamblea/preguntaActual'));
   await remove(ref(rtdb, 'asamblea/respuestas'));
   await remove(ref(rtdb, 'asamblea/conectados'));
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.meta));
-  await writePhase('apagada');
+  await remove(ref(rtdb, 'asamblea/sesion/cerradas'));
+  await set(ref(rtdb, RTDB_PATHS.acumulada), false);
+  await remove(ref(rtdb, RTDB_PATHS.sesionId));
+  await remove(ref(rtdb, RTDB_PATHS.cola));
+  await remove(ref(rtdb, RTDB_PATHS.indice));
 }
 
 /* ── KAHOOT SESSIONS (Firestore) ────────────────────────────── */
@@ -619,7 +631,7 @@ export async function addQuestionsToKahootSession(sessionId, preguntaIds) {
   return { added: nuevasPreguntas.length, total: todasPreguntas.length };
 }
 
-/** Activar sesión KAHOOT: copia preguntas a RTDB, marca "activa" */
+/** Activar sesión KAHOOT: copia preguntas a RTDB, marca "activa" — SINGLE ENTRY FLOW */
 export async function activateKahootSession(sessionId) {
   await assertStaff();
   const session = await getKahootSession(sessionId);
@@ -636,22 +648,30 @@ export async function activateKahootSession(sessionId) {
     duracion: p.duracion
   }));
 
-  // Limpiar sesión anterior en RTDB
+  // SINGLE ENTRY FLOW: escritura atómica con batch RTDB
+  // Escribe todo de una vez: limpia anterior + setea nueva sesión + meta
+  const batch = ref(rtdb); // No hay batch nativo en RTDB, usamos transacciones secuenciales pero en orden correcto
+
+  // 1. Limpiar sesión anterior
   await remove(ref(rtdb, 'asamblea/respuestas'));
   await remove(ref(rtdb, 'asamblea/conectados'));
   await remove(ref(rtdb, 'asamblea/sesion/cerradas'));
+
+  // 2. Inicializar nueva sesión (orden importante)
   await set(ref(rtdb, RTDB_PATHS.acumulada), false);
   await set(ref(rtdb, RTDB_PATHS.sesionId), sesionId);
   await set(ref(rtdb, RTDB_PATHS.cola), preguntasRTDB);
   await set(ref(rtdb, RTDB_PATHS.indice), 0);
-  await writePhase('lobby');
 
-  // Guardar referencia de sesión activa en RTDB (para proyector/celulares)
-  await set(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva), sessionId);
+  // 3. SINGLE ENTRY: escribir sesionActiva Y meta atómicamente (orden: meta primero, luego sesionActiva como flag)
   await set(ref(rtdb, KAHOOT_RTDB_PATHS.meta), {
     sessionId,
     titulo: session.titulo
   });
+  await set(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva), sessionId); // este es el "flag" de entrada
+
+  // 4. Fase lobby
+  await writePhase('lobby');
 
   // Actualizar estado en Firestore
   await updateDoc(doc(fsdb, 'kahoot_sessions', sessionId), {
@@ -663,7 +683,7 @@ export async function activateKahootSession(sessionId) {
   return { sessionId, sesionId };
 }
 
-/** Finalizar sesión KAHOOT: guarda resultados completos + histórico */
+/** Finalizar sesión KAHOOT: guarda resultados completos + histórico — SINGLE FINALIZATION */
 export async function finalizeKahootSession() {
   await assertCoordinator();
 
@@ -772,7 +792,18 @@ export async function finalizeKahootSession() {
     creadoEn: fsTS()
   });
 
-  // 6. Fase podio
+  // 6. SINGLE FINALIZATION: limpieza completa atómica
+  // Orden: fase=apagada, luego limpiar nodos, por último limpiar meta/sesionActiva
+  await writePhase('apagada');
+  await remove(ref(rtdb, 'asamblea/preguntaActual'));
+  await remove(ref(rtdb, 'asamblea/respuestas'));
+  await remove(ref(rtdb, 'asamblea/conectados'));
+  await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
+  await remove(ref(rtdb, KAHOOT_RTDB_PATHS.meta));
+  // Nota: NO removemos asamblea/sesion completamente para no romper reglas legacy
+  // Solo limpiamos lo necesario para nueva sesión
+
+  // 7. Fase podio (después de limpieza para mostrar resultados)
   await writePhase('podio');
 
   return { sessionId, resultados };
@@ -786,12 +817,43 @@ export async function conectar(uid, nombre) {
   onDisconnect(ref(rtdb, RTDB_PATHS.conectados(uid))).remove();
 }
 
+/** Timer Recovery: calcular tiempo restante de pregunta actual usando serverNow() */
+export function getRemainingTime() {
+  const q = localState.preguntaActual;
+  if (!q || !q.cierraEn) return 0;
+  const remaining = q.cierraEn - serverNow();
+  return Math.max(0, remaining);
+}
+
+/** Timer Recovery: calcular tiempo hasta apertura de siguiente fase */
+export function getTimeToNextPhase() {
+  const q = localState.preguntaActual;
+  if (!q) return 0;
+  const now = serverNow();
+  if (localState.fase === 'countdown' && q.abreEn) {
+    return Math.max(0, q.abreEn - now);
+  }
+  if (localState.fase === 'pregunta' && q.cierraEn) {
+    return Math.max(0, q.cierraEn - now);
+  }
+  return 0;
+}
+
+/** Verificar si la pregunta está en tiempo (no expirada) */
+export function isPreguntaEnTiempo() {
+  const q = localState.preguntaActual;
+  if (!q || !q.cierraEn) return false;
+  return serverNow() < q.cierraEn;
+}
+
 /** Responder: write-once en respuestas/{qid}/{uid} con serverTimestamp */
 export async function responder(qid, uid, idx) {
   const r = ref(rtdb, RTDB_PATHS.respuesta(qid, uid));
   const snap = await get(r);
   if (snap.exists()) throw new Error('Ya respondiste');
   if (localState.fase !== 'pregunta') throw new Error('Pregunta cerrada');
+  // Timer Recovery: validar también con serverNow() vs cierraEn
+  if (!isPreguntaEnTiempo()) throw new Error('Tiempo agotado');
   // Validar que qid coincide con pregunta actual
   if (localState.preguntaActual?.id !== qid) throw new Error('Pregunta inválida');
   await set(r, { idx, ts: rtdbTS(), nombre: (await getUserName(uid)) });

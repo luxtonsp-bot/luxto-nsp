@@ -8,7 +8,10 @@ import {
   on as engineOn,
   getState as engineState,
   conectar,
-  responder
+  responder,
+  serverNow,
+  getRemainingTime,
+  isPreguntaEnTiempo
 } from './asamblea-engine.js';
 import { auth, onAuthStateChanged, rtdb, ref, onValue, set, rtdbTS, onDisconnect, esc } from './firebase-init.js';
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -248,40 +251,54 @@ function mostrarPregunta(p) {
     grid.appendChild(btn);
   });
 
-  const dur = p.duracion || 20;
-  tiempoRestante = dur;
-  iniciarTimer(dur);
+  // Timer Recovery: usar cierraEn absoluto + serverNow() en lugar de contador local
+  iniciarTimerRecovery(p.duracion || 20, p.cierraEn);
   show("screenPregunta");
 }
 
-function iniciarTimer(duracion) {
+function iniciarTimerRecovery(duracion, cierraEn) {
   limpiarTimer();
   const circum = 138.2;
   const barEl = document.getElementById("tiempoBar");
   const circleEl = document.getElementById("timerCircle");
   const numEl = document.getElementById("timerNum");
+
+  // Inicializar con tiempo restante calculado desde serverNow
+  const initialRemaining = getRemainingTime();
+  tiempoRestante = initialRemaining;
   barEl.style.width = "100%";
   circleEl.style.strokeDashoffset = "0";
-  numEl.textContent = duracion;
+  numEl.textContent = initialRemaining;
+
   timerInterval = setInterval(() => {
-    tiempoRestante--;
-    const pct = tiempoRestante / duracion;
+    // Timer Recovery: recalcular remaining usando serverNow() cada tick
+    const remaining = getRemainingTime();
+    tiempoRestante = remaining;
+    const pct = remaining / duracion;
+
     barEl.style.width = (pct * 100) + "%";
     barEl.style.background = pct > 0.4 ? "var(--y)" : pct > 0.2 ? "var(--o)" : "var(--err)";
     circleEl.style.strokeDashoffset = circum * (1 - pct);
     circleEl.style.stroke = pct > 0.4 ? "#F5C518" : pct > 0.2 ? "#C4703A" : "#e03c3c";
-    numEl.textContent = tiempoRestante;
-    if (tiempoRestante <= 0) {
+    numEl.textContent = remaining;
+
+    // Si se agotó el tiempo y no respondí, mostrar timeout
+    if (remaining <= 0 && !respondioActual) {
       limpiarTimer();
-      if (!respondioActual) {
-        mostrarResultado(false, null, "", "", true);
-      }
+      mostrarResultado(false, null, "", "", true);
     }
-  }, 1000);
+  }, 200); // Más suave (200ms en lugar de 1000ms)
 }
 
 async function responderOpcion(idx, texto, pregunta) {
   if (respondioActual) return;
+
+  // Timer Recovery: validar también con serverNow() vs cierraEn
+  if (!isPreguntaEnTiempo()) {
+    toast("Tiempo agotado", "err");
+    return;
+  }
+
   respondioActual = true;
   participoEnAsamblea = true;
   limpiarTimer();
