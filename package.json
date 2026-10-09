@@ -1,0 +1,43 @@
+{
+  "name": "luxto-nsp",
+  "version": "1.0.0",
+  "description": "> **Parroquia Nuestra Señora de la Piedad** · Villa Jardín · San Luis · Lima · Perú   > *Desde 2010 — \"Así brille la luz de ustedes delante de los hombres...\" (Mt 5:16)*",
+  "main": ".eslintrc.js",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "stylelint": "stylelint \"**/*.css\" --custom-syntax=postcss-scss",
+    "stylelint:fix": "stylelint \"**/*.css\" --custom-syntax=postcss-scss --fix",
+    "validate:html": "html-validate *.html --config html-validate.json",
+    "validate:rules": "node scripts/validate-rules.js",
+    "check:imports": "node scripts/check-imports.mjs",
+    "test": "node assets/js/firebase-init.test.mjs && node assets/js/asamblea-engine.test.mjs && node assets/js/migration.test.mjs",
+    "migrate:ranking": "node migrate-ranking-global.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luxtonsp-bot/luxto-nsp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/luxtonsp-bot/luxto-nsp/issues"
+  },
+  "homepage": "https://github.com/luxtonsp-bot/luxto-nsp#readme",
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "eslint": "^10.11.0",
+    "html-validate": "^8.0.0",
+    "impeccable": "^4.1.0",
+    "jsdom": "^30.1.0",
+    "postcss": "^8.4.0",
+    "postcss-scss": "^4.0.0",
+    "stylelint": "^16.0.0",
+    "stylelint-scss": "^6.0.0"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.0"
+  }
+}

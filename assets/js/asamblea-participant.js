@@ -9,11 +9,10 @@ import {
   getState as engineState,
   conectar,
   responder,
-  serverNow,
   getRemainingTime,
   isPreguntaEnTiempo
 } from './asamblea-engine.js';
-import { auth, onAuthStateChanged, rtdb, ref, onValue, set, rtdbTS, onDisconnect, esc } from './firebase-init.js';
+import { auth, onAuthStateChanged, rtdb, ref, onValue, set, rtdbTS, onDisconnect, esc, serverNow } from './firebase-init.js';
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let usuarioActual = null;

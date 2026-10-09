@@ -12,10 +12,9 @@ import {
   responder,
   getRemainingTime,
   getTimeToNextPhase,
-  isPreguntaEnTiempo,
-  serverNow
+  isPreguntaEnTiempo
 } from './asamblea-engine.js';
-import { auth, onAuthStateChanged, rtdb, ref, onValue, set, onDisconnect, esc, KAHOOT_RTDB_PATHS } from './firebase-init.js';
+import { auth, onAuthStateChanged, rtdb, ref, onValue, set, onDisconnect, esc, KAHOOT_RTDB_PATHS, serverNow } from './firebase-init.js';
 
 let usuarioActual = null;
 let nombreActual = "";

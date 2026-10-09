@@ -58,15 +58,7 @@ export const rtdb = getDatabase(app);
 /* ── Helpers seguros ───────────────────────────────────────── */
 
 // Escapar HTML para prevenir XSS (incluye " y ')
-export function esc(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, '\'');
-}
+export { esc } from './esc.js';
 
 // Timestamp del servidor (Firestore)
 export const fsTS = fsServerTimestamp;

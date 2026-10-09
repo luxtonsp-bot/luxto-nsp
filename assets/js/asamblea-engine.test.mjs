@@ -3,16 +3,7 @@
  * Ejecutar con: node assets/js/asamblea-engine.test.mjs
  */
 
-// Mock de esc() para tests
-const esc = (str) => {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, '\'');
-};
+import { esc } from './esc.js';
 
 let passed = 0;
 let failed = 0;
@@ -39,61 +30,61 @@ function assertEqual(actual, expected, message) {
   }
 }
 
-console.log('\n=== asamblea-engine: esc() - XSS Prevention ===');
+console.log("\n=== asamblea-engine: esc() - XSS Prevention ===");
 
-assertEqual(esc('<script>alert(1)</script>'), '<script>alert(1)</script>', 'should escape script tag');
-assertEqual(esc('a & b'), 'a & b', 'should escape &');
-assertEqual(esc('"quotes"'), '"quotes"', 'should escape "');
-assertEqual(esc("'single'"), '\'single\'', 'should escape \'');
-assertEqual(esc('>greater<'), '>greater<', 'should escape > and <');
-assertEqual(esc(''), '', 'should handle empty');
-assertEqual(esc(null), '', 'should handle null');
-assertEqual(esc(undefined), '', 'should handle undefined');
+assertEqual(esc("<script>alert(1)</script>"), "\u0026lt;script\u0026gt;alert(1)\u0026lt;/script\u0026gt;", "should escape script tag");
+assertEqual(esc("a & b"), "a \u0026amp; b", "should escape &");
+assertEqual(esc('"quotes"'), "\u0026quot;quotes\u0026quot;", "should escape \"");
+assertEqual(esc("'single'"), "\u0026#39;single\u0026#39;", "should escape '");
+assertEqual(esc(">greater<"), "\u0026gt;greater\u0026lt;", "should escape > and <");
+assertEqual(esc(""), "", "should handle empty");
+assertEqual(esc(null), "", "should handle null");
+assertEqual(esc(undefined), "", "should handle undefined");
 
-const alreadyEscaped = '<test>';
-assertEqual(esc(alreadyEscaped), '<test>', 'should not double-escape');
-assertEqual(esc(123), '123', 'should handle numbers');
-assertEqual(esc(true), 'true', 'should handle booleans');
+const alreadyEscaped = "\u0026lt;test\u0026gt;";
+assertEqual(esc(alreadyEscaped), "\u0026amp;lt;test\u0026amp;gt;", "should not double-escape (entities become literal)");
+assertEqual(esc(123), "123", "should handle numbers");
+assertEqual(esc(true), "true", "should handle booleans");
 
-console.log('\n=== asamblea-engine: rankingGlobal key format ===');
-const uid = 'abc123def456';
-const email = 'user@example.com';
-const sanitized = email.replace(/[.#$[\]]/g, '_');
+console.log("\n=== asamblea-engine: rankingGlobal key format ===");
+const uid = "abc123def456";
+const email = "user@example.com";
+const sanitized = email.replace(/[.#$\[\]]/g, "_");
 const expectedPath = `rankingGlobal/${uid}`;
 
-assert(!expectedPath.includes(sanitized), 'path should not contain email-sanitized');
-assert(expectedPath.includes(uid), 'path should contain UID');
+assert(!expectedPath.includes(sanitized), "path should not contain email-sanitized");
+assert(expectedPath.includes(uid), "path should contain UID");
 
-console.log('\n=== asamblea-engine: Timer Recovery ===');
+console.log("\n=== asamblea-engine: Timer Recovery ===");
 const now = Date.now();
 let cierraEn = now + 5000;
 let remaining = Math.max(0, Math.ceil((cierraEn - now) / 1000));
-assertEqual(remaining, 5, 'should calculate 5s remaining');
+assertEqual(remaining, 5, "should calculate 5s remaining");
 
 cierraEn = now - 1000;
 remaining = Math.max(0, Math.ceil((cierraEn - now) / 1000));
-assertEqual(remaining, 0, 'should return 0 when expired');
+assertEqual(remaining, 0, "should return 0 when expired");
 
 cierraEn = now;
 remaining = Math.max(0, Math.ceil((cierraEn - now) / 1000));
-assertEqual(remaining, 0, 'should return 0 at exact boundary');
+assertEqual(remaining, 0, "should return 0 at exact boundary");
 
-console.log('\n=== asamblea-engine: Single Entry/Exit Flow ===');
-const metaPath = 'asamblea/kahoot/meta';
-assert(metaPath, 'metaPath should be defined');
-assert(!metaPath.includes('sesionActivaData'), 'metaPath should not contain sesionActivaData');
+console.log("\n=== asamblea-engine: Single Entry/Exit Flow ===");
+const metaPath = "asamblea/kahoot/meta";
+assert(metaPath, "metaPath should be defined");
+assert(!metaPath.includes("sesionActivaData"), "metaPath should not contain sesionActivaData");
 
-const flagPath = 'asamblea/kahoot/sesionActiva';
-assert(flagPath, 'flagPath should be defined');
+const flagPath = "asamblea/kahoot/sesionActiva";
+assert(flagPath, "flagPath should be defined");
 
 const pathsToClean = [
-  'asamblea/kahoot/meta',
-  'asamblea/kahoot/sesionActiva',
-  'asamblea/kahoot/respuestas',
-  'asamblea/kahoot/rankingSesion'
+  "asamblea/kahoot/meta",
+  "asamblea/kahoot/sesionActiva",
+  "asamblea/kahoot/respuestas",
+  "asamblea/kahoot/rankingSesion"
 ];
-assert(pathsToClean.includes('asamblea/kahoot/meta'), 'should clean meta');
-assert(pathsToClean.includes('asamblea/kahoot/sesionActiva'), 'should clean sesionActiva');
+assert(pathsToClean.includes("asamblea/kahoot/meta"), "should clean meta");
+assert(pathsToClean.includes("asamblea/kahoot/sesionActiva"), "should clean sesionActiva");
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
