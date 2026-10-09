@@ -462,7 +462,7 @@ export async function finalizarSesion() {
   });
   if (!txResult.committed) return; // otro lo hizo o falló
 
-  // 1. Acumular en rankingGlobal con transacción atómica por uid (email-sanitized key)
+  // 1. Acumular en rankingGlobal con transacción atómica por UID (key = uid, no email)
   const puntosSesion = localState.puntos;
   const membersSnap = await getDocs(collection(fsdb, 'members'));
   const memberByUid = {};
@@ -472,9 +472,9 @@ export async function finalizarSesion() {
     const pts = data?.pts;
     if (!pts) continue;
     const m = memberByUid[uid];
-    const key = m?.email ? m.email.replace(/[.#$[\]]/g, '_') : uid;
-    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(key)), (current) => {
-      const prev = current || { pts: 0, nombre: m?.nombre || 'Anónimo', email: m?.email || '', fotoUrl: m?.fotoUrl || '' };
+    // Key = uid (no email-sanitized). Las reglas RTDB ya validan estructura.
+    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(uid)), (current) => {
+      const prev = current || { pts: 0, nombre: m?.nombre || 'Anónimo', fotoUrl: m?.fotoUrl || '' };
       return { ...prev, pts: (prev.pts || 0) + pts, ultimaAsamblea: serverNow() };
     });
   }
@@ -702,7 +702,7 @@ export async function finalizeKahootSession() {
   });
   if (!txResult.committed) return; // ya finalizado por otro
 
-  // 1. Acumular en rankingGlobal (igual que finalizarSesion actual)
+  // 1. Acumular en rankingGlobal (igual que finalizarSesion actual) - key = uid
   const puntosSesion = localState.puntos;
   const membersSnap = await getDocs(collection(fsdb, 'members'));
   const memberByUid = {};
@@ -712,9 +712,9 @@ export async function finalizeKahootSession() {
     const pts = data?.pts;
     if (!pts) continue;
     const m = memberByUid[uid];
-    const key = m?.email ? m.email.replace(/[.#$[\]]/g, '_') : uid;
-    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(key)), (current) => {
-      const prev = current || { pts: 0, nombre: m?.nombre || 'Anónimo', email: m?.email || '', fotoUrl: m?.fotoUrl || '' };
+    // Key = uid (no email-sanitized)
+    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(uid)), (current) => {
+      const prev = current || { pts: 0, nombre: m?.nombre || 'Anónimo', fotoUrl: m?.fotoUrl || '' };
       return { ...prev, pts: (prev.pts || 0) + pts, ultimaAsamblea: serverNow() };
     });
   }
