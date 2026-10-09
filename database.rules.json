@@ -114,7 +114,7 @@
     "admins": {
       "$uid": {
         ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
-        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+        ".write": "(auth.uid === $uid && newData.child('rol').val() !== null && (newData.child('rol').val() === 'servidor' || newData.child('rol').val() === 'apoyo' || newData.child('rol').val() === 'coordinador')) || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
         ".validate": "newData.hasChildren(['rol']) && (newData.child('rol').val() === 'servidor' || newData.child('rol').val() === 'apoyo' || newData.child('rol').val() === 'coordinador')"
       }
     },

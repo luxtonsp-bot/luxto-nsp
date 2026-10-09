@@ -100,6 +100,8 @@ service cloud.firestore {
 
     // Banco de preguntas (contiene "correcta" — solo staff read/write)
     match /preguntas/{id} {
+      allow get: if isAuth() && isStaff();
+      allow list: if isAuth() && isStaff();
       allow read: if isAuth() && isStaff();  // assertStaff() validado en cliente (engine)
       allow create, update: if isStaff()
         && request.resource.data.hasAll(['texto', 'opciones', 'correcta'])
@@ -113,6 +115,8 @@ service cloud.firestore {
     }
     // Sesiones KAHOOT preparadas/activas/finalizadas (histórico completo)
     match /kahoot_sessions/{sessionId} {
+      allow get: if isAuth() && isStaff();
+      allow list: if isAuth() && isStaff();
       allow read: if isAuth() && isStaff();  // assertStaff() validado en cliente (engine)
       allow create, update: if isStaff();
       allow delete: if isCoordinator();
