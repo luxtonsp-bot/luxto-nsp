@@ -140,6 +140,7 @@ export const RTDB_PATHS = {
   rankingGlobal: (uid) => `rankingGlobal/${uid}`,
   rankingGlobalRoot: 'rankingGlobal',
   admins: (uid) => `admins/${uid}`,
+  borradores: 'asamblea/borradores',
   hostUid: 'asamblea/sesion/hostUid',
   sesionId: 'asamblea/sesion/sesionId',
   cerradas: (sid, qid) => `asamblea/sesion/cerradas/${sid}/${qid}`,

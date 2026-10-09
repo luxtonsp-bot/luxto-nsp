@@ -77,6 +77,30 @@ const ADMINS = [
   "alvarorodrigosalazar.2001@gmail.com"
 ];
 
+async function syncCurrentUserAdminState() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const memberSnap = await getDoc(doc(fsdb, "members", user.uid));
+    const rol = memberSnap.exists() ? (memberSnap.data().rol || "miembro") : "miembro";
+    const staffRoles = ["servidor", "apoyo", "coordinador"];
+
+    if (staffRoles.includes(rol) || ADMINS.includes(user.email)) {
+      const role = ADMINS.includes(user.email) ? "coordinador" : rol;
+      await set(ref(rtdb, RTDB_PATHS.admins(user.uid)), {
+        email: user.email || memberSnap.data()?.email || "",
+        rol: role,
+        ts: rtdbTS()
+      });
+    } else {
+      await remove(ref(rtdb, RTDB_PATHS.admins(user.uid)));
+    }
+  } catch (error) {
+    console.warn("syncCurrentUserAdminState error:", error.message);
+  }
+}
+
 let toggleEnProceso = false;
 let rankingGlobalListener = null;
 
@@ -107,6 +131,8 @@ onAuthStateChanged(auth, async (user) => {
     window._userRol = "coordinador";
     applyRolePermissions("coordinador");
   }
+
+  await syncCurrentUserAdminState();
   inicializar();
 });
 
@@ -693,7 +719,7 @@ window.guardarBorrador = function () {
     .filter(Boolean);
   const radio = document.querySelector('input[name="correcta"]:checked');
   const duracion = parseInt(document.getElementById("npDuracion").value);
-  push(ref(rtdb, "borradores"), {
+  push(ref(rtdb, RTDB_PATHS.borradores), {
     texto,
     opciones,
     correcta: radio ? parseInt(radio.value) : 0,
@@ -705,7 +731,7 @@ window.guardarBorrador = function () {
 
 function escucharBorradores() {
   try {
-    onValue(ref(rtdb, "borradores"), (snap) => {
+    onValue(ref(rtdb, RTDB_PATHS.borradores), (snap) => {
       const data = snap.val();
       const lista = document.getElementById("histLista");
       if (!lista) return;
@@ -736,7 +762,7 @@ function escucharBorradores() {
 
 window.cargarBorrador = async function (key) {
   try {
-    const snap = await get(ref(rtdb, "borradores/" + key));
+    const snap = await get(ref(rtdb, RTDB_PATHS.borradores + '/' + key));
     const p = snap.val();
     if (!p) return;
     const npTexto = document.getElementById("npTexto");
@@ -760,7 +786,7 @@ window.cargarBorrador = async function (key) {
 };
 
 window.eliminarBorrador = function (key) {
-  remove(ref(rtdb, "borradores/" + key));
+  remove(ref(rtdb, RTDB_PATHS.borradores + '/' + key));
   toast("Eliminado", "");
 };
 
@@ -895,6 +921,11 @@ window.updateMemberRole = async function (memberId, newRole) {
       await set(ref(rtdb, RTDB_PATHS.admins(memberId)), { email, rol: newRole, ts: rtdbTS() });
     } else {
       await remove(ref(rtdb, RTDB_PATHS.admins(memberId)));
+    }
+
+    // Mantener sincronizado también el acceso de este usuario actual en caso de cambios de rol
+    if (auth.currentUser?.uid === memberId) {
+      await syncCurrentUserAdminState();
     }
 
     document.getElementById("role-change-result").innerHTML = `
