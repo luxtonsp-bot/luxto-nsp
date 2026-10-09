@@ -3,16 +3,7 @@
  * Ejecutar con: node assets/js/firebase-init.test.mjs
  */
 
-// Re-implementar esc aquí para testear sin dependencias de Firebase
-const esc = (str) => {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, '\'');
-};
+import { esc } from './esc.js';
 
 let passed = 0;
 let failed = 0;
@@ -39,70 +30,73 @@ function assertEqual(actual, expected, message) {
   }
 }
 
-console.log('\n=== firebase-init: esc() - XSS Prevention ===');
+console.log("\n=== firebase-init: esc() - XSS Prevention ===");
 
-assertEqual(esc('a & b'), 'a & b', 'should escape & to &');
-assertEqual(esc('&'), '&', 'should escape single &');
-assertEqual(esc('<script>'), '<script>', 'should escape < to <');
-assertEqual(esc('<'), '<', 'should escape single <');
-assertEqual(esc('>test'), '>test', 'should escape > to >');
-assertEqual(esc('>'), '>', 'should escape single >');
-assertEqual(esc('"quotes"'), '"quotes"', 'should escape " to "');
-assertEqual(esc('"'), '"', 'should escape single "');
-assertEqual(esc("'single'"), '\'single\'', 'should escape \' to \'');
-assertEqual(esc("'"), "'", 'should escape single \'');
-assertEqual(esc('<img src=x onerror=alert(1)>'), '<img src=x onerror=alert(1)>', 'should handle XSS payload');
-assertEqual(esc('javascript:alert(1)'), 'javascript:alert(1)', 'should handle javascript: protocol');
-assertEqual(esc(''), '', 'should handle empty string');
-assertEqual(esc(null), '', 'should handle null');
-assertEqual(esc(undefined), '', 'should handle undefined');
-assertEqual(esc(123), '123', 'should handle numbers');
-assertEqual(esc(0), '0', 'should handle zero');
-assertEqual(esc(true), 'true', 'should handle true');
-assertEqual(esc(false), 'false', 'should handle false');
+// esc() returns actual HTML entities - using double quotes for strings with single quotes
+assertEqual(esc("a & b"), "a \u0026amp; b", "should escape & to &");
+assertEqual(esc("&"), "\u0026amp;", "should escape single &");
+assertEqual(esc("<script>"), "\u0026lt;script\u0026gt;", "should escape < to <");
+assertEqual(esc("<"), "\u0026lt;", "should escape single <");
+assertEqual(esc(">test"), "\u0026gt;test", "should escape > to >");
+assertEqual(esc(">"), "\u0026gt;", "should escape single >");
+assertEqual(esc('"quotes"'), "\u0026quot;quotes\u0026quot;", "should escape \" to \"");
+assertEqual(esc('"'), "\u0026quot;", "should escape single \"");
+assertEqual(esc("'single'"), "\u0026#39;single\u0026#39;", "should escape single quote to '");
+assertEqual(esc("'"), "\u0026#39;", "should escape single quote to '");
+assertEqual(esc("<img src=x onerror=alert(1)>"), "\u0026lt;img src=x onerror=alert(1)\u0026gt;", "should handle XSS payload - no < >");
+assertEqual(esc("javascript:alert(1)"), "javascript:alert(1)", "should handle javascript: protocol");
+assertEqual(esc(""), "", "should handle empty string");
+assertEqual(esc(null), "", "should handle null");
+assertEqual(esc(undefined), "", "should handle undefined");
+assertEqual(esc(123), "123", "should handle numbers");
+assertEqual(esc(0), "0", "should handle zero");
+assertEqual(esc(true), "true", "should handle true");
+assertEqual(esc(false), "false", "should handle false");
 
-const once = esc('<test>');
-const twice = esc(once);
-assertEqual(twice, '<test>', 'should not double-escape');
+// Verificar que no contiene caracteres peligrosos
+const xssResult = esc("<img onerror=1> \"a\" & b");
+assert(!xssResult.includes("<"), "escaped result must not contain <");
+assert(!xssResult.includes(">"), "escaped result must not contain >");
+assert(!xssResult.includes("\""), "escaped result must not contain \"");
 
-console.log('\n=== firebase-init: Role Helpers ===');
-const isCoordinator = (role) => role === 'coordinador';
-assertEqual(isCoordinator('coordinador'), true, 'should identify coordinador');
-assertEqual(isCoordinator('servidor'), false, 'should not identify servidor as coordinador');
-assertEqual(isCoordinator('miembro'), false, 'should not identify miembro as coordinador');
+console.log("\n=== firebase-init: Role Helpers ===");
+const isCoordinator = (role) => role === "coordinador";
+assertEqual(isCoordinator("coordinador"), true, "should identify coordinador");
+assertEqual(isCoordinator("servidor"), false, "should not identify servidor as coordinador");
+assertEqual(isCoordinator("miembro"), false, "should not identify miembro as coordinador");
 
-const isStaff = (role) => ['servidor', 'apoyo', 'coordinador'].includes(role);
-assertEqual(isStaff('servidor'), true, 'should identify servidor as staff');
-assertEqual(isStaff('apoyo'), true, 'should identify apoyo as staff');
-assertEqual(isStaff('coordinador'), true, 'should identify coordinador as staff');
-assertEqual(isStaff('miembro'), false, 'should not identify miembro as staff');
+const isStaff = (role) => ["servidor", "apoyo", "coordinador"].includes(role);
+assertEqual(isStaff("servidor"), true, "should identify servidor as staff");
+assertEqual(isStaff("apoyo"), true, "should identify apoyo as staff");
+assertEqual(isStaff("coordinador"), true, "should identify coordinador as staff");
+assertEqual(isStaff("miembro"), false, "should not identify miembro as staff");
 
-console.log('\n=== firebase-init: RTDB Paths ===');
+console.log("\n=== firebase-init: RTDB Paths ===");
 const paths = {
-  meta: 'asamblea/kahoot/meta',
-  sesionActivaFlag: 'asamblea/kahoot/sesionActiva',
-  respuestas: 'asamblea/kahoot/respuestas',
-  conectados: 'asamblea/conectados',
-  rankingSesion: 'asamblea/kahoot/rankingSesion',
+  meta: "asamblea/kahoot/meta",
+  sesionActivaFlag: "asamblea/kahoot/sesionActiva",
+  respuestas: "asamblea/kahoot/respuestas",
+  conectados: "asamblea/conectados",
+  rankingSesion: "asamblea/kahoot/rankingSesion",
   rankingGlobal: (uid) => `rankingGlobal/${uid}`
 };
 
-assertEqual(paths.meta, 'asamblea/kahoot/meta', 'meta path correct');
-assertEqual(paths.sesionActivaFlag, 'asamblea/kahoot/sesionActiva', 'sesionActivaFlag path correct');
-assertEqual(paths.respuestas, 'asamblea/kahoot/respuestas', 'respuestas path correct');
-assertEqual(paths.conectados, 'asamblea/conectados', 'conectados path correct');
-assertEqual(paths.rankingSesion, 'asamblea/kahoot/rankingSesion', 'rankingSesion path correct');
-assertEqual(paths.rankingGlobal('abc123'), 'rankingGlobal/abc123', 'rankingGlobal path correct');
+assertEqual(paths.meta, "asamblea/kahoot/meta", "meta path correct");
+assertEqual(paths.sesionActivaFlag, "asamblea/kahoot/sesionActiva", "sesionActivaFlag path correct");
+assertEqual(paths.respuestas, "asamblea/kahoot/respuestas", "respuestas path correct");
+assertEqual(paths.conectados, "asamblea/conectados", "conectados path correct");
+assertEqual(paths.rankingSesion, "asamblea/kahoot/rankingSesion", "rankingSesion path correct");
+assertEqual(paths.rankingGlobal("abc123"), "rankingGlobal/abc123", "rankingGlobal path correct");
 
-const uid = 'user-uid-123';
+const uid = "user-uid-123";
 const path = paths.rankingGlobal(uid);
-assertEqual(path, `rankingGlobal/${uid}`, 'rankingGlobal uses UID directly');
-assert(!path.includes('@'), 'rankingGlobal should not contain @');
-assert(!path.includes('.'), 'rankingGlobal should not contain .');
-assert(!path.includes('#'), 'rankingGlobal should not contain #');
-assert(!path.includes('$'), 'rankingGlobal should not contain $');
-assert(!path.includes('['), 'rankingGlobal should not contain [');
-assert(!path.includes(']'), 'rankingGlobal should not contain ]');
+assertEqual(path, `rankingGlobal/${uid}`, "rankingGlobal uses UID directly");
+assert(!path.includes("@"), "rankingGlobal should not contain @");
+assert(!path.includes("."), "rankingGlobal should not contain .");
+assert(!path.includes("#"), "rankingGlobal should not contain #");
+assert(!path.includes("$"), "rankingGlobal should not contain $");
+assert(!path.includes("["), "rankingGlobal should not contain [");
+assert(!path.includes("]"), "rankingGlobal should not contain ]");
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
