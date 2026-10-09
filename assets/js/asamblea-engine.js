@@ -162,17 +162,8 @@ export function on(path, callback) {
 /** Verificar permiso staff (llamar antes de cada acción) */
 async function assertStaff() {
   const user = auth.currentUser;
-  console.log('assertStaff: Verificando permisos para usuario:', user?.uid, user?.email);
-  if (!user) {
-    console.error('assertStaff: No hay usuario autenticado');
-    throw new Error('No autenticado');
-  }
-  const staffCheck = await isStaff(user.uid);
-  console.log('assertStaff: isStaff resultado:', staffCheck);
-  if (!staffCheck) {
-    console.error('assertStaff: Usuario no tiene permisos de staff');
-    throw new Error('Solo staff - usuario sin permisos');
-  }
+  if (!user) throw new Error('No autenticado');
+  if (!(await isStaff(user.uid))) throw new Error('Solo staff - usuario sin permisos');
 }
 
 /** Verificar permiso coordinador */
@@ -511,7 +502,7 @@ export async function apagarAsamblea() {
   await remove(ref(rtdb, 'asamblea/respuestas'));
   await remove(ref(rtdb, 'asamblea/conectados'));
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
-  await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActivaData));
+  await remove(ref(rtdb, KAHOOT_RTDB_PATHS.meta));
   await writePhase('apagada');
 }
 
@@ -657,11 +648,9 @@ export async function activateKahootSession(sessionId) {
 
   // Guardar referencia de sesión activa en RTDB (para proyector/celulares)
   await set(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva), sessionId);
-  await set(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActivaData), {
+  await set(ref(rtdb, KAHOOT_RTDB_PATHS.meta), {
     sessionId,
-    titulo: session.titulo,
-    fechaAsamblea: session.fechaAsamblea,
-    preguntas: session.preguntas  // CON correcta para proyector
+    titulo: session.titulo
   });
 
   // Actualizar estado en Firestore
