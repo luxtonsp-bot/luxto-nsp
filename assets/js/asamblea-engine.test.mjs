@@ -4,6 +4,7 @@
  */
 
 import { esc } from './esc.js';
+import { isStateAllowedForAction } from './phase-guards.js';
 
 let passed = 0;
 let failed = 0;
@@ -85,6 +86,11 @@ const pathsToClean = [
 ];
 assert(pathsToClean.includes("asamblea/kahoot/meta"), "should clean meta");
 assert(pathsToClean.includes("asamblea/kahoot/sesionActiva"), "should clean sesionActiva");
+
+console.log("\n=== asamblea-engine: phase guard against stale local state ===");
+assert(isStateAllowedForAction("countdown", ["lobby", "countdown", "revelada", "ranking"]) === true, "countdown should be allowed for a live action");
+assert(isStateAllowedForAction("pregunta", ["lobby", "countdown", "revelada", "ranking"]) === false, "pregunta should not be allowed from a drained state guard");
+assert(isStateAllowedForAction("revelada", ["revelada", "ranking"]) === true, "revelada should allow ranking transition");
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);

@@ -36,6 +36,7 @@ import {
   rtdbServerTS,
   writeBatch
 } from './firebase-init.js';
+import { isStateAllowedForAction } from './phase-guards.js';
 
 const PHASES = ['apagada', 'lobby', 'countdown', 'pregunta', 'revelada', 'ranking', 'podio'];
 
@@ -173,6 +174,23 @@ async function assertStaff() {
   if (!(await isStaff(user.uid))) throw new Error('Solo staff - usuario sin permisos');
 }
 
+async function getCurrentPhase() {
+  try {
+    const snap = await get(ref(rtdb, RTDB_PATHS.fase));
+    return snap.exists() ? (snap.val() || 'apagada') : localState.fase;
+  } catch (error) {
+    console.warn('getCurrentPhase fallback to local cache:', error.message);
+    return localState.fase;
+  }
+}
+
+async function assertAllowedPhase(allowedPhases, actionName) {
+  const currentPhase = await getCurrentPhase();
+  if (!isStateAllowedForAction(currentPhase, allowedPhases)) {
+    throw new Error(`No se puede ${actionName} desde la fase actual: ${currentPhase}`);
+  }
+}
+
 /** Verificar permiso coordinador */
 async function assertCoordinator() {
   const user = auth.currentUser;
@@ -269,7 +287,7 @@ export async function setSesionCola(preguntaIds) {
 /** Iniciar sesión: lobby -> countdown -> primera pregunta */
 export async function startSesion() {
   await assertStaff();
-  if (localState.fase !== 'lobby') throw new Error('Debe estar en lobby');
+  await assertAllowedPhase(['lobby'], 'iniciar la sesión');
   await writePhase('countdown');
 
   // Guardar momento de inicio del countdown para checkLateHostJoin
@@ -336,10 +354,7 @@ export async function checkLateHostJoin() {
 /** Avanzar a siguiente pregunta (o iniciar primera) — lee correcta de Firestore */
 export async function nextPregunta() {
   await assertStaff();
-  // Validar fase: solo desde lobby, countdown, revelada, ranking
-  if (!['lobby', 'countdown', 'revelada', 'ranking'].includes(localState.fase)) {
-    throw new Error(`No se puede lanzar pregunta desde fase: ${localState.fase}`);
-  }
+  await assertAllowedPhase(['lobby', 'countdown', 'revelada', 'ranking'], 'lanzar la siguiente pregunta');
 
   // Transacción atómica sobre índice para evitar double-click
   const idxRef = ref(rtdb, RTDB_PATHS.indice);
@@ -392,7 +407,7 @@ export async function nextPregunta() {
 /** Cerrar pregunta actual (calcular puntos, guardar resumen) — IDEMPOTENTE */
 export async function cerrarPregunta() {
   await assertStaff();
-  if (localState.fase !== 'pregunta') throw new Error('No hay pregunta activa');
+  await assertAllowedPhase(['pregunta'], 'cerrar la pregunta');
   if (!localState.sesionId) throw new Error('sesionId no disponible');
 
   const q = localState.preguntaActual;
@@ -447,7 +462,7 @@ export async function cerrarPregunta() {
 /** Mostrar ranking parcial */
 export async function mostrarRanking() {
   await assertStaff();
-  if (!['revelada', 'ranking'].includes(localState.fase)) throw new Error('Fase inválida');
+  await assertAllowedPhase(['revelada', 'ranking'], 'mostrar el ranking');
   await writePhase('ranking');
 }
 

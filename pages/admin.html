@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel Admin — Luz de Cristo</title>
-<link rel="icon" href="/luxto-nsp/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="/luxto-nsp/assets/images/logo_luxto.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/luxto-nsp/assets/images/logo_luxto.png">
-<link rel="apple-touch-icon" href="/luxto-nsp/assets/images/logo_luxto.png">
+<link rel="icon" href="../favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/images/logo_luxto.png">
+<link rel="icon" type="image/png" sizes="16x16" href="../assets/images/logo_luxto.png">
+<link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 /* ─────────────────────────────────────────
@@ -464,7 +464,7 @@ option:checked, option:hover, option:focus {
 
 <header id="topbar">
   <div class="topbar-inner">
-    <a href="index.html" class="topbar-logo">
+    <a href="../index.html" class="topbar-logo">
       <img src="../assets/images/logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
       <span class="topbar-logo-name">Luz de Cristo</span>
     </a>
@@ -764,19 +764,6 @@ option:checked, option:hover, option:focus {
 <script type="module" src="../assets/js/firebase-init.js"></script>
 <script type="module" src="../assets/js/asamblea-engine.js"></script>
 <script type="module" src="../assets/js/admin.js"></script>
-
-<script>
-// ── Navegación por tabs (UI only) ──
-window.openTab = function(evt, tabName) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-  document.getElementById(tabName).classList.add('active');
-  evt.currentTarget.classList.add('active');
-
-  // Notificar al módulo admin.js que cambió el tab (para cargar datos)
-  if (window.onAdminTabChange) window.onAdminTabChange(tabName);
-};
-</script>
 
 </body>
 </html>
