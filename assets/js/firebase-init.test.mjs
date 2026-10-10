@@ -3,6 +3,7 @@
  * Ejecutar con: node assets/js/firebase-init.test.mjs
  */
 
+import fs from 'node:fs';
 import { esc } from './esc.js';
 
 let passed = 0;
@@ -97,6 +98,15 @@ assert(!path.includes("#"), "rankingGlobal should not contain #");
 assert(!path.includes("$"), "rankingGlobal should not contain $");
 assert(!path.includes("["), "rankingGlobal should not contain [");
 assert(!path.includes("]"), "rankingGlobal should not contain ]");
+
+console.log("\n=== firebase-init: Rules / Staff permissions ===");
+const dbRules = fs.readFileSync(new URL('../../database.rules.json', import.meta.url), 'utf8');
+const firestoreRules = fs.readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+const membersRoleCheck = "root.child('members').child(auth.uid).child('rol').val() === 'coordinador'";
+assert(dbRules.includes(membersRoleCheck), "RTDB rules allow coordinator by member role");
+assert(dbRules.includes("'servidor'"), "RTDB rules include servidor role");
+assert(dbRules.includes("'apoyo'"), "RTDB rules include apoyo role");
+assert(firestoreRules.includes("allow create, update: if isStaff();"), "Firestore rules allow staff to create KAHOOT sessions");
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
