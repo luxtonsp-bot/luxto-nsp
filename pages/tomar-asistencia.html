@@ -634,47 +634,63 @@
             const anio = fecha.slice(0, 4);
             const snapshot = await db.collection('asistencia').doc(anio).collection(fecha).get();
 
-            if (snapshot.empty) {
-                listaAsistenciaDia.innerHTML = '<div class="empty-state">No hay registros de asistencia para esta fecha</div>';
-                return;
-            }
-
             // Obtener datos de asamblea para esa fecha (tema, hora)
             const assemblyDoc = await db.collection('asambleas').doc(fecha).get();
             const assemblyData = assemblyDoc.exists ? assemblyDoc.data() : {};
 
-            // Cargar info de todos los miembros para mostrar nombre/foto
-            const membersSnapshot = await db.collection('members').get();
+            // Cargar TODOS los miembros activos (para calcular ausentes)
+            const membersSnapshot = await db.collection('members')
+                .where('estadoAnioActual', '==', 'activo')
+                .get();
             const membersMap = {};
+            let totalActivos = 0;
             membersSnapshot.forEach(doc => {
                 membersMap[doc.id] = doc.data();
+                totalActivos++;
             });
 
-            let html = '';
-            let presentes = 0;
-            let ausentes = 0;
+            if (snapshot.empty && totalActivos === 0) {
+                listaAsistenciaDia.innerHTML = '<div class="empty-state">No hay miembros activos ni registros de asistencia para esta fecha</div>';
+                return;
+            }
+
+            // Set de UIDs que marcaron presente
+            const presentesUids = new Set();
             let tardanzas = 0;
+            let presentes = 0;
 
             snapshot.forEach(doc => {
                 const data = doc.data();
-                const memberData = membersMap[doc.id] || {};
-                const nombre = memberData.nombre || data.uid || 'Sin nombre';
-                const email = memberData.email || '';
-                const presente = data.presente === true;
-                const tardanza = data.tardanzaMinutos || 0;
-                const esTardanza = data.esTardanza === true;
-
-                if (presente) {
+                if (data.presente === true) {
+                    presentesUids.add(doc.id);
                     presentes++;
-                    if (esTardanza) tardanzas++;
-                } else {
-                    ausentes++;
+                    if (data.esTardanza === true) tardanzas++;
                 }
+            });
+
+            const ausentes = totalActivos - presentes;
+
+            let html = '';
+
+            // Recorrer TODOS los miembros activos para mostrar todos (presentes + ausentes)
+            const sortedMembers = [];
+            membersSnapshot.forEach(doc => {
+                sortedMembers.push({ id: doc.id, data: doc.data() });
+            });
+            sortedMembers.sort((a, b) => (a.data.nombre || '').localeCompare(b.data.nombre || ''));
+
+            sortedMembers.forEach(({ id, data: memberData }) => {
+                const nombre = memberData.nombre || 'Sin nombre';
+                const email = memberData.email || '';
+                const presente = presentesUids.has(id);
+                const memberAttendance = snapshot.docs.find(d => d.id === id)?.data() || {};
+                const tardanza = memberAttendance.tardanzaMinutos || 0;
+                const esTardanza = memberAttendance.esTardanza === true;
 
                 const initial = nombre.charAt(0).toUpperCase();
                 let photoUrl = memberData.fotoThumb;
-                if (!photoUrl && memberData.fotoDriveId) photoUrl = convertirUrlDrive(memberData.fotoDriveId);
-                const hasValidPhoto = photoUrl && (photoUrl.startsWith('http') || photoUrl.startsWith('data:'));
+                if (!isValidImageUrl(photoUrl) && memberData.fotoDriveId) photoUrl = convertirUrlDrive(memberData.fotoDriveId);
+                const hasValidPhoto = isValidImageUrl(photoUrl);
 
                 const estadoHtml = presente
                     ? `<span style="color:var(--ok); font-weight:700;">✓ Presente${esTardanza ? ` · Tardanza: ${tardanza} min` : ''}</span>`
@@ -694,7 +710,7 @@
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
                             ${estadoHtml}
-                            <div style="font-size:11px; color:var(--muted);">${data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
+                            ${presente && memberAttendance.timestamp ? `<div style="font-size:11px; color:var(--muted);">${new Date(memberAttendance.timestamp.seconds * 1000).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'})}</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -824,8 +840,8 @@
             resumenMiembros.forEach((m, i) => {
                 const initial = m.nombre.charAt(0).toUpperCase();
                 let photoUrl = m.fotoThumb;
-                if (!photoUrl && m.fotoDriveId) photoUrl = convertirUrlDrive(m.fotoDriveId);
-                const hasValidPhoto = photoUrl && (photoUrl.startsWith('http') || photoUrl.startsWith('data:'));
+                if (!isValidImageUrl(photoUrl) && m.fotoDriveId) photoUrl = convertirUrlDrive(m.fotoDriveId);
+                const hasValidPhoto = isValidImageUrl(photoUrl);
 
                 const colorPorcentaje = m.porcentaje >= 80 ? 'var(--ok)' : m.porcentaje >= 50 ? 'var(--y)' : 'var(--err)';
 
