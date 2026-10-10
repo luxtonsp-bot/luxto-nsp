@@ -35,26 +35,48 @@ import {
   runTransaction,
   deleteDoc,
   rtdbServerTS,
-  writeBatch
-} from './firebase-init.js';
-import { isStateAllowedForAction, getSessionCleanupPaths } from './phase-guards.js';
+  writeBatch,
+} from "./firebase-init.js";
+import {
+  isStateAllowedForAction,
+  getSessionCleanupPaths,
+} from "./phase-guards.js";
 
-const PHASES = ['apagada', 'lobby', 'countdown', 'pregunta', 'revelada', 'ranking', 'podio'];
+const PHASES = [
+  "apagada",
+  "lobby",
+  "countdown",
+  "pregunta",
+  "revelada",
+  "ranking",
+  "podio",
+];
 
 export function normalizeKahootSessionState(estado) {
-  const value = String(estado ?? '').trim().toLowerCase();
-  if (!value) return 'preparada';
-  if (value === 'borrador') return 'preparada';
+  const value = String(estado ?? "")
+    .trim()
+    .toLowerCase();
+  if (!value) return "preparada";
+  if (value === "borrador") return "preparada";
   return value;
 }
 
 export function getKahootHistoryTimestamp(session = {}) {
   const raw = session.finalizadaEn ?? session.finalizadoEn ?? null;
   if (!raw) return null;
-  if (typeof raw === 'number') return raw;
-  if (typeof raw === 'object' && typeof raw.seconds === 'number') return raw.seconds;
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "object" && typeof raw.seconds === "number")
+    return raw.seconds;
   if (raw instanceof Date) return Math.floor(raw.getTime() / 1000);
   return null;
+}
+
+export function canAddQuestionsToKahootSession(session = {}) {
+  if (!session || typeof session !== "object") return false;
+  const estado = normalizeKahootSessionState(session.estado);
+  // Solo se pueden agregar preguntas a sesiones en preparación o activas
+  // Una sesión 'finalizada' ya se jugó completamente y tiene resultados guardados
+  return ["preparada", "activa"].includes(estado);
 }
 
 // Guardar countdownStart para checkLateHostJoin
@@ -63,7 +85,7 @@ let countdownStart = 0;
 /* ── Estado local (caché para listeners UI) ───────────────── */
 let localState = {
   activa: false,
-  fase: 'apagada',
+  fase: "apagada",
   cola: [],
   indice: 0,
   preguntaActual: null,
@@ -74,7 +96,7 @@ let localState = {
   acumulada: false,
   hostUid: null,
   sesionId: null,
-  meta: null
+  meta: null,
 };
 
 const listeners = new Map(); // path -> { off, callbacks[] }
@@ -82,18 +104,18 @@ const listeners = new Map(); // path -> { off, callbacks[] }
 /* ── Helpers internos ─────────────────────────────────────── */
 function notify(path) {
   const cbs = listeners.get(path)?.callbacks || [];
-  cbs.forEach(cb => cb(localState));
+  cbs.forEach((cb) => cb(localState));
 }
 
 async function writePhase(fase) {
   if (!PHASES.includes(fase)) throw new Error(`Fase inválida: ${fase}`);
   await set(ref(rtdb, RTDB_PATHS.fase), fase);
-  const activa = fase !== 'apagada';
+  const activa = fase !== "apagada";
   localState.fase = fase;
   localState.activa = activa;
-  await set(ref(rtdb, 'asamblea/activa'), activa);
-  notify('fase');
-  notify('activa');
+  await set(ref(rtdb, "asamblea/activa"), activa);
+  notify("fase");
+  notify("activa");
 }
 
 /* ── API PÚBLICA ──────────────────────────────────────────── */
@@ -103,86 +125,88 @@ export async function initAsambleaEngine() {
   await syncServerTime();
 
   // Listener legacy activation flag used by dashboard/member flow
-  onValue(ref(rtdb, 'asamblea/activa'), snap => {
+  onValue(ref(rtdb, "asamblea/activa"), (snap) => {
     localState.activa = snap.val() === true;
-    notify('activa');
+    notify("activa");
   });
 
   // Listener fase
-  onValue(ref(rtdb, RTDB_PATHS.fase), snap => {
-    localState.fase = snap.val() || 'apagada';
-    localState.activa = localState.fase !== 'apagada';
-    notify('fase');
-    notify('activa');
+  onValue(ref(rtdb, RTDB_PATHS.fase), (snap) => {
+    localState.fase = snap.val() || "apagada";
+    localState.activa = localState.fase !== "apagada";
+    notify("fase");
+    notify("activa");
   });
 
   // Listener cola
-  onValue(ref(rtdb, RTDB_PATHS.cola), snap => {
+  onValue(ref(rtdb, RTDB_PATHS.cola), (snap) => {
     localState.cola = snap.val() || [];
-    notify('cola');
+    notify("cola");
   });
 
   // Listener índice
-  onValue(ref(rtdb, RTDB_PATHS.indice), snap => {
+  onValue(ref(rtdb, RTDB_PATHS.indice), (snap) => {
     localState.indice = snap.val() || 0;
-    notify('indice');
+    notify("indice");
   });
 
   // Listener preguntaActual
-  onValue(ref(rtdb, RTDB_PATHS.preguntaActual), snap => {
+  onValue(ref(rtdb, RTDB_PATHS.preguntaActual), (snap) => {
     localState.preguntaActual = snap.val();
-    notify('preguntaActual');
+    notify("preguntaActual");
   });
 
   // Listener conectados
-  onValue(ref(rtdb, 'asamblea/conectados'), snap => {
+  onValue(ref(rtdb, "asamblea/conectados"), (snap) => {
     localState.conectados = snap.val() || {};
-    notify('conectados');
+    notify("conectados");
   });
 
   // Listener respuestas (para fase pregunta/revelada)
-  onValue(ref(rtdb, 'asamblea/respuestas'), snap => {
+  onValue(ref(rtdb, "asamblea/respuestas"), (snap) => {
     localState.respuestas = snap.val() || {};
-    notify('respuestas');
+    notify("respuestas");
   });
 
   // Listener puntos (root completo)
-  onValue(ref(rtdb, RTDB_PATHS.puntosRoot), snap => {
+  onValue(ref(rtdb, RTDB_PATHS.puntosRoot), (snap) => {
     localState.puntos = snap.val() || {};
-    notify('puntos');
+    notify("puntos");
   });
   // Listener resumen
-  onValue(ref(rtdb, RTDB_PATHS.resumen), snap => {
+  onValue(ref(rtdb, RTDB_PATHS.resumen), (snap) => {
     localState.resumen = snap.val() || [];
-    notify('resumen');
+    notify("resumen");
   });
   // Listener acumulada
-  onValue(ref(rtdb, RTDB_PATHS.acumulada), snap => {
+  onValue(ref(rtdb, RTDB_PATHS.acumulada), (snap) => {
     localState.acumulada = snap.val() || false;
-    notify('acumulada');
+    notify("acumulada");
   });
 
   // Listener hostUid (elección de líder único)
-  onValue(ref(rtdb, RTDB_PATHS.hostUid), snap => {
+  onValue(ref(rtdb, RTDB_PATHS.hostUid), (snap) => {
     localState.hostUid = snap.val();
-    notify('hostUid');
+    notify("hostUid");
   });
 
   // Listener sesionId
-  onValue(ref(rtdb, RTDB_PATHS.sesionId), snap => {
+  onValue(ref(rtdb, RTDB_PATHS.sesionId), (snap) => {
     localState.sesionId = snap.val();
-    notify('sesionId');
+    notify("sesionId");
   });
 
   // Listener meta (para proyector/celulares - título sesión activa)
-  onValue(ref(rtdb, KAHOOT_RTDB_PATHS.meta), snap => {
+  onValue(ref(rtdb, KAHOOT_RTDB_PATHS.meta), (snap) => {
     localState.meta = snap.val();
-    notify('meta');
+    notify("meta");
   });
 }
 
 /** Obtener estado actual (reactivo via listeners) */
-export function getState() { return { ...localState }; }
+export function getState() {
+  return { ...localState };
+}
 
 /** Suscribirse a cambios de un path */
 export function on(path, callback) {
@@ -200,16 +224,17 @@ export function on(path, callback) {
 /** Verificar permiso staff (llamar antes de cada acción) */
 async function assertStaff() {
   const user = auth.currentUser;
-  if (!user) throw new Error('No autenticado');
-  if (!(await isStaff(user.uid))) throw new Error('Solo staff - usuario sin permisos');
+  if (!user) throw new Error("No autenticado");
+  if (!(await isStaff(user.uid)))
+    throw new Error("Solo staff - usuario sin permisos");
 }
 
 async function getCurrentPhase() {
   try {
     const snap = await get(ref(rtdb, RTDB_PATHS.fase));
-    return snap.exists() ? (snap.val() || 'apagada') : localState.fase;
+    return snap.exists() ? snap.val() || "apagada" : localState.fase;
   } catch (error) {
-    console.warn('getCurrentPhase fallback to local cache:', error.message);
+    console.warn("getCurrentPhase fallback to local cache:", error.message);
     return localState.fase;
   }
 }
@@ -217,7 +242,9 @@ async function getCurrentPhase() {
 async function assertAllowedPhase(allowedPhases, actionName) {
   const currentPhase = await getCurrentPhase();
   if (!isStateAllowedForAction(currentPhase, allowedPhases)) {
-    throw new Error(`No se puede ${actionName} desde la fase actual: ${currentPhase}`);
+    throw new Error(
+      `No se puede ${actionName} desde la fase actual: ${currentPhase}`,
+    );
   }
 }
 
@@ -227,7 +254,10 @@ async function clearSessionRuntimeState() {
     try {
       await remove(ref(rtdb, path));
     } catch (error) {
-      console.warn(`clearSessionRuntimeState: no se pudo limpiar ${path}:`, error.message);
+      console.warn(
+        `clearSessionRuntimeState: no se pudo limpiar ${path}:`,
+        error.message,
+      );
     }
   }
 }
@@ -235,7 +265,8 @@ async function clearSessionRuntimeState() {
 /** Verificar permiso coordinador */
 async function assertCoordinator() {
   const user = auth.currentUser;
-  if (!user || !(await isCoordinator(user.uid))) throw new Error('Solo coordinador');
+  if (!user || !(await isCoordinator(user.uid)))
+    throw new Error("Solo coordinador");
 }
 
 /** Registrar este cliente como host (solo uno gana) — transacción atómica + onDisconnect */
@@ -278,27 +309,44 @@ export function isHost() {
 export async function savePregunta(data) {
   await assertStaff();
   const { texto, opciones, correcta, duracion, id } = data;
-  if (!texto || !opciones?.length) throw new Error('Texto y opciones requeridos');
-  const docRef = id ? doc(fsdb, 'preguntas', id) : doc(collection(fsdb, 'preguntas'));
-  await setDoc(docRef, { texto, opciones, correcta: correcta ?? 0, duracion: duracion ?? 20, createdAt: fsTS(), updatedAt: fsTS() });
+  if (!texto || !opciones?.length)
+    throw new Error("Texto y opciones requeridos");
+  const docRef = id
+    ? doc(fsdb, "preguntas", id)
+    : doc(collection(fsdb, "preguntas"));
+  await setDoc(docRef, {
+    texto,
+    opciones,
+    correcta: correcta ?? 0,
+    duracion: duracion ?? 20,
+    createdAt: fsTS(),
+    updatedAt: fsTS(),
+  });
   return docRef.id;
 }
 export async function deletePregunta(id) {
   await assertStaff();
-  await deleteDoc(doc(fsdb, 'preguntas', id));
+  await deleteDoc(doc(fsdb, "preguntas", id));
 }
 export async function listPreguntas() {
   try {
     // Intentar primero con orderBy updatedAt
-    const snap = await getDocs(query(collection(fsdb, 'preguntas'), orderBy('updatedAt', 'desc')));
-    const preguntas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await getDocs(
+      query(collection(fsdb, "preguntas"), orderBy("updatedAt", "desc")),
+    );
+    const preguntas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     if (preguntas.length > 0) return preguntas;
   } catch (e) {
-    console.warn('listPreguntas: orderBy updatedAt falló, probando sin orderBy:', e.message);
+    console.warn(
+      "listPreguntas: orderBy updatedAt falló, probando sin orderBy:",
+      e.message,
+    );
   }
   // Fallback: sin orderBy (para documentos antiguos sin updatedAt)
-  const snap = await getDocs(collection(fsdb, 'preguntas'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
+  const snap = await getDocs(collection(fsdb, "preguntas"));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
 }
 
 /** Cargar preguntas seleccionadas a la sesión (cola) — sin correcta */
@@ -306,13 +354,19 @@ export async function setSesionCola(preguntaIds) {
   await assertStaff();
   const preguntas = [];
   for (const id of preguntaIds) {
-    const snap = await getDoc(doc(fsdb, 'preguntas', id));
+    const snap = await getDoc(doc(fsdb, "preguntas", id));
     if (!snap.exists()) throw new Error(`Pregunta ${id} no existe`);
     const p = snap.data();
-    preguntas.push({ id: snap.id, texto: p.texto, opciones: p.opciones, duracion: p.duracion });
+    preguntas.push({
+      id: snap.id,
+      texto: p.texto,
+      opciones: p.opciones,
+      duracion: p.duracion,
+    });
   }
   // Generar sesionId único para esta sesión (timestamp + random)
-  const sesionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const sesionId =
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   // Todo en orden: limpiar → acumulada=false → cola → resumen → fase lobby
   await clearSessionRuntimeState();
@@ -320,14 +374,14 @@ export async function setSesionCola(preguntaIds) {
   await set(ref(rtdb, RTDB_PATHS.cola), preguntas);
   await set(ref(rtdb, RTDB_PATHS.indice), 0);
   await set(ref(rtdb, RTDB_PATHS.resumen), []);
-  await writePhase('lobby');
+  await writePhase("lobby");
 }
 
 /** Iniciar sesión: lobby -> countdown -> primera pregunta */
 export async function startSesion() {
   await assertStaff();
-  await assertAllowedPhase(['lobby'], 'iniciar la sesión');
-  await writePhase('countdown');
+  await assertAllowedPhase(["lobby"], "iniciar la sesión");
+  await writePhase("countdown");
 
   // Guardar momento de inicio del countdown para checkLateHostJoin
   countdownStart = serverNow();
@@ -352,7 +406,7 @@ function scheduleHostActions() {
   // countdown → pregunta (5s)
   const toPregunta = Math.max(0, 5000);
   setTimeout(async () => {
-    if (isHost() && (await getState()).fase === 'countdown') {
+    if (isHost() && (await getState()).fase === "countdown") {
       await nextPregunta();
     }
   }, toPregunta);
@@ -360,7 +414,7 @@ function scheduleHostActions() {
   // Cierre automático en cierraEn
   const toClose = Math.max(0, cierraEn - serverNow());
   setTimeout(async () => {
-    if (isHost() && (await getState()).fase === 'pregunta') {
+    if (isHost() && (await getState()).fase === "pregunta") {
       await cerrarPregunta();
     }
   }, toClose + 5000); // suma los 5s del countdown
@@ -370,7 +424,7 @@ function scheduleHostActions() {
 export async function checkLateHostJoin() {
   if (!isHost()) return;
   const state = getState();
-  if (state.fase === 'countdown') {
+  if (state.fase === "countdown") {
     // Verificar si ya pasó el tiempo de countdown (5s desde countdownStart)
     const idx = state.indice;
     const cola = state.cola;
@@ -381,7 +435,7 @@ export async function checkLateHostJoin() {
         await nextPregunta();
       }
     }
-  } else if (state.fase === 'pregunta') {
+  } else if (state.fase === "pregunta") {
     // Verificar si ya pasó cierraEn
     const p = state.preguntaActual;
     if (p && p.cierraEn && serverNow() >= p.cierraEn) {
@@ -393,7 +447,10 @@ export async function checkLateHostJoin() {
 /** Avanzar a siguiente pregunta (o iniciar primera) — lee correcta de Firestore */
 export async function nextPregunta() {
   await assertStaff();
-  await assertAllowedPhase(['lobby', 'countdown', 'revelada', 'ranking'], 'lanzar la siguiente pregunta');
+  await assertAllowedPhase(
+    ["lobby", "countdown", "revelada", "ranking"],
+    "lanzar la siguiente pregunta",
+  );
 
   // Transacción atómica sobre índice para evitar double-click
   const idxRef = ref(rtdb, RTDB_PATHS.indice);
@@ -406,11 +463,14 @@ export async function nextPregunta() {
 
   const idx = txResult.snapshot.val() - 1;
   const cola = localState.cola;
-  if (idx >= cola.length) { await writePhase('podio'); return; }
+  if (idx >= cola.length) {
+    await writePhase("podio");
+    return;
+  }
 
   const p = cola[idx];
   // Leer correcta de Firestore al lanzar
-  const fsSnap = await getDoc(doc(fsdb, 'preguntas', p.id));
+  const fsSnap = await getDoc(doc(fsdb, "preguntas", p.id));
   const correcta = fsSnap.exists() ? (fsSnap.data().correcta ?? 0) : 0;
 
   const abreEn = serverNow();
@@ -427,16 +487,16 @@ export async function nextPregunta() {
     opciones: p.opciones,
     duracion: p.duracion,
     abreEn,
-    cierraEn
+    cierraEn,
   });
 
-  await writePhase('pregunta');
+  await writePhase("pregunta");
 
   // El host agenda cierre automático en cierraEn
   if (isHost()) {
     const delay = Math.max(0, cierraEn - serverNow());
     setTimeout(async () => {
-      if (isHost() && (await getState()).fase === 'pregunta') {
+      if (isHost() && (await getState()).fase === "pregunta") {
         await cerrarPregunta();
       }
     }, delay);
@@ -446,8 +506,8 @@ export async function nextPregunta() {
 /** Cerrar pregunta actual (calcular puntos, guardar resumen) — IDEMPOTENTE */
 export async function cerrarPregunta() {
   await assertStaff();
-  await assertAllowedPhase(['pregunta'], 'cerrar la pregunta');
-  if (!localState.sesionId) throw new Error('sesionId no disponible');
+  await assertAllowedPhase(["pregunta"], "cerrar la pregunta");
+  if (!localState.sesionId) throw new Error("sesionId no disponible");
 
   const q = localState.preguntaActual;
   const qid = q.id;
@@ -480,7 +540,10 @@ export async function cerrarPregunta() {
   for (const [uid, delta] of Object.entries(deltaPuntos)) {
     if (delta <= 0) continue;
     await runTransaction(ref(rtdb, RTDB_PATHS.puntos(uid)), (current) => {
-      const prev = current || { pts: 0, nombre: resumenNuevo.find(r => r.uid === uid)?.nombre || uid };
+      const prev = current || {
+        pts: 0,
+        nombre: resumenNuevo.find((r) => r.uid === uid)?.nombre || uid,
+      };
       return { pts: prev.pts + delta, nombre: prev.nombre };
     });
   }
@@ -494,15 +557,18 @@ export async function cerrarPregunta() {
   await set(ref(rtdb, RTDB_PATHS.resumen), ranking.slice(0, 20));
 
   // Revelar correcta en preguntaActual
-  await update(ref(rtdb, RTDB_PATHS.preguntaActual), { correcta, estado: 'revelada' });
-  await writePhase('revelada');
+  await update(ref(rtdb, RTDB_PATHS.preguntaActual), {
+    correcta,
+    estado: "revelada",
+  });
+  await writePhase("revelada");
 }
 
 /** Mostrar ranking parcial */
 export async function mostrarRanking() {
   await assertStaff();
-  await assertAllowedPhase(['revelada', 'ranking'], 'mostrar el ranking');
-  await writePhase('ranking');
+  await assertAllowedPhase(["revelada", "ranking"], "mostrar el ranking");
+  await writePhase("ranking");
 }
 
 /** Finalizar sesión: acumular rankingGlobal + snapshot Firestore + podio — IDEMPOTENTE REAL */
@@ -510,56 +576,81 @@ export async function finalizarSesion() {
   await assertCoordinator(); // solo coordinador finaliza y escribe historico
 
   // Transacción atómica sobre acumulada: revisa committed
-  const txResult = await runTransaction(ref(rtdb, RTDB_PATHS.acumulada), (current) => {
-    if (current === true) return; // ya hecho
-    return true;
-  });
+  const txResult = await runTransaction(
+    ref(rtdb, RTDB_PATHS.acumulada),
+    (current) => {
+      if (current === true) return; // ya hecho
+      return true;
+    },
+  );
   if (!txResult.committed) return; // otro lo hizo o falló
 
   // 1. Acumular en rankingGlobal con transacción atómica por UID (key = uid, no email)
   const puntosSesion = localState.puntos;
-  const membersSnap = await getDocs(collection(fsdb, 'members'));
+  const membersSnap = await getDocs(collection(fsdb, "members"));
   const memberByUid = {};
-  membersSnap.forEach(d => { memberByUid[d.id] = d.data(); });
+  membersSnap.forEach((d) => {
+    memberByUid[d.id] = d.data();
+  });
 
   for (const [uid, data] of Object.entries(puntosSesion)) {
     const pts = data?.pts;
     if (!pts) continue;
     const m = memberByUid[uid];
     // Key = uid (no email-sanitized). Las reglas RTDB ya validan estructura.
-    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(uid)), (current) => {
-      const prev = current || { pts: 0, nombre: m?.nombre || 'Anónimo', fotoUrl: m?.fotoUrl || '' };
-      return { ...prev, pts: (prev.pts || 0) + pts, ultimaAsamblea: serverNow() };
-    });
+    await runTransaction(
+      ref(rtdb, RTDB_PATHS.rankingGlobal(uid)),
+      (current) => {
+        const prev = current || {
+          pts: 0,
+          nombre: m?.nombre || "Anónimo",
+          fotoUrl: m?.fotoUrl || "",
+        };
+        return {
+          ...prev,
+          pts: (prev.pts || 0) + pts,
+          ultimaAsamblea: serverNow(),
+        };
+      },
+    );
   }
 
   // 2. Snapshot Firestore
   const hoy = new Date();
-  const hoyStr = hoy.toISOString().split('T')[0];
-  await setDoc(doc(fsdb, 'asambleas_kahoot', hoyStr), {
+  const hoyStr = hoy.toISOString().split("T")[0];
+  await setDoc(doc(fsdb, "asambleas_kahoot", hoyStr), {
     fecha: hoyStr,
     puntosSesion,
     resumen: localState.resumen,
     totalPreguntas: localState.cola.length,
-    creadoEn: fsTS()
+    creadoEn: fsTS(),
   });
-  await setDoc(doc(fsdb, 'historico', String(hoy.getFullYear()), 'asambleas_kahoot', hoyStr), {
-    fecha: hoyStr,
-    puntosSesion,
-    resumen: localState.resumen,
-    totalPreguntas: localState.cola.length,
-    creadoEn: fsTS()
-  });
+  await setDoc(
+    doc(
+      fsdb,
+      "historico",
+      String(hoy.getFullYear()),
+      "asambleas_kahoot",
+      hoyStr,
+    ),
+    {
+      fecha: hoyStr,
+      puntosSesion,
+      resumen: localState.resumen,
+      totalPreguntas: localState.cola.length,
+      creadoEn: fsTS(),
+    },
+  );
 
   // 3. Fase podio
-  await writePhase('podio');
+  await writePhase("podio");
 }
 
 /** Apagar asamblea (reset suave — no borra nodo padre para no romper reglas viejas) */
 export async function apagarAsamblea() {
   await assertStaff();
   // SINGLE FINALIZATION: misma limpieza que finalizeKahootSession pero sin snapshots
-  await writePhase('apagada');
+  await writePhase("apagada");
   await clearSessionRuntimeState();
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.meta));
@@ -572,15 +663,19 @@ export async function apagarAsamblea() {
 /* ── KAHOOT SESSIONS (Firestore) ────────────────────────────── */
 
 /** Crear nueva sesión KAHOOT en borrador */
-export async function createKahootSession({ titulo, fechaAsamblea, preguntaIds = [] }) {
+export async function createKahootSession({
+  titulo,
+  fechaAsamblea,
+  preguntaIds = [],
+}) {
   await assertStaff();
-  if (!titulo?.trim()) throw new Error('Título requerido');
-  if (!fechaAsamblea) throw new Error('Fecha de asamblea requerida');
+  if (!titulo?.trim()) throw new Error("Título requerido");
+  if (!fechaAsamblea) throw new Error("Fecha de asamblea requerida");
 
   const preguntas = [];
   for (let i = 0; i < preguntaIds.length; i++) {
     const id = preguntaIds[i];
-    const snap = await getDoc(doc(fsdb, 'preguntas', id));
+    const snap = await getDoc(doc(fsdb, "preguntas", id));
     if (!snap.exists()) throw new Error(`Pregunta ${id} no existe`);
     const p = snap.data();
     preguntas.push({
@@ -589,12 +684,12 @@ export async function createKahootSession({ titulo, fechaAsamblea, preguntaIds =
       opciones: p.opciones,
       correcta: p.correcta ?? 0,
       duracion: p.duracion ?? 20,
-      orden: i + 1
+      orden: i + 1,
     });
   }
 
   const anio = new Date(fechaAsamblea).getFullYear();
-  const sessionRef = doc(collection(fsdb, 'kahoot_sessions'));
+  const sessionRef = doc(collection(fsdb, "kahoot_sessions"));
   await setDoc(sessionRef, {
     titulo: titulo.trim(),
     fechaAsamblea,
@@ -602,9 +697,9 @@ export async function createKahootSession({ titulo, fechaAsamblea, preguntaIds =
     creadoPor: auth.currentUser.uid,
     creadoEn: fsTS(),
     actualizadoEn: fsTS(),
-    estado: 'preparada',
+    estado: "preparada",
     preguntas,
-    resultados: null
+    resultados: null,
   });
   return sessionRef.id;
 }
@@ -613,42 +708,63 @@ export async function createKahootSession({ titulo, fechaAsamblea, preguntaIds =
 export async function listKahootSessions({ fechaAsamblea, estado } = {}) {
   await assertStaff();
   try {
-    let q = query(collection(fsdb, 'kahoot_sessions'), orderBy('creadoEn', 'desc'));
+    let q = query(
+      collection(fsdb, "kahoot_sessions"),
+      orderBy("creadoEn", "desc"),
+    );
     const snap = await getDocs(q);
-    let sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    let sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     if (sessions.length > 0) {
-      if (fechaAsamblea) sessions = sessions.filter(s => s.fechaAsamblea === fechaAsamblea);
-      if (estado) sessions = sessions.filter(s => normalizeKahootSessionState(s.estado) === normalizeKahootSessionState(estado));
+      if (fechaAsamblea)
+        sessions = sessions.filter((s) => s.fechaAsamblea === fechaAsamblea);
+      if (estado)
+        sessions = sessions.filter(
+          (s) =>
+            normalizeKahootSessionState(s.estado) ===
+            normalizeKahootSessionState(estado),
+        );
       return sessions;
     }
   } catch (e) {
-    console.warn('listKahootSessions: orderBy creadoEn falló, probando sin orderBy:', e.message);
+    console.warn(
+      "listKahootSessions: orderBy creadoEn falló, probando sin orderBy:",
+      e.message,
+    );
   }
-  const snap = await getDocs(collection(fsdb, 'kahoot_sessions'));
-  let sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  sessions.sort((a, b) => (b.creadoEn?.seconds || 0) - (a.creadoEn?.seconds || 0));
-  if (fechaAsamblea) sessions = sessions.filter(s => s.fechaAsamblea === fechaAsamblea);
-  if (estado) sessions = sessions.filter(s => normalizeKahootSessionState(s.estado) === normalizeKahootSessionState(estado));
+  const snap = await getDocs(collection(fsdb, "kahoot_sessions"));
+  let sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  sessions.sort(
+    (a, b) => (b.creadoEn?.seconds || 0) - (a.creadoEn?.seconds || 0),
+  );
+  if (fechaAsamblea)
+    sessions = sessions.filter((s) => s.fechaAsamblea === fechaAsamblea);
+  if (estado)
+    sessions = sessions.filter(
+      (s) =>
+        normalizeKahootSessionState(s.estado) ===
+        normalizeKahootSessionState(estado),
+    );
   return sessions;
 }
 
 /** Obtener sesión KAHOOT completa */
 export async function getKahootSession(sessionId) {
   await assertStaff();
-  const snap = await getDoc(doc(fsdb, 'kahoot_sessions', sessionId));
-  if (!snap.exists()) throw new Error('Sesión KAHOOT no encontrada');
+  const snap = await getDoc(doc(fsdb, "kahoot_sessions", sessionId));
+  if (!snap.exists()) throw new Error("Sesión KAHOOT no encontrada");
   return { id: snap.id, ...snap.data() };
 }
 
-/** Agregar preguntas a una sesión KAHOOT existente (solo en estado borrador/preparada) */
+/** Agregar preguntas a una sesión KAHOOT existente. */
 export async function addQuestionsToKahootSession(sessionId, preguntaIds) {
   await assertStaff();
   const session = await getKahootSession(sessionId);
-  const estado = normalizeKahootSessionState(session.estado);
-  if (estado === 'activa' || estado === 'finalizada') {
-    throw new Error('No se pueden agregar preguntas a una sesión activa o finalizada');
+  if (!session) {
+    throw new Error("Sesión KAHOOT no encontrada");
   }
 
+  // Se permite ampliar el contenido de una sesión incluso si ya fue usada antes,
+  // siempre que la sesión exista y el usuario lo decida explícitamente.
   const preguntasExistentes = session.preguntas || [];
   const nextOrden = preguntasExistentes.length + 1;
   const nuevasPreguntas = [];
@@ -656,8 +772,8 @@ export async function addQuestionsToKahootSession(sessionId, preguntaIds) {
   for (let i = 0; i < preguntaIds.length; i++) {
     const id = preguntaIds[i];
     // Evitar duplicados
-    if (preguntasExistentes.some(p => p.bancoId === id)) continue;
-    const snap = await getDoc(doc(fsdb, 'preguntas', id));
+    if (preguntasExistentes.some((p) => p.bancoId === id)) continue;
+    const snap = await getDoc(doc(fsdb, "preguntas", id));
     if (!snap.exists()) throw new Error(`Pregunta ${id} no existe`);
     const p = snap.data();
     nuevasPreguntas.push({
@@ -666,16 +782,17 @@ export async function addQuestionsToKahootSession(sessionId, preguntaIds) {
       opciones: p.opciones,
       correcta: p.correcta ?? 0,
       duracion: p.duracion ?? 20,
-      orden: nextOrden + i
+      orden: nextOrden + i,
     });
   }
 
-  if (nuevasPreguntas.length === 0) return { added: 0, total: preguntasExistentes.length };
+  if (nuevasPreguntas.length === 0)
+    return { added: 0, total: preguntasExistentes.length };
 
   const todasPreguntas = [...preguntasExistentes, ...nuevasPreguntas];
-  await updateDoc(doc(fsdb, 'kahoot_sessions', sessionId), {
+  await updateDoc(doc(fsdb, "kahoot_sessions", sessionId), {
     preguntas: todasPreguntas,
-    actualizadoEn: fsTS()
+    actualizadoEn: fsTS(),
   });
   return { added: nuevasPreguntas.length, total: todasPreguntas.length };
 }
@@ -685,17 +802,18 @@ export async function activateKahootSession(sessionId) {
   await assertStaff();
   const session = await getKahootSession(sessionId);
   const estado = normalizeKahootSessionState(session.estado);
-  if (estado === 'finalizada') throw new Error('Sesión ya finalizada');
+  if (estado === "finalizada") throw new Error("Sesión ya finalizada");
 
   // Generar sesionId único para RTDB
-  const sesionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const sesionId =
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   // Preparar preguntas para RTDB (SIN correcta)
-  const preguntasRTDB = session.preguntas.map(p => ({
+  const preguntasRTDB = session.preguntas.map((p) => ({
     id: p.bancoId,
     texto: p.texto,
     opciones: p.opciones,
-    duracion: p.duracion
+    duracion: p.duracion,
   }));
 
   // SINGLE ENTRY FLOW: escritura atómica con batch RTDB
@@ -714,18 +832,18 @@ export async function activateKahootSession(sessionId) {
   // 3. SINGLE ENTRY: escribir sesionActiva Y meta atómicamente (orden: meta primero, luego sesionActiva como flag)
   await set(ref(rtdb, KAHOOT_RTDB_PATHS.meta), {
     sessionId,
-    titulo: session.titulo
+    titulo: session.titulo,
   });
   await set(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva), sessionId); // este es el "flag" de entrada
 
   // 4. Fase lobby
-  await writePhase('lobby');
+  await writePhase("lobby");
 
   // Actualizar estado en Firestore
-  await updateDoc(doc(fsdb, 'kahoot_sessions', sessionId), {
-    estado: 'activa',
+  await updateDoc(doc(fsdb, "kahoot_sessions", sessionId), {
+    estado: "activa",
     actualizadoEn: fsTS(),
-    sesionIdRTDB: sesionId
+    sesionIdRTDB: sesionId,
   });
 
   return { sessionId, sesionId };
@@ -738,37 +856,56 @@ export async function finalizeKahootSession() {
   // Obtener sesión activa desde RTDB
   const sesionActivaSnap = await get(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
   const sessionId = sesionActivaSnap.val();
-  if (!sessionId) throw new Error('No hay sesión KAHOOT activa');
+  if (!sessionId) throw new Error("No hay sesión KAHOOT activa");
 
   const session = await getKahootSession(sessionId);
-  if (session.estado === 'finalizada') throw new Error('Sesión ya finalizada');
+  if (session.estado === "finalizada") throw new Error("Sesión ya finalizada");
 
   // Verificar que no se haya finalizado ya (idempotencia)
-  const txResult = await runTransaction(ref(rtdb, RTDB_PATHS.acumulada), (current) => {
-    if (current === true) return;
-    return true;
-  });
+  const txResult = await runTransaction(
+    ref(rtdb, RTDB_PATHS.acumulada),
+    (current) => {
+      if (current === true) return;
+      return true;
+    },
+  );
   if (!txResult.committed) return; // ya finalizado por otro
 
   // 1. Acumular en rankingGlobal (igual que finalizarSesion actual) - key = uid
   const puntosSesion = localState.puntos;
-  const membersSnap = await getDocs(collection(fsdb, 'members'));
+  const membersSnap = await getDocs(collection(fsdb, "members"));
   const memberByUid = {};
-  membersSnap.forEach(d => { memberByUid[d.id] = d.data(); });
+  membersSnap.forEach((d) => {
+    memberByUid[d.id] = d.data();
+  });
 
   for (const [uid, data] of Object.entries(puntosSesion)) {
     const pts = data?.pts;
     if (!pts) continue;
     const m = memberByUid[uid];
     // Key = uid (no email-sanitized)
-    await runTransaction(ref(rtdb, RTDB_PATHS.rankingGlobal(uid)), (current) => {
-      const prev = current || { pts: 0, nombre: m?.nombre || 'Anónimo', fotoUrl: m?.fotoUrl || '' };
-      return { ...prev, pts: (prev.pts || 0) + pts, ultimaAsamblea: serverNow() };
-    });
+    await runTransaction(
+      ref(rtdb, RTDB_PATHS.rankingGlobal(uid)),
+      (current) => {
+        const prev = current || {
+          pts: 0,
+          nombre: m?.nombre || "Anónimo",
+          fotoUrl: m?.fotoUrl || "",
+        };
+        return {
+          ...prev,
+          pts: (prev.pts || 0) + pts,
+          ultimaAsamblea: serverNow(),
+        };
+      },
+    );
   }
 
   // 2. Construir resultados completos
   const respuestasPorPregunta = {};
+  // NUEVO: Historial por participante para consultas en dashboard
+  const historialPorParticipante = {};
+
   for (const [qid, respuestas] of Object.entries(localState.respuestas || {})) {
     const claveSnap = await get(ref(rtdb, RTDB_PATHS.claves(qid)));
     const correcta = claveSnap.val()?.correcta ?? 0;
@@ -779,13 +916,35 @@ export async function finalizeKahootSession() {
       const esCorrecta = r.idx === correcta;
       const rapidez = Math.max(0, 1 - (r.ts - (abreEn || r.ts)) / 20000); // fallback 20s
       const pts = esCorrecta ? Math.round(1000 + 500 * rapidez) : 0;
-      respuestasPorPregunta[qid][uid] = {
+      const respuestaData = {
         idx: r.idx,
         ts: r.ts,
         pts,
         correcta: esCorrecta,
-        nombre: r.nombre
+        nombre: r.nombre,
       };
+      respuestasPorPregunta[qid][uid] = respuestaData;
+
+      // Construir historial por participante
+      if (!historialPorParticipante[uid]) {
+        historialPorParticipante[uid] = {
+          nombre: r.nombre,
+          totalPts: 0,
+          preguntas: [],
+          correctas: 0,
+          incorrectas: 0,
+        };
+      }
+      historialPorParticipante[uid].totalPts += pts;
+      historialPorParticipante[uid].preguntas.push({
+        preguntaId: qid,
+        respuestaIdx: r.idx,
+        esCorrecta,
+        pts,
+        ts: r.ts,
+      });
+      if (esCorrecta) historialPorParticipante[uid].correctas++;
+      else historialPorParticipante[uid].incorrectas++;
     }
   }
 
@@ -802,51 +961,65 @@ export async function finalizeKahootSession() {
     rankingFinal,
     puntosPorParticipante: puntosTotales,
     totalParticipantes: Object.keys(puntosTotales).length,
-    finalizadaEn: serverNow()
+    finalizadaEn: serverNow(),
+    // NUEVO: Historial detallado por participante para dashboard
+    historialPorParticipante,
   };
 
   // 3. Actualizar sesión en Firestore con resultados
   const finalizadaAt = fsTS();
-  await updateDoc(doc(fsdb, 'kahoot_sessions', sessionId), {
-    estado: 'finalizada',
+  await updateDoc(doc(fsdb, "kahoot_sessions", sessionId), {
+    estado: "finalizada",
     actualizadoEn: finalizadaAt,
     resultados,
     finalizadaEn: finalizadaAt,
-    finalizadoEn: finalizadaAt
+    finalizadoEn: finalizadaAt,
   });
 
   // 4. Snapshot en histórico anual (nueva subcolección)
   const anio = session.anio || new Date().getFullYear();
-  await setDoc(doc(fsdb, 'historico', String(anio), 'kahoot_sessions', sessionId), {
-    ...session,
-    resultados,
-    finalizadaEn: finalizadaAt,
-    finalizadoEn: finalizadaAt
-  });
+  await setDoc(
+    doc(fsdb, "historico", String(anio), "kahoot_sessions", sessionId),
+    {
+      ...session,
+      resultados,
+      finalizadaEn: finalizadaAt,
+      finalizadoEn: finalizadaAt,
+    },
+  );
 
   // 5. Snapshot diario simple (existente - mantener compatibilidad)
   const hoy = new Date();
-  const hoyStr = hoy.toISOString().split('T')[0];
-  await setDoc(doc(fsdb, 'asambleas_kahoot', hoyStr), {
+  const hoyStr = hoy.toISOString().split("T")[0];
+  await setDoc(doc(fsdb, "asambleas_kahoot", hoyStr), {
     fecha: hoyStr,
     puntosSesion,
     resumen: localState.resumen,
     totalPreguntas: session.preguntas.length,
     kahootSessionId: sessionId,
-    creadoEn: fsTS()
+    creadoEn: fsTS(),
   });
-  await setDoc(doc(fsdb, 'historico', String(hoy.getFullYear()), 'asambleas_kahoot', hoyStr), {
-    fecha: hoyStr,
-    puntosSesion,
-    resumen: localState.resumen,
-    totalPreguntas: session.preguntas.length,
-    kahootSessionId: sessionId,
-    creadoEn: fsTS()
-  });
+  await setDoc(
+    doc(
+      fsdb,
+      "historico",
+      String(hoy.getFullYear()),
+      "asambleas_kahoot",
+      hoyStr,
+    ),
+    {
+      fecha: hoyStr,
+      puntosSesion,
+      resumen: localState.resumen,
+      totalPreguntas: session.preguntas.length,
+      kahootSessionId: sessionId,
+      creadoEn: fsTS(),
+    },
+  );
 
   // 6. SINGLE FINALIZATION: limpieza completa atómica
   // Orden: fase=apagada, luego limpiar nodos, por último limpiar meta/sesionActiva
-  await writePhase('apagada');
+  await writePhase("apagada");
   await clearSessionRuntimeState();
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva));
   await remove(ref(rtdb, KAHOOT_RTDB_PATHS.meta));
@@ -854,7 +1027,7 @@ export async function finalizeKahootSession() {
   // Solo limpiamos lo necesario para nueva sesión
 
   // 7. Fase podio (después de limpieza para mostrar resultados)
-  await writePhase('podio');
+  await writePhase("podio");
 
   return { sessionId, resultados };
 }
@@ -880,10 +1053,10 @@ export function getTimeToNextPhase() {
   const q = localState.preguntaActual;
   if (!q) return 0;
   const now = serverNow();
-  if (localState.fase === 'countdown' && q.abreEn) {
+  if (localState.fase === "countdown" && q.abreEn) {
     return Math.max(0, q.abreEn - now);
   }
-  if (localState.fase === 'pregunta' && q.cierraEn) {
+  if (localState.fase === "pregunta" && q.cierraEn) {
     return Math.max(0, q.cierraEn - now);
   }
   return 0;
@@ -900,17 +1073,100 @@ export function isPreguntaEnTiempo() {
 export async function responder(qid, uid, idx) {
   const r = ref(rtdb, RTDB_PATHS.respuesta(qid, uid));
   const snap = await get(r);
-  if (snap.exists()) throw new Error('Ya respondiste');
-  if (localState.fase !== 'pregunta') throw new Error('Pregunta cerrada');
+  if (snap.exists()) throw new Error("Ya respondiste");
+  if (localState.fase !== "pregunta") throw new Error("Pregunta cerrada");
   // Timer Recovery: validar también con serverNow() vs cierraEn
-  if (!isPreguntaEnTiempo()) throw new Error('Tiempo agotado');
+  if (!isPreguntaEnTiempo()) throw new Error("Tiempo agotado");
   // Validar que qid coincide con pregunta actual
-  if (localState.preguntaActual?.id !== qid) throw new Error('Pregunta inválida');
-  await set(r, { idx, ts: rtdbTS(), nombre: (await getUserName(uid)) });
+  if (localState.preguntaActual?.id !== qid)
+    throw new Error("Pregunta inválida");
+  await set(r, { idx, ts: rtdbTS(), nombre: await getUserName(uid) });
 }
 async function getUserName(uid) {
-  const snap = await getDoc(doc(fsdb, 'members', uid));
+  const snap = await getDoc(doc(fsdb, "members", uid));
   return snap.exists() ? snap.data().nombre : uid;
+}
+
+/* ── CONSULTAS PARA DASHBOARD (Historial KAHOOT por usuario) ─────────────────── */
+
+/**
+ * Obtener el historial KAHOOT completo de un usuario específico (versión pública para dashboard)
+ * Busca en todas las sesiones finalizadas del año actual
+ */
+export async function getKahootHistorialUsuario(uid) {
+  const anioActual = new Date().getFullYear();
+
+  try {
+    const { collection, query, orderBy, getDocs } =
+      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const histRef = collection(
+      fsdb,
+      "historico",
+      String(anioActual),
+      "kahoot_sessions",
+    );
+    const snap = await getDocs(query(histRef, orderBy("finalizadaEn", "desc")));
+
+    const sesionesUsuario = [];
+    for (const docSnap of snap.docs) {
+      const session = { id: docSnap.id, ...docSnap.data() };
+      if (session.resultados?.historialPorParticipante?.[uid]) {
+        const historial = session.resultados.historialPorParticipante[uid];
+        sesionesUsuario.push({
+          sessionId: session.id,
+          titulo: session.titulo,
+          fechaAsamblea: session.fechaAsamblea,
+          finalizadaEn: session.finalizadaEn,
+          totalPreguntas: session.preguntas?.length || 0,
+          ...historial,
+        });
+      }
+    }
+
+    // Ordenar por fecha descendente (más reciente primero)
+    sesionesUsuario.sort((a, b) => {
+      const fa =
+        a.finalizadaEn?.seconds ||
+        (a.finalizadaEn ? new Date(a.finalizadaEn).getTime() / 1000 : 0);
+      const fb =
+        b.finalizadaEn?.seconds ||
+        (b.finalizadaEn ? new Date(b.finalizadaEn).getTime() / 1000 : 0);
+      return fb - fa;
+    });
+
+    return sesionesUsuario;
+  } catch (e) {
+    console.warn("getKahootHistorialUsuario: error:", e.message);
+    return [];
+  }
+}
+
+/**
+ * Obtener el ranking global acumulado (puntos totales del año) de un usuario
+ * Se lee desde RTDB rankingGlobal/{uid}
+ */
+export async function getRankingGlobalUsuario(uid) {
+  const snap = await get(ref(rtdb, RTDB_PATHS.rankingGlobal(uid)));
+  if (!snap.exists())
+    return { pts: 0, nombre: "", fotoUrl: "", ultimaAsamblea: null };
+  return snap.val();
+}
+
+/**
+ * Obtener el top 10 del ranking global para mostrar en dashboard
+ */
+export async function getTopRankingGlobal(limitCount = 10) {
+  const snap = await get(ref(rtdb, RTDB_PATHS.rankingGlobalRoot));
+  const data = snap.val() || {};
+  const entries = Object.entries(data).map(([uid, v]) => ({
+    uid,
+    nombre: v.nombre || "Anónimo",
+    pts: v.pts || 0,
+    fotoUrl: v.fotoUrl || "",
+    ultimaAsamblea: v.ultimaAsamblea,
+  }));
+  entries.sort((a, b) => b.pts - a.pts);
+  return entries.slice(0, limitCount);
 }
 
 /* ── Limpieza ─────────────────────────────────────────────── */
