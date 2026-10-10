@@ -65,7 +65,9 @@ import {
   getKahootSession,
   activateKahootSession,
   finalizeKahootSession,
-  addQuestionsToKahootSession
+  addQuestionsToKahootSession,
+  normalizeKahootSessionState,
+  getKahootHistoryTimestamp
 } from './asamblea-engine.js';
 import { createSerialQueue } from './serial-queue.js';
 
@@ -1130,19 +1132,17 @@ window.verKahootSession = async function () {
   try {
     const session = await getKahootSession(select.value);
     if (!session) { toast("Sesión no encontrada", "err"); return; }
-    // Mostrar info
-    const estadoLabel = session.estado === 'preparada' ? '🟡 Preparada' :
-                        session.estado === 'activa' ? '🟢 Activa' :
-                        session.estado === 'finalizada' ? '🔵 Finalizada' : session.estado;
+    const estado = normalizeKahootSessionState(session.estado);
+    const estadoLabel = estado === 'preparada' ? '🟡 Preparada' :
+                        estado === 'activa' ? '🟢 Activa' :
+                        estado === 'finalizada' ? '🔵 Finalizada' : estado;
     infoDiv.innerHTML = `
       <strong>${esc(session.titulo)}</strong> ${session.fechaAsamblea ? ` — ${session.fechaAsamblea}` : ''}<br>
       Estado: ${estadoLabel} · Preguntas: ${session.preguntas ? session.preguntas.length : 0} · Creado: ${session.creadoEn ? new Date(session.creadoEn.seconds * 1000).toLocaleString() : 'N/A'}
     `;
     infoDiv.style.display = "block";
-    // Actualizar contador de preguntas en la sesión
     if (countSpan) countSpan.textContent = `${session.preguntas ? session.preguntas.length : 0} preguntas en esta sesión`;
-    // Mostrar botón agregar si está en estado preparada
-    if (btnAgregar) btnAgregar.style.display = session.estado === 'preparada' ? "inline-flex" : "none";
+    if (btnAgregar) btnAgregar.style.display = ['preparada', 'borrador'].includes(estado) ? "inline-flex" : "none";
   } catch (e) {
     console.error(e);
     toast("Error: " + e.message, "err");
@@ -1217,19 +1217,27 @@ window.loadKahootHistorial = async function () {
     const { fsdb } = await import('./firebase-init.js');
     const anioActual = new Date().getFullYear();
     const histRef = collection(fsdb, "historico", String(anioActual), "kahoot_sessions");
-    const snap = await getDocs(query(histRef, orderBy("finalizadoEn", "desc")));
+    let snap;
+    try {
+      snap = await getDocs(query(histRef, orderBy("finalizadaEn", "desc")));
+    } catch (e) {
+      snap = await getDocs(query(histRef, orderBy("finalizadoEn", "desc")));
+    }
     const sesiones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (sesiones.length === 0) {
       container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay KAHOOTs finalizados este año.</p>';
       return;
     }
-    container.innerHTML = sesiones.map(s => `
+    container.innerHTML = sesiones.map(s => {
+      const ts = getKahootHistoryTimestamp(s);
+      const fechaFinal = ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleString() : (ts ? new Date(ts * 1000).toLocaleString() : 'N/A');
+      return `
       <div class="banco-item" style="background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:8px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <div style="flex:1; min-width:200px;">
             <div style="font-weight:600; margin-bottom:4px;">${esc(s.titulo)}</div>
             <div style="font-size:12px; color:var(--muted);">
-              Fecha: ${s.fechaAsamblea || 'N/A'} · Finalizado: ${s.finalizadoEn ? new Date(s.finalizadoEn.seconds * 1000).toLocaleString() : 'N/A'} · ${s.preguntas ? s.preguntas.length : 0} preguntas · ${s.participantes ? Object.keys(s.participantes).length : 0} participantes
+              Fecha: ${s.fechaAsamblea || 'N/A'} · Finalizado: ${fechaFinal} · ${s.preguntas ? s.preguntas.length : 0} preguntas · ${s.participantes ? Object.keys(s.participantes).length : 0} participantes
             </div>
           </div>
           <div style="display:flex; gap:8px;">
@@ -1238,7 +1246,8 @@ window.loadKahootHistorial = async function () {
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   } catch (e) {
     console.error(e);
     container.innerHTML = `<p style="color:var(--err);">Error cargando historial: ${e.message}</p>`;
@@ -1254,8 +1263,10 @@ window.verDetalleKahootHistorico = async function (sessionId) {
     const snap = await getDoc(doc(fsdb, "historico", String(anioActual), "kahoot_sessions", sessionId));
     if (!snap.exists()) { toast("Sesión no encontrada", "err"); return; }
     const s = snap.data();
+    const ts = getKahootHistoryTimestamp(s);
+    const fechaFinal = ts && ts.seconds ? new Date(ts.seconds * 1000).toLocaleString() : (ts ? new Date(ts * 1000).toLocaleString() : 'N/A');
     let html = `<h4 style="margin-bottom:12px; color:var(--y);">${esc(s.titulo)}</h4>`;
-    html += `<p style="color:var(--muted); margin-bottom:16px;">Fecha: ${s.fechaAsamblea || 'N/A'} · Finalizado: ${s.finalizadoEn ? new Date(s.finalizadoEn.seconds * 1000).toLocaleString() : 'N/A'}</p>`;
+    html += `<p style="color:var(--muted); margin-bottom:16px;">Fecha: ${s.fechaAsamblea || 'N/A'} · Finalizado: ${fechaFinal}</p>`;
     html += `<p><strong>Ranking final:</strong></p><ul style="margin-left:20px;">`;
     if (s.rankingFinal && s.rankingFinal.length > 0) {
       s.rankingFinal.forEach((r, i) => {

@@ -5,6 +5,10 @@
 
 import { esc } from './esc.js';
 import { isStateAllowedForAction, getSessionCleanupPaths } from './phase-guards.js';
+import {
+  normalizeKahootSessionState,
+  getKahootHistoryTimestamp
+} from './asamblea-engine.js';
 
 let passed = 0;
 let failed = 0;
@@ -111,6 +115,14 @@ assert(cleanupPaths.includes('asamblea/conectados'), 'cleanup should include con
 assert(cleanupPaths.includes('asamblea/sesion/puntos'), 'cleanup should include accumulated points');
 assert(cleanupPaths.includes('asamblea/sesion/resumen'), 'cleanup should include session summary');
 assert(cleanupPaths.includes('asamblea/sesion/cerradas'), 'cleanup should include closure keys');
+
+console.log("\n=== asamblea-engine: KAHOOT lifecycle compatibility ===");
+assertEqual(normalizeKahootSessionState('borrador'), 'preparada', 'draft should be treated as prepared');
+assertEqual(normalizeKahootSessionState('preparada'), 'preparada', 'prepared should stay prepared');
+assertEqual(normalizeKahootSessionState('activa'), 'activa', 'active should stay active');
+assertEqual(normalizeKahootSessionState('finalizada'), 'finalizada', 'finalized should stay finalized');
+assertEqual(getKahootHistoryTimestamp({ finalizadaEn: { seconds: 111 } }), 111, 'history should read finalizadaEn from the normalized timestamp');
+assertEqual(getKahootHistoryTimestamp({ finalizadoEn: { seconds: 222 } }), 222, 'history should keep compatibility with legacy finalizadoEn');
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
