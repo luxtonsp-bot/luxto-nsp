@@ -25,6 +25,7 @@ import {
   get,
   onDisconnect,
   doc,
+  getDoc,
   collection,
   query,
   orderBy,
