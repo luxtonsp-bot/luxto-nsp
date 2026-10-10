@@ -784,10 +784,9 @@ function escucharRankingGlobal() {
         if (!lista) return;
         const entries = Object.entries(data).map(([key, v]) => ({
           key,
-          nombre: v.nombre || v.email || "Anónimo",
+          nombre: v.nombre || "Anónimo",
           pts: v.pts || 0,
           fotoUrl: v.fotoUrl || "",
-          email: v.email || "",
         }));
         entries.sort((a, b) => b.pts - a.pts);
         if (entries.length === 0) {
