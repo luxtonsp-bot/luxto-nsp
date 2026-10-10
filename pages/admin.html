@@ -518,7 +518,7 @@ option:checked, option:hover, option:focus {
         <div style="margin-bottom:20px; padding:16px; background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:12px;">
           <div class="np-label" style="margin-bottom:8px;">Sesión KAHOOT preparada para hoy</div>
           <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            <select class="np-select" id="kahootSessionSelect" style="flex:1; min-width:200px;">
+            <select class="np-select" id="kahootSessionSelect" onchange="verKahootSession()" style="flex:1; min-width:200px;">
               <option value="">-- Seleccionar sesión KAHOOT --</option>
             </select>
             <button class="btn btn-primary" id="btnCargarKahoot" onclick="activarKahootSession()" style="display:none;">📥 Cargar en sesión activa</button>
