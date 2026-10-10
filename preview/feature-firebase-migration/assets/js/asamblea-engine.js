@@ -25,7 +25,6 @@ import {
   get,
   onDisconnect,
   doc,
-  getDoc,
   collection,
   query,
   orderBy,
@@ -37,7 +36,7 @@ import {
   rtdbServerTS,
   writeBatch
 } from './firebase-init.js';
-import { isStateAllowedForAction, getSessionCleanupPaths, canRevealAnswer } from './phase-guards.js';
+import { isStateAllowedForAction, getSessionCleanupPaths } from './phase-guards.js';
 
 const PHASES = ['apagada', 'lobby', 'countdown', 'pregunta', 'revelada', 'ranking', 'podio'];
 
@@ -699,9 +698,7 @@ export async function activateKahootSession(sessionId) {
   // 3. SINGLE ENTRY: escribir sesionActiva Y meta atómicamente (orden: meta primero, luego sesionActiva como flag)
   await set(ref(rtdb, KAHOOT_RTDB_PATHS.meta), {
     sessionId,
-    titulo: session.titulo,
-    fechaAsamblea: session.fechaAsamblea || null,
-    totalPreguntas: Array.isArray(session.preguntas) ? session.preguntas.length : 0
+    titulo: session.titulo
   });
   await set(ref(rtdb, KAHOOT_RTDB_PATHS.sesionActiva), sessionId); // este es el "flag" de entrada
 
