@@ -379,9 +379,13 @@ window.toggleModoAsamblea = async function (activa) {
   if (!toggleInput) return;
 
   const desiredState = !!activa;
-  if (toggleInput.checked === desiredState) return;
 
-  toggleInput.checked = desiredState;
+  // Si el checkbox ya refleja el estado deseado, no salimos antes de ejecutar la acción.
+  // El evento del navegador ya cambió el valor a 'checked' antes de llegar aquí.
+  // El bloqueo previo era la causa de que el toggle pareciera no funcionar.
+  if (toggleInput.checked !== desiredState) {
+    toggleInput.checked = desiredState;
+  }
 
   try {
     await asambleaToggleQueue.enqueue(async () => {

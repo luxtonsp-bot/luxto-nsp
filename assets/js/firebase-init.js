@@ -101,26 +101,28 @@ export function fsBatch() {
 
 // Verificar si usuario es staff (servidor/apoyo/coordinador)
 export async function isStaff(uid) {
-  try {
-    const snap = await getDoc(doc(fsdb, 'members', uid));
-    if (!snap.exists()) return false;
-    const rol = snap.data().rol;
-    return rol === 'servidor' || rol === 'apoyo' || rol === 'coordinador';
-  } catch { return false; }
+  const rol = await getUserRole(uid);
+  return rol === 'servidor' || rol === 'apoyo' || rol === 'coordinador';
 }
 export async function isCoordinator(uid) {
-  try {
-    const snap = await getDoc(doc(fsdb, 'members', uid));
-    return snap.exists() && snap.data().rol === 'coordinador';
-  } catch { return false; }
+  const rol = await getUserRole(uid);
+  return rol === 'coordinador';
 }
 
 // Obtener rol del usuario actual
 export async function getUserRole(uid) {
   try {
     const snap = await getDoc(doc(fsdb, 'members', uid));
-    return snap.exists() ? snap.data().rol : null;
-  } catch { return null; }
+    if (snap.exists() && snap.data().rol) return snap.data().rol;
+  } catch {}
+
+  try {
+    const adminSnap = await get(ref(rtdb, `admins/${uid}`));
+    const adminData = adminSnap.val();
+    if (adminData?.rol) return adminData.rol;
+  } catch {}
+
+  return null;
 }
 
 /* ── Rutas RTDB canónicas (asamblea) ───────────────────────── */

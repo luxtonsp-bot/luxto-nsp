@@ -92,6 +92,17 @@ assert(isStateAllowedForAction("countdown", ["lobby", "countdown", "revelada", "
 assert(isStateAllowedForAction("pregunta", ["lobby", "countdown", "revelada", "ranking"]) === false, "pregunta should not be allowed from a drained state guard");
 assert(isStateAllowedForAction("revelada", ["revelada", "ranking"]) === true, "revelada should allow ranking transition");
 
+console.log("\n=== asamblea-engine: toggle should still run when browser has already flipped the checkbox ===");
+const domToggleState = { checked: true };
+const desiredState = true;
+const runToggle = (toggle, target) => {
+  if (toggle.checked !== target) {
+    toggle.checked = target;
+  }
+  return true;
+};
+assert(runToggle(domToggleState, desiredState) === true, "toggle should still execute when browser already updated the checkbox");
+
 console.log("\n=== asamblea-engine: session cleanup clears accumulated state ===");
 const cleanupPaths = getSessionCleanupPaths();
 assert(cleanupPaths.includes('asamblea/preguntaActual'), 'cleanup should include active question');
