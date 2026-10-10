@@ -1100,11 +1100,6 @@ window.loadKahootSessions = async function () {
       return;
     }
 
-    const preparedSessions = sessions.filter(s => {
-      const estado = normalizeKahootSessionState(s.estado);
-      return ['preparada', 'borrador', 'prepared', 'draft'].includes(estado);
-    });
-
     sessions.forEach(s => {
       const opt = document.createElement("option");
       opt.value = s.id;
@@ -1114,13 +1109,13 @@ window.loadKahootSessions = async function () {
       select.appendChild(opt);
     });
 
-    // Si hay una sesión en preparación, seleccionarla; si no, elegir la primera preparada.
+    // Si hay una sesión en preparación, seleccionarla; si no, agarra la primera disponible.
     if (_kahootSessionEnPreparacion) {
       select.value = _kahootSessionEnPreparacion;
       _kahootSessionEnPreparacion = null;
       window.verKahootSession();
-    } else if (preparedSessions.length > 0 && !select.value) {
-      select.value = preparedSessions[0].id;
+    } else if (sessions.length > 0 && !select.value) {
+      select.value = sessions[0].id;
       window.verKahootSession();
     } else {
       syncKahootAddButtonState(null);
@@ -1151,9 +1146,9 @@ function syncKahootAddButtonState(session) {
     return;
   }
 
-  const estado = normalizeKahootSessionState(session.estado);
-  const visibleStates = ['preparada', 'borrador', 'prepared', 'draft'];
-  btnAgregar.style.display = visibleStates.includes(estado) ? "inline-flex" : "none";
+  // El botón debe depender únicamente de que haya una sesión seleccionada.
+  // La validación real de edición se hace en Firestore/backend con addQuestionsToKahootSession.
+  btnAgregar.style.display = "inline-flex";
 }
 
 window.verKahootSession = async function () {
