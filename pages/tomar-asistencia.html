@@ -14,6 +14,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <!-- Shared permissions module -->
+    <script src="../assets/js/auth-permissions.js"></script>
     <script>
         function convertirUrlDrive(url) {
             if (!url) return "";
@@ -292,12 +294,8 @@
     // Initialize
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Verificar permisos: solo servidores, coordinador y apoyos pueden tomar asistencia
-            const hasPermission = await checkAttendancePermission(user.email);
-            if (!hasPermission) {
-                showNoPermission();
-                return;
-            }
+            // Usar módulo compartido de permisos
+            await AuthPermissions.initStaffPermissionCheck();
             await loadCurrentAssembly();
             await loadMembers();
             initAnioSelector();
@@ -306,37 +304,6 @@
             window.location.href = 'login.html';
         }
     });
-
-    // Verificar si el usuario tiene permiso para tomar asistencia
-    async function checkAttendancePermission(email) {
-        if (!email) return false;
-        try {
-            const snapshot = await db.collection('members')
-                .where('email', '==', email.toLowerCase())
-                .limit(1)
-                .get();
-            if (snapshot.empty) return false;
-            const memberData = snapshot.docs[0].data();
-            const rol = (memberData.rol || memberData.role || '').toLowerCase();
-            return ['servidor', 'coordinador', 'apoyo'].includes(rol);
-        } catch (error) {
-            console.error("Error checking permission:", error);
-            return false;
-        }
-    }
-
-    function showNoPermission() {
-        document.body.innerHTML = `
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center; padding:24px;">
-                <div style="font-size:48px; margin-bottom:16px;">🚫</div>
-                <h2 style="color:var(--cream); margin-bottom:12px;">Sin permisos para tomar asistencia</h2>
-                <p style="color:var(--muted); max-width:400px;">
-                    Solo los <strong>servidores, coordinador y apoyos</strong> pueden acceder a esta función.
-                </p>
-                <a href="dashboard.html" class="btn btn-primary" style="margin-top:24px;">Volver al Dashboard</a>
-            </div>
-        `;
-    }
 
     // Load current assembly (today's assembly in Lima timezone)
     async function loadCurrentAssembly() {

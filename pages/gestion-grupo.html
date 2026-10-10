@@ -14,6 +14,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <!-- Shared permissions module -->
+    <script src="../assets/js/auth-permissions.js"></script>
 </head>
 <body>
 
@@ -145,14 +147,8 @@
     // Initialize
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Check if user is coordinator
-            const userDoc = await db.collection('members').doc(user.uid).get();
-            if (!userDoc.exists || userDoc.data().rol !== 'coordinador') {
-                toast('Solo los coordinadores pueden acceder a esta página', 'err');
-                setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
-                return;
-            }
-
+            // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
+            await AuthPermissions.initStaffPermissionCheck();
             loadCurrentYearMembers();
         } else {
             window.location.href = 'login.html';
