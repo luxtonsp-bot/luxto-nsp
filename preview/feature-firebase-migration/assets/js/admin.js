@@ -1094,6 +1094,7 @@ window.loadKahootSessions = async function () {
     select.innerHTML = '<option value="">-- Cargando sesiones... --</option>';
     const sessions = await listKahootSessions();
     select.innerHTML = '<option value="">-- Seleccionar sesión KAHOOT --</option>';
+    select.onchange = () => window.verKahootSession();
     if (sessions.length === 0) {
       select.innerHTML += '<option value="" disabled>No hay sesiones preparadas</option>';
       return;
@@ -1306,8 +1307,8 @@ window.reusarPreguntasKahoot = async function (sessionId) {
     if (!nuevoTitulo) return;
     const nuevaFecha = prompt("Fecha para la nueva sesión (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
     if (!nuevaFecha) return;
-    const sessionId = await createKahootSession({ titulo: nuevoTitulo, fechaAsamblea: nuevaFecha, creadoPor: auth.currentUser.uid, preguntaIds: s.preguntas.map(p => p.bancoId) });
-    _kahootSessionEnPreparacion = sessionId;
+    const newSessionId = await createKahootSession({ titulo: nuevoTitulo, fechaAsamblea: nuevaFecha, creadoPor: auth.currentUser.uid, preguntaIds: s.preguntas.map(p => p.bancoId) });
+    _kahootSessionEnPreparacion = newSessionId;
     toast(`✅ Nueva sesión creada con ${s.preguntas.length} preguntas reutilizadas`, "ok");
     window.loadKahootSessions();
   } catch (e) {
