@@ -11,10 +11,19 @@ service cloud.firestore {
       let doc = get(/databases/$(database)/documents/members/$(uid));
       return doc.exists ? doc.data.rol : null;
     }
-    function isCoordinator() { return isAuth() && getUserRole(request.auth.uid) == "coordinador"; }
+    function isAdminEmail() {
+      return isAuth() && (
+        request.auth.token.email == "henry.alfaro1@unmsm.edu.pe" ||
+        request.auth.token.email == "paolosotil97@gmail.com" ||
+        request.auth.token.email == "jorgediego.123.2002@gmail.com" ||
+        request.auth.token.email == "gianfracamones@gmail.com" ||
+        request.auth.token.email == "alvarorodrigosalazar.2001@gmail.com"
+      );
+    }
+    function isCoordinator() { return isAuth() && (getUserRole(request.auth.uid) == "coordinador" || isAdminEmail()); }
     function isStaff() {
       let role = getUserRole(request.auth.uid);
-      return isAuth() && (role == "servidor" || role == "apoyo" || role == "coordinador");
+      return isAuth() && (role == "servidor" || role == "apoyo" || role == "coordinador" || isAdminEmail());
     }
 
     match /members/{uid} {
