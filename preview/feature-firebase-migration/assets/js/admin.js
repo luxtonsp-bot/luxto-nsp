@@ -774,7 +774,11 @@ function actualizarRanking(respuestas) {
 
 /* ── Ranking global ──────────────────────────────────── */
 function escucharRankingGlobal() {
-  if (rankingGlobalListener) return;
+  // Clean up previous listener to re-render with current role
+  if (rankingGlobalListener) {
+    rankingGlobalListener();
+    rankingGlobalListener = null;
+  }
   try {
     rankingGlobalListener = onValue(
       ref(rtdb, "rankingGlobal"),
@@ -784,7 +788,7 @@ function escucharRankingGlobal() {
         if (!lista) return;
         const entries = Object.entries(data).map(([key, v]) => ({
           key,
-          nombre: v.nombre || "Anónimo",
+          nombre: v.nombre && v.nombre.trim() ? v.nombre.trim() : "Anónimo",
           pts: v.pts || 0,
           fotoUrl: v.fotoUrl || "",
         }));
@@ -805,6 +809,14 @@ function escucharRankingGlobal() {
               ? convertirUrlDrive(e.fotoUrl)
               : avatarFallbackAdmin(e.nombre);
             const fallback = avatarFallbackAdmin(e.nombre);
+            const isCoord = window._userRol === "coordinador";
+            const deleteBtn = isCoord
+              ? '<button class="rank-delete-btn" onclick="eliminarDelRankingGlobal(\'' +
+                e.key +
+                "','" +
+                escaparHTML(e.nombre).replace(/'/g, "\\'") +
+                '\')" title="Eliminar del ranking">🗑️</button>'
+              : "";
             return (
               '<div class="rank-item ' +
               itemClass +
@@ -826,6 +838,7 @@ function escucharRankingGlobal() {
               e.pts +
               "</div>" +
               '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">pts</div></div>' +
+              deleteBtn +
               "</div>"
             );
           })
@@ -866,6 +879,20 @@ window.reiniciarRankingGlobal = async function () {
   await remove(ref(rtdb, "rankingGlobal"));
   await remove(ref(rtdb, "asamblea/respuestas"));
   toast("♻️ Ranking global reiniciado", "ok");
+};
+
+/* ── Eliminar participante del ranking global ────────── */
+window.eliminarDelRankingGlobal = async function (uid, nombre) {
+  // Solo coordinador puede borrar (validado por reglas RTDB)
+  const ok = confirm(`¿Eliminar a "${nombre}" del ranking global? Se perderán sus puntos acumulados.`);
+  if (!ok) return;
+  try {
+    await remove(ref(rtdb, "rankingGlobal/" + uid));
+    toast(`✅ ${nombre} eliminado del ranking global`, "ok");
+  } catch (e) {
+    console.error("Error eliminando del ranking:", e);
+    toast("Error: solo coordinadores pueden eliminar", "err");
+  }
 };
 
 /* ── Borradores (guardar/cargar/eliminar) ─────────── */
