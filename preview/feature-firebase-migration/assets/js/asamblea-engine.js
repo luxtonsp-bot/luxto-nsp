@@ -41,6 +41,22 @@ import { isStateAllowedForAction, getSessionCleanupPaths } from './phase-guards.
 
 const PHASES = ['apagada', 'lobby', 'countdown', 'pregunta', 'revelada', 'ranking', 'podio'];
 
+export function normalizeKahootSessionState(estado) {
+  const value = String(estado ?? '').trim().toLowerCase();
+  if (!value) return 'preparada';
+  if (value === 'borrador') return 'preparada';
+  return value;
+}
+
+export function getKahootHistoryTimestamp(session = {}) {
+  const raw = session.finalizadaEn ?? session.finalizadoEn ?? null;
+  if (!raw) return null;
+  if (typeof raw === 'number') return raw;
+  if (typeof raw === 'object' && typeof raw.seconds === 'number') return raw.seconds;
+  if (raw instanceof Date) return Math.floor(raw.getTime() / 1000);
+  return null;
+}
+
 // Guardar countdownStart para checkLateHostJoin
 let countdownStart = 0;
 
@@ -586,7 +602,7 @@ export async function createKahootSession({ titulo, fechaAsamblea, preguntaIds =
     creadoPor: auth.currentUser.uid,
     creadoEn: fsTS(),
     actualizadoEn: fsTS(),
-    estado: 'borrador',
+    estado: 'preparada',
     preguntas,
     resultados: null
   });
@@ -597,25 +613,22 @@ export async function createKahootSession({ titulo, fechaAsamblea, preguntaIds =
 export async function listKahootSessions({ fechaAsamblea, estado } = {}) {
   await assertStaff();
   try {
-    // Intentar con orderBy creadoEn (requiere índice compuesto)
     let q = query(collection(fsdb, 'kahoot_sessions'), orderBy('creadoEn', 'desc'));
     const snap = await getDocs(q);
     let sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (sessions.length > 0) {
       if (fechaAsamblea) sessions = sessions.filter(s => s.fechaAsamblea === fechaAsamblea);
-      if (estado) sessions = sessions.filter(s => s.estado === estado);
+      if (estado) sessions = sessions.filter(s => normalizeKahootSessionState(s.estado) === normalizeKahootSessionState(estado));
       return sessions;
     }
   } catch (e) {
     console.warn('listKahootSessions: orderBy creadoEn falló, probando sin orderBy:', e.message);
   }
-  // Fallback: sin orderBy (para documentos sin creadoEn o índice faltante)
   const snap = await getDocs(collection(fsdb, 'kahoot_sessions'));
   let sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  // Ordenar en cliente por creadoEn descendente
   sessions.sort((a, b) => (b.creadoEn?.seconds || 0) - (a.creadoEn?.seconds || 0));
   if (fechaAsamblea) sessions = sessions.filter(s => s.fechaAsamblea === fechaAsamblea);
-  if (estado) sessions = sessions.filter(s => s.estado === estado);
+  if (estado) sessions = sessions.filter(s => normalizeKahootSessionState(s.estado) === normalizeKahootSessionState(estado));
   return sessions;
 }
 
@@ -631,7 +644,8 @@ export async function getKahootSession(sessionId) {
 export async function addQuestionsToKahootSession(sessionId, preguntaIds) {
   await assertStaff();
   const session = await getKahootSession(sessionId);
-  if (session.estado === 'activa' || session.estado === 'finalizada') {
+  const estado = normalizeKahootSessionState(session.estado);
+  if (estado === 'activa' || estado === 'finalizada') {
     throw new Error('No se pueden agregar preguntas a una sesión activa o finalizada');
   }
 
@@ -670,7 +684,8 @@ export async function addQuestionsToKahootSession(sessionId, preguntaIds) {
 export async function activateKahootSession(sessionId) {
   await assertStaff();
   const session = await getKahootSession(sessionId);
-  if (session.estado === 'finalizada') throw new Error('Sesión ya finalizada');
+  const estado = normalizeKahootSessionState(session.estado);
+  if (estado === 'finalizada') throw new Error('Sesión ya finalizada');
 
   // Generar sesionId único para RTDB
   const sesionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -791,10 +806,13 @@ export async function finalizeKahootSession() {
   };
 
   // 3. Actualizar sesión en Firestore con resultados
+  const finalizadaAt = fsTS();
   await updateDoc(doc(fsdb, 'kahoot_sessions', sessionId), {
     estado: 'finalizada',
-    actualizadoEn: fsTS(),
-    resultados
+    actualizadoEn: finalizadaAt,
+    resultados,
+    finalizadaEn: finalizadaAt,
+    finalizadoEn: finalizadaAt
   });
 
   // 4. Snapshot en histórico anual (nueva subcolección)
@@ -802,7 +820,8 @@ export async function finalizeKahootSession() {
   await setDoc(doc(fsdb, 'historico', String(anio), 'kahoot_sessions', sessionId), {
     ...session,
     resultados,
-    finalizadaEn: fsTS()
+    finalizadaEn: finalizadaAt,
+    finalizadoEn: finalizadaAt
   });
 
   // 5. Snapshot diario simple (existente - mantener compatibilidad)
