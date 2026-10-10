@@ -1099,21 +1099,32 @@ window.loadKahootSessions = async function () {
       select.innerHTML += '<option value="" disabled>No hay sesiones preparadas</option>';
       return;
     }
+
+    const preparedSessions = sessions.filter(s => {
+      const estado = normalizeKahootSessionState(s.estado);
+      return ['preparada', 'borrador', 'prepared', 'draft'].includes(estado);
+    });
+
     sessions.forEach(s => {
       const opt = document.createElement("option");
       opt.value = s.id;
       const fechaStr = s.fechaAsamblea ? ` (${s.fechaAsamblea})` : "";
-      opt.textContent = `${s.titulo}${fechaStr} — ${s.preguntas ? s.preguntas.length : 0} preguntas`;
+      const estado = normalizeKahootSessionState(s.estado);
+      opt.textContent = `${s.titulo}${fechaStr} — ${s.preguntas ? s.preguntas.length : 0} preguntas (${estado})`;
       select.appendChild(opt);
     });
-    // Si hay una sesión en preparación, seleccionarla
+
+    // Si hay una sesión en preparación, seleccionarla; si no, elegir la primera preparada.
     if (_kahootSessionEnPreparacion) {
       select.value = _kahootSessionEnPreparacion;
       _kahootSessionEnPreparacion = null;
       window.verKahootSession();
-    } else if (sessions.length > 0 && !select.value) {
-      select.selectedIndex = 1;
+    } else if (preparedSessions.length > 0 && !select.value) {
+      select.value = preparedSessions[0].id;
       window.verKahootSession();
+    } else {
+      const btnAgregar = document.getElementById("btnAgregarAlKahoot");
+      if (btnAgregar) btnAgregar.style.display = "none";
     }
     // Habilitar botones
     const btnCargar = document.getElementById("btnCargarKahoot");
@@ -1121,7 +1132,11 @@ window.loadKahootSessions = async function () {
     const btnAgregar = document.getElementById("btnAgregarAlKahoot");
     if (btnCargar) btnCargar.style.display = "inline-flex";
     if (btnVer) btnVer.style.display = "inline-flex";
-    if (btnAgregar && select.value) btnAgregar.style.display = "inline-flex";
+    if (btnAgregar && select.value) {
+      const selectedSession = sessions.find(s => s.id === select.value);
+      const selectedState = normalizeKahootSessionState(selectedSession?.estado);
+      btnAgregar.style.display = ['preparada', 'borrador', 'prepared', 'draft'].includes(selectedState) ? 'inline-flex' : 'none';
+    }
   } catch (e) {
     console.error(e);
     select.innerHTML = '<option value="">Error cargando sesiones</option>';
