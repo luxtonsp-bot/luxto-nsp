@@ -785,10 +785,8 @@
                 if (data.hayAsamblea) fechasAsambleas.push(doc.id);
             });
 
-            // 2. Obtener todos los miembros activos (sin orderBy para evitar índice compuesto)
-            const membersSnapshot = await db.collection('members')
-                .where('estadoAnioActual', '==', 'activo')
-                .get();
+            // 2. Obtener TODOS los miembros (sin filtro de estado)
+            const membersSnapshot = await db.collection('members').get();
 
             const miembros = [];
             membersSnapshot.forEach(doc => {
@@ -805,11 +803,18 @@
             // Ordenar por nombre en cliente
             miembros.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-            // 3. Para cada fecha de asamblea, cargar asistencia
+            // 3. Filtrar fechas que TENGAN DATOS en asistencia (no solo habilitadas en config)
+            const fechasConDatos = [];
+            for (const fecha of fechasAsambleas) {
+                const snap = await db.collection('asistencia').doc(anio).collection(fecha).limit(1).get();
+                if (!snap.empty) fechasConDatos.push(fecha);
+            }
+
+            // 4. Cargar asistencia solo para fechas con datos
             let totalAsistencias = 0;
             const asistenciaPorFecha = {};
 
-            for (const fecha of fechasAsambleas) {
+            for (const fecha of fechasConDatos) {
                 const snap = await db.collection('asistencia').doc(anio).collection(fecha).get();
                 const presentesDelDia = [];
                 snap.forEach(doc => {
@@ -822,33 +827,33 @@
                 asistenciaPorFecha[fecha] = presentesDelDia;
             }
 
-            // 4. Calcular estadísticas por miembro
+            // 5. Calcular estadísticas por miembro
             const resumenMiembros = miembros.map(m => {
                 let asistio = 0;
-                for (const fecha of fechasAsambleas) {
+                for (const fecha of fechasConDatos) {
                     if (asistenciaPorFecha[fecha]?.includes(m.uid)) asistio++;
                 }
                 return {
                     ...m,
                     asistio,
-                    totalAsambleas: fechasAsambleas.length,
-                    porcentaje: fechasAsambleas.length > 0 ? Math.round((asistio / fechasAsambleas.length) * 100) : 0
+                    totalAsambleas: fechasConDatos.length,
+                    porcentaje: fechasConDatos.length > 0 ? Math.round((asistio / fechasConDatos.length) * 100) : 0
                 };
             });
 
             // Ordenar: % desc, luego total desc
             resumenMiembros.sort((a, b) => b.porcentaje - a.porcentaje || b.asistio - a.asistio);
 
-            // 5. Render stats
-            const promedioAsistencia = fechasAsambleas.length > 0
-                ? Math.round(totalAsistencias / fechasAsambleas.length)
+            // 6. Render stats
+            const promedioAsistencia = fechasConDatos.length > 0
+                ? Math.round(totalAsistencias / fechasConDatos.length)
                 : 0;
 
-            statTotalAsambleas.textContent = fechasAsambleas.length;
+            statTotalAsambleas.textContent = fechasConDatos.length;
             statPromedioAsistencia.textContent = promedioAsistencia;
             statTotalMiembros.textContent = miembros.length;
 
-            // 6. Render lista
+            // 7. Render lista
             let html = '';
             resumenMiembros.forEach((m, i) => {
                 const initial = m.nombre.charAt(0).toUpperCase();
@@ -861,9 +866,11 @@
                     <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px;">
                         <div style="display:flex; align-items:center; gap:12px; flex:1;">
                             ${hasValidPhoto
-                                ? `<img src="${photoUrl}" alt="${m.nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">`
-                                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify_content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
-                            }
+                                ? `<img src="${photoUrl}" alt="${m.nombre}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                                : ''}
+                            ${!hasValidPhoto || hasValidPhoto
+                                ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:${hasValidPhoto ? 'none' : 'flex'}; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
+                                : ''}
                             <div>
                                 <div class="item-title">${m.nombre}</div>
                                 ${m.email ? `<div class="item-meta">${m.email}</div>` : ''}
