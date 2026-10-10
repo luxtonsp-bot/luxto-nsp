@@ -190,13 +190,18 @@
     }
 
     function formatDate(dateString) {
+        // dateString = "YYYY-MM-DD" en zona Lima. Parsear manualmente para evitar TZ shift.
+        const [y, m, d] = dateString.split('-').map(Number);
+        const date = new Date(y, m - 1, d); // month es 0-indexed
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString('es-ES', options);
+        return date.toLocaleDateString('es-ES', options);
     }
 
     function formatDateShort(dateString) {
+        const [y, m, d] = dateString.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
         const options = { year: 'numeric', month: 'short', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString('es-ES', options);
+        return date.toLocaleDateString('es-ES', options);
     }
 
     let currentMember = null;
@@ -252,11 +257,12 @@
         });
     });
 
-    // ── Sub-tab switching ──
+    // ── Sub-tab switching (scoped to #tab-ver) ──
     document.querySelectorAll('#subTabs .tab-button').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('#subTabs .tab-button').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+            // Solo afectar .tab-content dentro de #tab-ver (sub-tabs), no los main tabs
+            document.querySelectorAll('#tab-ver .tab-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('subtab-' + btn.dataset.subtab).classList.add('active');
         });
