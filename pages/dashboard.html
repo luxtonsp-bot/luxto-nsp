@@ -2571,12 +2571,12 @@
             .map((item, idx) => {
               const pos = idx + 1;
               const isMe = item.uid === uid;
-              const fotoUrl = item.fotoUrl || "";
+              const fotoUrl = item.fotoUrl ? convertirUrlDrive(item.fotoUrl) : "";
 
               return `
         <div class="ranking-global-item ${isMe ? "me" : ""} ${pos <= 3 ? `pos-${pos}` : ""}">
           <span class="ranking-pos">${pos}</span>
-          ${fotoUrl ? `<img class="ranking-foto" src="${fotoUrl}" alt="">` : '<div class="ranking-foto" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);">#</div>'}
+          ${fotoUrl ? `<img class="ranking-foto" src="${fotoUrl}" alt="" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="ranking-foto" style="display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.1);">#</div>` : '<div class="ranking-foto" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);">#</div>'}
           <span class="ranking-nombre">${escaparHTML(item.nombre || "Sin nombre")}${isMe ? " (tú)" : ""}</span>
           <span class="ranking-pts">${item.pts || 0} pts</span>
         </div>

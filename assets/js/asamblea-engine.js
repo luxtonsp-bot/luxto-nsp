@@ -871,26 +871,44 @@ export async function finalizeKahootSession() {
   );
   if (!txResult.committed) return; // ya finalizado por otro
 
-  // 1. Acumular en rankingGlobal (igual que finalizarSesion actual) - key = uid
+  // 1. Acumular en rankingGlobal - key = uid (Auth UID)
   const puntosSesion = localState.puntos;
-  const membersSnap = await getDocs(collection(fsdb, "members"));
-  const memberByUid = {};
-  membersSnap.forEach((d) => {
-    memberByUid[d.id] = d.data();
-  });
 
   for (const [uid, data] of Object.entries(puntosSesion)) {
     const pts = data?.pts;
     if (!pts) continue;
-    const m = memberByUid[uid];
+
+    // Buscar member por Auth UID (doc ID = uid)
+    let nombre = "Anónimo";
+    let fotoUrl = "";
+    try {
+      const memberSnap = await getDoc(doc(fsdb, "members", uid));
+      if (memberSnap.exists()) {
+        const m = memberSnap.data();
+        nombre = m.nombre || m.name || "Anónimo";
+        // Prioridad: fotoThumb (base64 128px) > fotoDriveId (Drive) > ""
+        if (m.fotoThumb) {
+          fotoUrl = m.fotoThumb;
+        } else if (m.fotoDriveId) {
+          fotoUrl = `https://drive.google.com/thumbnail?id=${m.fotoDriveId}&sz=w100`;
+        }
+      } else {
+        // Fallback: nombre de conectados (guardado al unirse)
+        nombre = localState.conectados[uid]?.nombre || "Anónimo";
+      }
+    } catch (e) {
+      console.warn(`Error leyendo member ${uid}:`, e.message);
+      nombre = localState.conectados[uid]?.nombre || "Anónimo";
+    }
+
     // Key = uid (no email-sanitized)
     await runTransaction(
       ref(rtdb, RTDB_PATHS.rankingGlobal(uid)),
       (current) => {
         const prev = current || {
           pts: 0,
-          nombre: m?.nombre || "Anónimo",
-          fotoUrl: m?.fotoUrl || "",
+          nombre,
+          fotoUrl,
         };
         return {
           ...prev,
