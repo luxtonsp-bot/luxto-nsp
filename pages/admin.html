@@ -301,6 +301,32 @@ body::before {
   font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--y);
 }
 
+.rank-delete-btn {
+  background:none;
+  border:none;
+  cursor:pointer;
+  font-size:16px;
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  transition:all var(--t);
+  opacity:0.6;
+  flex-shrink:0;
+}
+.rank-delete-btn:hover {
+  background:rgba(224,60,60,.15);
+  color:var(--err);
+  opacity:1;
+  transform:scale(1.1);
+}
+.rank-item:hover .rank-delete-btn {
+  opacity:1;
+}
+
 .nueva-pregunta { margin-bottom:28px; }
 .np-grid { display:flex; flex-direction:column; gap:18px; }
 .np-field { display:flex; flex-direction:column; gap:6px; }
