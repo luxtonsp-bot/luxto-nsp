@@ -204,6 +204,10 @@
         return date.toLocaleDateString('es-ES', options);
     }
 
+    function isValidImageUrl(url) {
+        return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:'));
+    }
+
     let currentMember = null;
     let currentAssemblyDate = null;
     let allMembersCache = [];
@@ -383,10 +387,6 @@
         if (snapshot.empty) {
             membersListDiv.innerHTML = '<div class="empty-state">No se encontraron miembros</div>';
             return;
-        }
-
-        function isValidImageUrl(url) {
-            return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:'));
         }
 
         let html = '';
