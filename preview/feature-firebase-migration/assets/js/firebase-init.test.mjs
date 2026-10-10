@@ -108,6 +108,7 @@ assert(!dbRules.includes("root.child('members').child(auth.uid).child('rol').val
 assert(dbRules.includes("'servidor'"), "RTDB rules include servidor role");
 assert(dbRules.includes("'apoyo'"), "RTDB rules include apoyo role");
 assert(firestoreRules.includes("allow create, update: if isStaff();"), "Firestore rules allow staff to create KAHOOT sessions");
+assert(firestoreRules.includes("request.auth.token.email == \"henry.alfaro1@unmsm.edu.pe\""), "Firestore rules include the email fallback for authorized coordinators");
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
