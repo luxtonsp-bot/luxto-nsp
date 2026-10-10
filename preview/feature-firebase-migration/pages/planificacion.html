@@ -16,6 +16,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <!-- html2canvas para imagen HD (scale 4x) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Shared permissions module -->
+    <script src="../assets/js/auth-permissions.js"></script>
     <style>
         /* Additional styles for planificacion */
         .saturday-selector {
@@ -983,6 +985,8 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
     // ── Initialize ──
     auth.onAuthStateChanged(async (user) => {
         if (user) {
+            // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
+            await AuthPermissions.initStaffPermissionCheck();
             generateYearOptions();
             generateSaturdayOptions();
             // Load the selected Saturday by default
