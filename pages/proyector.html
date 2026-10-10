@@ -233,6 +233,11 @@
     .preg-stats { top:auto; bottom:80px; left:12px; right:12px; justify-content:center; }
     .stat-pill { font-size:11px; padding:6px 12px; }
 
+    /* KAHOOT controls - responsive */
+    .kahoot-control { width:100%; justify-content:center; gap:6px; }
+    .kahoot-control select { width:100%; max-width:300px; }
+    #kahootSessionInfo { text-align:center; width:100%; min-width:auto; font-size:10px; }
+
     /* Toast - bottom on mobile */
     #toast { top:auto; bottom:24px; left:16px; right:16px; transform:none; border-radius:12px; text-align:center; }
     #toast.show { transform:none; }
@@ -262,6 +267,9 @@
     .lobby-nombre { font-size:clamp(14px,3.5vw,18px); }
     .admin-bar { padding:10px 12px; gap:6px; }
     .btn { padding:12px 16px; font-size:14px; }
+    .kahoot-control { gap:4px; }
+    .kahoot-control select { font-size:12px; padding:8px 10px; }
+    #kahootSessionInfo { font-size:9px; }
   }
   </style>
 </head>
@@ -342,13 +350,27 @@
   <div class="admin-bar" id="adminBar">
     <span class="admin-bar-label" id="adminBarLabel">⚙️ Control del coordinador</span>
     <div class="bar-sep"></div>
+
+    <!-- KAHOOT Session Control -->
+    <div class="kahoot-control" id="kahootControl" style="display:flex;align-items:center;gap:8px;">
+      <select class="btn btn-ghost" id="kahootSessionSelect" style="padding:8px 12px;font-size:12px;min-width:200px;background:rgba(255,255,255,.06);color:var(--cream);border:1px solid var(--border);border-radius:8px;">
+        <option value="">-- Cargando KAHOOTs... --</option>
+      </select>
+      <div class="bar-sep"></div>
+      <button class="btn btn-primary" id="btnActivarKahoot" onclick="activarKahootSessionDesdeProyector()" style="display:none;">▶ Activar KAHOOT</button>
+      <button class="btn btn-warn" id="btnFinalizarKahoot" onclick="finalizarKahootSessionDesdeProyector()" style="display:none;">🏁 Finalizar KAHOOT</button>
+    </div>
+    <div id="kahootSessionInfo" style="font-size:11px;color:var(--muted);min-width:180px;display:none;"></div>
+    <div class="bar-sep"></div>
+
+    <!-- Asamblea Control (preguntas normales) -->
     <button class="btn btn-ghost" id="btnRanking" onclick="mostrarRankingManual()">📊 Ranking</button>
     <div class="bar-sep"></div>
     <button class="btn btn-primary" id="btnLanzar" onclick="lanzarPrimeraPregunta()">🚀 Lanzar pregunta 1</button>
     <button class="btn btn-danger" id="btnCerrar" onclick="cerrarPreguntaManual()" style="display:none;">⏹ Cerrar</button>
     <button class="btn btn-primary" id="btnSiguiente" onclick="lanzarSiguientePregunta()" style="display:none;">Siguiente →</button>
     <div class="bar-sep"></div>
-    <button class="btn btn-warn" id="btnFinalizar" onclick="finalizarAsamblea()" style="display:none;">🏁 Finalizar</button>
+    <button class="btn btn-warn" id="btnFinalizar" onclick="finalizarAsamblea()" style="display:none;">🏁 Finalizar Asamblea</button>
   </div>
   <button class="admin-toggle" id="adminToggle" onclick="toggleAdminBar()" style="display:none;">⚙️ Admin</button>
 
