@@ -1111,12 +1111,17 @@ window.loadKahootSessions = async function () {
       select.value = _kahootSessionEnPreparacion;
       _kahootSessionEnPreparacion = null;
       window.verKahootSession();
+    } else if (sessions.length > 0 && !select.value) {
+      select.selectedIndex = 1;
+      window.verKahootSession();
     }
     // Habilitar botones
     const btnCargar = document.getElementById("btnCargarKahoot");
     const btnVer = document.getElementById("btnVerKahoot");
+    const btnAgregar = document.getElementById("btnAgregarAlKahoot");
     if (btnCargar) btnCargar.style.display = "inline-flex";
     if (btnVer) btnVer.style.display = "inline-flex";
+    if (btnAgregar && select.value) btnAgregar.style.display = "inline-flex";
   } catch (e) {
     console.error(e);
     select.innerHTML = '<option value="">Error cargando sesiones</option>';
@@ -1143,7 +1148,8 @@ window.verKahootSession = async function () {
     `;
     infoDiv.style.display = "block";
     if (countSpan) countSpan.textContent = `${session.preguntas ? session.preguntas.length : 0} preguntas en esta sesión`;
-    if (btnAgregar) btnAgregar.style.display = ['preparada', 'borrador'].includes(estado) ? "inline-flex" : "none";
+    const visibleStates = ['preparada', 'borrador', 'prepared', 'draft'];
+    if (btnAgregar) btnAgregar.style.display = visibleStates.includes(estado) ? "inline-flex" : "none";
   } catch (e) {
     console.error(e);
     toast("Error: " + e.message, "err");
