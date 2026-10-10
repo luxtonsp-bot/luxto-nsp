@@ -99,7 +99,7 @@
         </div>
 
         <!-- SUB-TAB: Día Específico -->
-        <div class="sub-tab-content active" id="subtab-dia">
+        <div class="tab-content active" id="subtab-dia">
             <div class="card">
                 <div class="card-title">📅 Seleccionar fecha</div>
                 <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
@@ -120,7 +120,7 @@
         </div>
 
         <!-- SUB-TAB: Resumen Anual -->
-        <div class="sub-tab-content" id="subtab-anual">
+        <div class="tab-content" id="subtab-anual">
             <div class="card">
                 <div class="card-title">
                     📈 Resumen Anual
@@ -598,14 +598,25 @@
         fechaSelector.value = today;
     }
 
+    // Helper: convierte valor de <input type="date"> (TZ local) a fecha en zona Lima (YYYY-MM-DD)
+    function fechaSelectorToLima(fechaStr) {
+        if (!fechaStr) return getLimaDateStr();
+        // fechaStr viene como "YYYY-MM-DD" en TZ local del navegador
+        // Lo interpretamos como medianoche en TZ local y convertimos a zona Lima
+        const localDate = new Date(fechaStr + 'T00:00:00');
+        const limaDate = new Date(localDate.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return limaDate.toISOString().split('T')[0];
+    }
+
     // ── SUB-TAB: DÍA ESPECÍFICO ──
     cargarFechaBtn.addEventListener('click', async () => {
-        const fecha = fechaSelector.value;
-        if (!fecha) {
+        const fechaLocal = fechaSelector.value;
+        if (!fechaLocal) {
             toast('Selecciona una fecha', 'err');
             return;
         }
-        await cargarAsistenciaDia(fecha);
+        const fechaLima = fechaSelectorToLima(fechaLocal);
+        await cargarAsistenciaDia(fechaLima);
     });
 
     async function cargarAsistenciaDia(fecha) {
@@ -739,10 +750,9 @@
                 if (data.hayAsamblea) fechasAsambleas.push(doc.id);
             });
 
-            // 2. Obtener todos los miembros activos
+            // 2. Obtener todos los miembros activos (sin orderBy para evitar índice compuesto)
             const membersSnapshot = await db.collection('members')
                 .where('estadoAnioActual', '==', 'activo')
-                .orderBy('nombre')
                 .get();
 
             const miembros = [];
@@ -757,6 +767,8 @@
                     asistenciasTotales: data.asistenciasTotales || 0
                 });
             });
+            // Ordenar por nombre en cliente
+            miembros.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
             // 3. Para cada fecha de asamblea, cargar asistencia
             let totalAsistencias = 0;
