@@ -1097,8 +1097,11 @@ window.loadKahootSessions = async function () {
     select.onchange = () => window.verKahootSession();
     if (sessions.length === 0) {
       select.innerHTML += '<option value="" disabled>No hay sesiones preparadas</option>';
+      syncKahootAddButtonState(null);
       return;
     }
+
+    const editableSession = sessions.find((s) => isKahootEditable(s)) || sessions[0];
 
     sessions.forEach(s => {
       const opt = document.createElement("option");
@@ -1109,33 +1112,34 @@ window.loadKahootSessions = async function () {
       select.appendChild(opt);
     });
 
-    // Si hay una sesión en preparación, seleccionarla; si no, agarra la primera disponible.
     if (_kahootSessionEnPreparacion) {
       select.value = _kahootSessionEnPreparacion;
       _kahootSessionEnPreparacion = null;
       window.verKahootSession();
-    } else if (sessions.length > 0 && !select.value) {
-      select.value = sessions[0].id;
+    } else if (editableSession) {
+      select.value = editableSession.id;
       window.verKahootSession();
     } else {
       syncKahootAddButtonState(null);
     }
-    // Habilitar botones
+
     const btnCargar = document.getElementById("btnCargarKahoot");
     const btnVer = document.getElementById("btnVerKahoot");
-    const btnAgregar = document.getElementById("btnAgregarAlKahoot");
     if (btnCargar) btnCargar.style.display = "inline-flex";
     if (btnVer) btnVer.style.display = "inline-flex";
-    if (btnAgregar && select.value) {
-      const selectedSession = sessions.find(s => s.id === select.value) || null;
-      syncKahootAddButtonState(selectedSession);
-    }
   } catch (e) {
     console.error(e);
     select.innerHTML = '<option value="">Error cargando sesiones</option>';
+    syncKahootAddButtonState(null);
     toast("Error cargando sesiones: " + e.message, "err");
   }
 };
+
+function isKahootEditable(session) {
+  if (!session) return false;
+  const estado = normalizeKahootSessionState(session.estado);
+  return ['preparada', 'borrador', 'prepared', 'draft'].includes(estado);
+}
 
 function syncKahootAddButtonState(session) {
   const btnAgregar = document.getElementById("btnAgregarAlKahoot");
@@ -1143,12 +1147,18 @@ function syncKahootAddButtonState(session) {
 
   if (!session) {
     btnAgregar.style.display = "none";
+    btnAgregar.disabled = true;
+    btnAgregar.title = "Selecciona un KAHOOT";
     return;
   }
 
-  // El botón debe depender únicamente de que haya una sesión seleccionada.
-  // La validación real de edición se hace en Firestore/backend con addQuestionsToKahootSession.
+  const editable = isKahootEditable(session);
   btnAgregar.style.display = "inline-flex";
+  btnAgregar.disabled = !editable;
+  btnAgregar.title = editable
+    ? "Agregar las preguntas seleccionadas a este KAHOOT"
+    : "Solo puedes agregar preguntas a una sesión en preparación";
+  btnAgregar.style.opacity = editable ? "1" : "0.6";
 }
 
 window.verKahootSession = async function () {
@@ -1180,6 +1190,25 @@ window.verKahootSession = async function () {
 window.agregarPreguntasAKahoot = async function () {
   const select = document.getElementById("kahootSessionSelect");
   if (!select || !select.value) { toast("Selecciona una sesión KAHOOT primero", "err"); return; }
+
+  const session = await getKahootSession(select.value).catch(() => null);
+  if (!session) {
+    toast("La sesión seleccionada ya no existe", "err");
+    return;
+  }
+
+  if (!isKahootEditable(session)) {
+    const editableSession = (await listKahootSessions()).find((s) => isKahootEditable(s));
+    if (editableSession) {
+      select.value = editableSession.id;
+      await window.verKahootSession();
+      toast("Se cambió a la sesión editable disponible para agregar preguntas", "err");
+      return;
+    }
+    toast("Solo puedes agregar preguntas a una sesión en preparación", "err");
+    return;
+  }
+
   const selected = Array.from(document.querySelectorAll('#preguntas-banco input[type=checkbox]:checked')).map(el => el.dataset.id);
   if (selected.length === 0) { toast("Selecciona al menos una pregunta del banco", "err"); return; }
   try {
@@ -1187,7 +1216,7 @@ window.agregarPreguntasAKahoot = async function () {
     const result = await addQuestionsToKahootSession(select.value, selected);
     toast(`✅ ${result.added} preguntas agregadas al KAHOOT (total: ${result.total})`, "ok");
     window.verKahootSession();
-    window.loadPreguntasBanco(); // recargar banco para desmarcar
+    window.loadPreguntasBanco();
   } catch (e) {
     console.error(e);
     toast("Error: " + e.message, "err");
