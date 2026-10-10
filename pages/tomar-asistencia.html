@@ -10,12 +10,11 @@
     <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/portal.css">
-    <!-- Firebase imports (same as other pages) -->
+    <!-- Firebase imports -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script>
-        // Convertir URL de Drive a thumbnail (igual que dashboard)
         function convertirUrlDrive(url) {
             if (!url) return "";
             if (url.includes("drive.google.com/thumbnail")) return url;
@@ -44,38 +43,119 @@
 <main class="container">
 
     <div class="section-eyebrow">Control de asistencia</div>
-    <h1>Tomar Asistencia</h1>
-    <p class="section-desc">Busca un miembro y marca su asistencia. Los que no se marquen al finalizar quedan como ausentes.</p>
+    <h1>Asistencia</h1>
+    <p class="section-desc">Gestiona la asistencia de las asambleas: toma de lista diaria y vista histórica.</p>
 
-    <div class="card" id="current-assembly-info">
-        <div class="item">Cargando información de la asamblea...</div>
+    <!-- MAIN TABS -->
+    <div class="tab-container">
+        <div class="tabs" id="mainTabs">
+            <button class="tab-button active" data-tab="tomar">📝 Tomar Asistencia</button>
+            <button class="tab-button" data-tab="ver">📊 Ver Asistencia</button>
+        </div>
     </div>
 
-    <div class="card">
-        <div class="card-title">🔍 Buscar miembro</div>
-        <div class="form-row">
-            <div style="flex:1;">
-                <input type="text" id="member-search" placeholder="Buscar miembro por nombre...">
+    <!-- TAB 1: TOMAR ASISTENCIA -->
+    <div class="tab-content active" id="tab-tomar">
+        <div class="card" id="current-assembly-info">
+            <div class="item">Cargando información de la asamblea...</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔍 Buscar miembro</div>
+            <div class="form-row">
+                <div style="flex:1;">
+                    <input type="text" id="member-search" placeholder="Buscar miembro por nombre...">
+                </div>
+                <div style="flex:0;">
+                    <button id="search-button" class="btn btn-primary">Buscar</button>
+                </div>
             </div>
-            <div style="flex:0;">
-                <button id="search-button" class="btn btn-primary">Buscar</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">👥 Miembros</div>
+            <div id="members-list" class="item-list">
+                <div class="empty-state">Busca un miembro para comenzar</div>
+            </div>
+        </div>
+
+        <div class="card" id="attendance-actions" style="display: none;">
+            <div class="card-title">Acciones de asistencia</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button id="mark-present" class="btn btn-ok">✓ Marcar como presente</button>
+                <button id="mark-absent" class="btn btn-secondary">✗ Marcar como ausente</button>
+                <button id="finalize-attendance" class="btn btn-danger">🏁 Finalizar Asistencia</button>
             </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-title">👥 Miembros</div>
-        <div id="members-list" class="item-list">
-            <div class="empty-state">Busca un miembro para comenzar</div>
+    <!-- TAB 2: VER ASISTENCIA (con sub-tabs) -->
+    <div class="tab-content" id="tab-ver">
+        <div class="tab-container" style="margin-bottom:16px;">
+            <div class="tabs" id="subTabs">
+                <button class="tab-button active" data-subtab="dia">📅 Día Específico</button>
+                <button class="tab-button" data-subtab="anual">📈 Resumen Anual</button>
+            </div>
         </div>
-    </div>
 
-    <div class="card" id="attendance-actions" style="display: none;">
-        <div class="card-title">Acciones de asistencia</div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button id="mark-present" class="btn btn-ok">✓ Marcar como presente</button>
-            <button id="mark-absent" class="btn btn-secondary">✗ Marcar como ausente</button>
-            <button id="finalize-attendance" class="btn btn-danger">🏁 Finalizar Asistencia</button>
+        <!-- SUB-TAB: Día Específico -->
+        <div class="sub-tab-content active" id="subtab-dia">
+            <div class="card">
+                <div class="card-title">📅 Seleccionar fecha</div>
+                <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:200px;">
+                        <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Fecha</label>
+                        <input type="date" id="fecha-selector" class="np-input" style="width:100%;">
+                    </div>
+                    <button id="cargar-fecha-btn" class="btn btn-primary" style="height:44px;">Cargar</button>
+                </div>
+            </div>
+
+            <div class="card" id="fecha-info-card" style="display:none;">
+                <div class="card-title">📋 Asistencia del día <span id="fecha-display"></span></div>
+                <div id="lista-asistencia-dia" class="item-list">
+                    <div class="empty-state">Selecciona una fecha y pulsa Cargar</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-TAB: Resumen Anual -->
+        <div class="sub-tab-content" id="subtab-anual">
+            <div class="card">
+                <div class="card-title">
+                    📈 Resumen Anual
+                    <span class="card-sub" id="anio-display"></span>
+                </div>
+                <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:16px;">
+                    <div style="flex:1; min-width:200px;">
+                        <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Año</label>
+                        <select id="anio-selector" class="np-select" style="width:100%;"></select>
+                    </div>
+                    <button id="cargar-anual-btn" class="btn btn-primary" style="height:44px;">Generar</button>
+                </div>
+            </div>
+
+            <div class="card" id="resumen-anual-card" style="display:none;">
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
+                    <div style="background:rgba(45,186,111,.1); border:1px solid rgba(45,186,111,.2); padding:12px 16px; border-radius:10px; min-width:140px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Total Asambleas</div>
+                        <div id="stat-total-asambleas" style="font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--ok);">-</div>
+                    </div>
+                    <div style="background:rgba(245,197,24,.1); border:1px solid rgba(245,197,24,.2); padding:12px 16px; border-radius:10px; min-width:140px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Promedio Asistencia</div>
+                        <div id="stat-promedio-asistencia" style="font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--y);">-</div>
+                    </div>
+                    <div style="background:rgba(224,60,60,.1); border:1px solid rgba(224,60,60,.2); padding:12px 16px; border-radius:10px; min-width:140px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;">Total Miembros</div>
+                        <div id="stat-total-miembros" style="font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--err);">-</div>
+                    </div>
+                </div>
+
+                <div class="card-title" style="margin-top:8px;">📋 Detalle por miembro</div>
+                <div id="lista-resumen-anual" class="item-list">
+                    <div class="empty-state">Selecciona un año y pulsa Generar</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -101,17 +181,27 @@
     const auth = firebase.auth();
 
     // ── Zona horaria Lima (UTC-5) ──
-    const LIMA_OFFSET_MIN = -300; // UTC-5 en minutos (Perú no tiene DST)
+    const LIMA_OFFSET_MIN = -300;
 
     function getLimaDateStr() {
-        // Retorna YYYY-MM-DD en zona Lima
         const now = new Date();
         const lima = new Date(now.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
         return lima.toISOString().split('T')[0];
     }
 
+    function formatDate(dateString) {
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString('es-ES', options);
+    }
+
+    function formatDateShort(dateString) {
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString('es-ES', options);
+    }
+
     let currentMember = null;
     let currentAssemblyDate = null;
+    let allMembersCache = [];
 
     // DOM Elements
     const memberSearchInput = document.getElementById('member-search');
@@ -122,6 +212,23 @@
     const markAbsentBtn = document.getElementById('mark-absent');
     const finalizeAttendanceBtn = document.getElementById('finalize-attendance');
     const currentAssemblyInfoDiv = document.getElementById('current-assembly-info');
+
+    // Sub-tab elements
+    const fechaSelector = document.getElementById('fecha-selector');
+    const cargarFechaBtn = document.getElementById('cargar-fecha-btn');
+    const fechaInfoCard = document.getElementById('fecha-info-card');
+    const fechaDisplay = document.getElementById('fecha-display');
+    const listaAsistenciaDia = document.getElementById('lista-asistencia-dia');
+
+    const anioSelector = document.getElementById('anio-selector');
+    const cargarAnualBtn = document.getElementById('cargar-anual-btn');
+    const resumenAnualCard = document.getElementById('resumen-anual-card');
+    const anioDisplay = document.getElementById('anio-display');
+    const listaResumenAnual = document.getElementById('lista-resumen-anual');
+
+    const statTotalAsambleas = document.getElementById('stat-total-asambleas');
+    const statPromedioAsistencia = document.getElementById('stat-promedio-asistencia');
+    const statTotalMiembros = document.getElementById('stat-total-miembros');
 
     // ── Toast ──
     function toast(msg, tipo = "") {
@@ -135,11 +242,33 @@
         firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
     }
 
+    // ── Tab switching (main) ──
+    document.querySelectorAll('#mainTabs .tab-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#mainTabs .tab-button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+    });
+
+    // ── Sub-tab switching ──
+    document.querySelectorAll('#subTabs .tab-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#subTabs .tab-button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('subtab-' + btn.dataset.subtab).classList.add('active');
+        });
+    });
+
     // Initialize
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             await loadCurrentAssembly();
             await loadMembers();
+            initAnioSelector();
+            initFechaSelector();
         } else {
             window.location.href = 'login.html';
         }
@@ -148,9 +277,7 @@
     // Load current assembly (today's assembly in Lima timezone)
     async function loadCurrentAssembly() {
         try {
-            // Get today's date in YYYY-MM-DD format (Lima timezone)
             const dateStr = getLimaDateStr();
-
             currentAssemblyDate = dateStr;
 
             const assemblyDoc = await db.collection('asambleas').doc(dateStr).get();
@@ -179,7 +306,6 @@
                     `;
                 }
             } else {
-                // Buscar próxima asamblea activa en los próximos 14 días
                 let nextAssemblyInfo = null;
                 const todayLima = new Date();
                 todayLima.setTime(todayLima.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
@@ -225,16 +351,15 @@
         }
     }
 
-    // Load members (search)
+    // Load all members (for search and cache)
     async function loadMembers(searchTerm = '') {
         try {
             let query;
             if (searchTerm) {
-                // Search by name (case-insensitive prefix match)
                 query = db.collection('members')
                     .orderBy('nombre')
                     .startAt(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1))
-                    .endAt(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1) + '\uf8ff');
+                    .endAt(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1) + '');
             } else {
                 query = db.collection('members').orderBy('nombre');
             }
@@ -247,14 +372,13 @@
         }
     }
 
-    // Display members list
+    // Display members list (for TOMAR ASISTENCIA)
     function displayMembers(snapshot) {
         if (snapshot.empty) {
             membersListDiv.innerHTML = '<div class="empty-state">No se encontraron miembros</div>';
             return;
         }
 
-        // Helper: valida que sea URL real (http/https/data:), no UID ni string vacía
         function isValidImageUrl(url) {
             return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:'));
         }
@@ -265,12 +389,10 @@
             const nombre = data.nombre || data.name || 'Sin nombre';
             const email = data.email || '';
             const initial = nombre.charAt(0).toUpperCase();
-            // Avatar: fotoThumb (Firestore) → fotoDriveId (Drive) → fallback a inicial
             let photoUrl = data.fotoThumb;
             if (!isValidImageUrl(photoUrl) && data.fotoDriveId) {
                 photoUrl = convertirUrlDrive(data.fotoDriveId);
             }
-            // Validación final: solo usar si es URL real
             const hasValidPhoto = isValidImageUrl(photoUrl);
             const avatarHtml = hasValidPhoto
                 ? `<img src="${photoUrl}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
@@ -300,8 +422,7 @@
         membersListDiv.innerHTML = html;
     }
 
-    // Calcula tardanza contra horaInicio de asambleas/{fecha}
-    // Usa serverTimestamp del servidor (UTC) — zona horaria Lima (UTC-5), tolerancia 10 min
+    // ── TARDANZA ──
     const TOLERANCIA_TARDANZA_MIN = 10;
 
     async function calcularTardanza(attendanceRef, fechaAsamblea) {
@@ -313,29 +434,18 @@
         const assemblyData = assemblyDoc.data();
         if (!assemblyData.horaInicio) return;
 
-        // serverTimestamp viene en UTC. Convertir a minutos desde medianoche en zona horaria Lima (UTC-5)
         const arrivalDate = arrival.toDate ? arrival.toDate() : new Date(arrival);
-        // Usar getUTCHours/getUTCMinutes para obtener la hora UTC real, luego aplicar offset Lima
         const arrivalUTCHours = arrivalDate.getUTCHours();
         const arrivalUTCMinutes = arrivalDate.getUTCMinutes();
         const arrivalTotalUTCMinutes = arrivalUTCHours * 60 + arrivalUTCMinutes;
-        // Lima = UTC - 5 horas = UTC - 300 min
         const arrivalMinutes = arrivalTotalUTCMinutes + LIMA_OFFSET_MIN;
-        // Normalizar a 0-1439 (minutos del día en Lima)
         const normalizedArrivalMinutes = ((arrivalMinutes % 1440) + 1440) % 1440;
 
-        // Hora de inicio en minutos (ya está en hora Lima)
         const [h, m] = assemblyData.horaInicio.split(':').map(Number);
         const startMinutes = h * 60 + m;
 
         let diff = normalizedArrivalMinutes - startMinutes;
-        // Cruce de medianoche: solo si la asamblea empieza temprano (ej. 8:00 = 480 min)
-        // y llegaste tarde en la noche anterior (ej. 23:00 = 1380 min) → diff = 1380-480 = 900 > 720
-        // En ese caso restamos 1440 para obtener diff negativo (llegada día anterior)
-        // Si asamblea es tarde (ej. 16:00 = 960) y llegas madrugada misma día (ej. 00:25 = 25) → diff = -935
-        // NO es cruce de medianoche, es llegada temprano → diff negativo = no tardanza
-        if (diff > 720) diff -= 1440;        // cruce medianoche: llegada noche anterior, asamblea mañana temprano
-        // NO hacer: if (diff < -720) diff += 1440  ← eso convertía llegada temprano en tardanza
+        if (diff > 720) diff -= 1440;
         const tardanzaMinutos = Math.max(0, diff);
 
         console.log('[TARDANZA DEBUG]', {
@@ -356,8 +466,8 @@
         }, { merge: true });
     }
 
-    // Mark attendance
-    async function markAttendance(memberId, memberName, present) {
+    // Mark attendance (TOMAR ASISTENCIA)
+    window.markAttendance = async function(memberId, memberName, present) {
         try {
             if (!currentAssemblyDate) {
                 toast('No hay asamblea activa hoy', 'err');
@@ -373,9 +483,21 @@
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
-            // Si es presente, calcular tardanza
+            // Si es presente, calcular tardanza Y actualizar contador en member
             if (present) {
                 await calcularTardanza(attendanceRef, currentAssemblyDate);
+                // Incrementar contador de asistencias totales en el miembro (transacción)
+                const memberRef = db.collection('members').doc(memberId);
+                await db.runTransaction(async (transaction) => {
+                    const memberDoc = await transaction.get(memberRef);
+                    if (memberDoc.exists) {
+                        const currentTotal = memberDoc.data().asistenciasTotales || 0;
+                        transaction.update(memberRef, {
+                            asistenciasTotales: currentTotal + 1,
+                            ultimaAsistencia: currentAssemblyDate
+                        });
+                    }
+                });
             }
 
             toast(`${memberName}: ${present ? '✓ Presente' : '✗ Ausente'}`, present ? 'ok' : '');
@@ -383,15 +505,14 @@
             console.error("Error marking attendance:", error);
             toast('Error al marcar asistencia', 'err');
         }
-    }
+    };
 
-    // Search button
+    // Search
     searchButton.addEventListener('click', () => {
         const term = memberSearchInput.value.trim();
         loadMembers(term);
     });
 
-    // Enter key in search
     memberSearchInput.addEventListener('keyup', (e) => {
         if (e.key === 'Enter') {
             const term = memberSearchInput.value.trim();
@@ -411,12 +532,10 @@
                 return;
             }
 
-            // Get all members
             const membersSnapshot = await db.collection('members').get();
             const allMemberIds = [];
             membersSnapshot.forEach(doc => allMemberIds.push(doc.id));
 
-            // Get already marked attendance for today
             const attendanceSnapshot = await db.collection('asistencia')
                 .doc(currentAssemblyDate.slice(0, 4))
                 .collection(currentAssemblyDate)
@@ -424,12 +543,10 @@
             const markedIds = new Set();
             attendanceSnapshot.forEach(doc => markedIds.add(doc.id));
 
-            // Mark unmarked members as absent (solo estadoAnioActual == 'activo')
             const batch = db.batch();
             let absentCount = 0;
             for (const memberId of allMemberIds) {
                 if (!markedIds.has(memberId)) {
-                    // Verificar que el miembro esté activo
                     const memberDoc = await db.collection('members').doc(memberId).get();
                     const memberData = memberDoc.data();
                     if (memberData && memberData.estadoAnioActual === 'activo') {
@@ -453,7 +570,6 @@
             await batch.commit();
             toast(`Asistencia finalizada. ${absentCount} miembros registrados como ausentes.`, 'ok');
 
-            // Reset UI
             currentMember = null;
             attendanceActionsDiv.style.display = 'none';
             membersListDiv.innerHTML = '<div class="empty-state">Asistencia finalizada. Recarga la página para tomar nueva asistencia.</div>';
@@ -464,11 +580,275 @@
         }
     });
 
-    // Helper function to format date
-    function formatDate(dateString) {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString('es-ES', options);
+    // ── INICIALIZAR SELECTORES ──
+    function initAnioSelector() {
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear; y >= 2020; y--) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            anioSelector.appendChild(opt);
+        }
+        anioDisplay.textContent = currentYear;
     }
+
+    function initFechaSelector() {
+        const today = getLimaDateStr();
+        fechaSelector.max = today;
+        fechaSelector.value = today;
+    }
+
+    // ── SUB-TAB: DÍA ESPECÍFICO ──
+    cargarFechaBtn.addEventListener('click', async () => {
+        const fecha = fechaSelector.value;
+        if (!fecha) {
+            toast('Selecciona una fecha', 'err');
+            return;
+        }
+        await cargarAsistenciaDia(fecha);
+    });
+
+    async function cargarAsistenciaDia(fecha) {
+        fechaDisplay.textContent = formatDate(fecha);
+        fechaInfoCard.style.display = 'block';
+        listaAsistenciaDia.innerHTML = '<div class="empty-state">Cargando...</div>';
+
+        try {
+            const anio = fecha.slice(0, 4);
+            const snapshot = await db.collection('asistencia').doc(anio).collection(fecha).get();
+
+            if (snapshot.empty) {
+                listaAsistenciaDia.innerHTML = '<div class="empty-state">No hay registros de asistencia para esta fecha</div>';
+                return;
+            }
+
+            // Obtener datos de asamblea para esa fecha (tema, hora)
+            const assemblyDoc = await db.collection('asambleas').doc(fecha).get();
+            const assemblyData = assemblyDoc.exists ? assemblyDoc.data() : {};
+
+            // Cargar info de todos los miembros para mostrar nombre/foto
+            const membersSnapshot = await db.collection('members').get();
+            const membersMap = {};
+            membersSnapshot.forEach(doc => {
+                membersMap[doc.id] = doc.data();
+            });
+
+            let html = '';
+            let presentes = 0;
+            let ausentes = 0;
+            let tardanzas = 0;
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const memberData = membersMap[doc.id] || {};
+                const nombre = memberData.nombre || data.uid || 'Sin nombre';
+                const email = memberData.email || '';
+                const presente = data.presente === true;
+                const tardanza = data.tardanzaMinutos || 0;
+                const esTardanza = data.esTardanza === true;
+
+                if (presente) {
+                    presentes++;
+                    if (esTardanza) tardanzas++;
+                } else {
+                    ausentes++;
+                }
+
+                const initial = nombre.charAt(0).toUpperCase();
+                let photoUrl = memberData.fotoThumb;
+                if (!photoUrl && memberData.fotoDriveId) photoUrl = convertirUrlDrive(memberData.fotoDriveId);
+                const hasValidPhoto = photoUrl && (photoUrl.startsWith('http') || photoUrl.startsWith('data:'));
+
+                const estadoHtml = presente
+                    ? `<span style="color:var(--ok); font-weight:700;">✓ Presente${esTardanza ? ` · Tardanza: ${tardanza} min` : ''}</span>`
+                    : `<span style="color:var(--err); font-weight:700;">✗ Ausente</span>`;
+
+                html += `
+                    <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px;">
+                        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                            ${hasValidPhoto
+                                ? `<img src="${photoUrl}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">`
+                                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
+                            }
+                            <div>
+                                <div class="item-title">${nombre}</div>
+                                ${email ? `<div class="item-meta">${email}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                            ${estadoHtml}
+                            <div style="font-size:11px; color:var(--muted);">${data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Resumen arriba
+            const resumenHtml = `
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
+                    <div style="background:rgba(45,186,111,.1); border:1px solid rgba(45,186,111,.2); padding:8px 16px; border-radius:8px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Presentes</div>
+                        <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--ok);">${presentes}</div>
+                    </div>
+                    <div style="background:rgba(224,60,60,.1); border:1px solid rgba(224,60,60,.2); padding:8px 16px; border-radius:8px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Ausentes</div>
+                        <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--err);">${ausentes}</div>
+                    </div>
+                    <div style="background:rgba(212,136,26,.1); border:1px solid rgba(212,136,26,.2); padding:8px 16px; border-radius:8px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tardanzas</div>
+                        <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--warn);">${tardanzas}</div>
+                    </div>
+                    ${assemblyData.tema?.titulo ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${assemblyData.tema.titulo}</div></div>` : ''}
+                    ${assemblyData.horaInicio ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${assemblyData.horaInicio}</div></div>` : ''}
+                </div>
+            `;
+
+            listaAsistenciaDia.innerHTML = resumenHtml + html;
+
+        } catch (error) {
+            console.error("Error cargando asistencia del día:", error);
+            listaAsistenciaDia.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando datos</div>';
+        }
+    }
+
+    // ── SUB-TAB: RESUMEN ANUAL ──
+    cargarAnualBtn.addEventListener('click', async () => {
+        const anio = anioSelector.value;
+        if (!anio) {
+            toast('Selecciona un año', 'err');
+            return;
+        }
+        await cargarResumenAnual(anio);
+    });
+
+    async function cargarResumenAnual(anio) {
+        anioDisplay.textContent = anio;
+        resumenAnualCard.style.display = 'block';
+        listaResumenAnual.innerHTML = '<div class="empty-state">Cargando...</div>';
+
+        try {
+            // 1. Obtener todas las asambleas del año
+            const asambleasSnapshot = await db.collection('asambleas')
+                .where('fecha', '>=', `${anio}-01-01`)
+                .where('fecha', '<=', `${anio}-12-31`)
+                .get();
+
+            const fechasAsambleas = [];
+            asambleasSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.hayAsamblea) fechasAsambleas.push(doc.id);
+            });
+
+            // 2. Obtener todos los miembros activos
+            const membersSnapshot = await db.collection('members')
+                .where('estadoAnioActual', '==', 'activo')
+                .orderBy('nombre')
+                .get();
+
+            const miembros = [];
+            membersSnapshot.forEach(doc => {
+                const data = doc.data();
+                miembros.push({
+                    uid: doc.id,
+                    nombre: data.nombre || 'Sin nombre',
+                    email: data.email || '',
+                    fotoThumb: data.fotoThumb,
+                    fotoDriveId: data.fotoDriveId,
+                    asistenciasTotales: data.asistenciasTotales || 0
+                });
+            });
+
+            // 3. Para cada fecha de asamblea, cargar asistencia
+            let totalAsistencias = 0;
+            const asistenciaPorFecha = {};
+
+            for (const fecha of fechasAsambleas) {
+                const snap = await db.collection('asistencia').doc(anio).collection(fecha).get();
+                const presentesDelDia = [];
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.presente === true) {
+                        presentesDelDia.push(doc.id);
+                        totalAsistencias++;
+                    }
+                });
+                asistenciaPorFecha[fecha] = presentesDelDia;
+            }
+
+            // 4. Calcular estadísticas por miembro
+            const resumenMiembros = miembros.map(m => {
+                let asistio = 0;
+                for (const fecha of fechasAsambleas) {
+                    if (asistenciaPorFecha[fecha]?.includes(m.uid)) asistio++;
+                }
+                return {
+                    ...m,
+                    asistio,
+                    totalAsambleas: fechasAsambleas.length,
+                    porcentaje: fechasAsambleas.length > 0 ? Math.round((asistio / fechasAsambleas.length) * 100) : 0
+                };
+            });
+
+            // Ordenar: % desc, luego total desc
+            resumenMiembros.sort((a, b) => b.porcentaje - a.porcentaje || b.asistio - a.asistio);
+
+            // 5. Render stats
+            const promedioAsistencia = fechasAsambleas.length > 0
+                ? Math.round(totalAsistencias / fechasAsambleas.length)
+                : 0;
+
+            statTotalAsambleas.textContent = fechasAsambleas.length;
+            statPromedioAsistencia.textContent = promedioAsistencia;
+            statTotalMiembros.textContent = miembros.length;
+
+            // 6. Render lista
+            let html = '';
+            resumenMiembros.forEach((m, i) => {
+                const initial = m.nombre.charAt(0).toUpperCase();
+                let photoUrl = m.fotoThumb;
+                if (!photoUrl && m.fotoDriveId) photoUrl = convertirUrlDrive(m.fotoDriveId);
+                const hasValidPhoto = photoUrl && (photoUrl.startsWith('http') || photoUrl.startsWith('data:'));
+
+                const colorPorcentaje = m.porcentaje >= 80 ? 'var(--ok)' : m.porcentaje >= 50 ? 'var(--y)' : 'var(--err)';
+
+                html += `
+                    <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px;">
+                        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                            ${hasValidPhoto
+                                ? `<img src="${photoUrl}" alt="${m.nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">`
+                                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
+                            }
+                            <div>
+                                <div class="item-title">${m.nombre}</div>
+                                ${m.email ? `<div class="item-meta">${m.email}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                            <div style="text-align:right;">
+                                <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Asistencias</div>
+                                <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--cream);">${m.asistio} / ${m.totalAsambleas}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">% Asistencia</div>
+                                <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:${colorPorcentaje};">${m.porcentaje}%</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Total Histórico</div>
+                                <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--y);">${m.asistenciasTotales}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            listaResumenAnual.innerHTML = html || '<div class="empty-state">No hay datos para este año</div>';
+
+        } catch (error) {
+            console.error("Error cargando resumen anual:", error);
+            listaResumenAnual.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando datos</div>';
+        }
+    }
+
 </script>
 </body>
 </html>
