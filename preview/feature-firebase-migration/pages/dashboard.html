@@ -1208,6 +1208,7 @@
             id="topbarFoto"
             class="topbar-avatar"
             alt=""
+            crossorigin="anonymous"
             onerror="
               this.onerror = null;
               this.style.display = 'none';
@@ -1246,6 +1247,7 @@
             class="perfil-foto"
             src="../assets/images/logo_luxto.png"
             alt="Foto de perfil"
+            crossorigin="anonymous"
             onerror="
               this.onerror = null;
               this.src = '../assets/images/logo_luxto.png';
@@ -1581,16 +1583,26 @@
         setTimeout(() => (t.className = ""), 3200);
       }
 
-      /* ── Convierte URL de Drive a thumbnail público ──────── */
+      /* ── Convierte URL de Drive a VISTA DIRECTA (uc?export=view) ────────
+         Thumbnail (drive.google.com/thumbnail) NO carga en GitHub Pages por CSP.
+         Usamos uc?export=view&id=FILE_ID que sí funciona. */
       function convertirUrlDrive(url) {
         if (!url) return "";
-        if (url.includes("drive.google.com/thumbnail")) return url;
+        // Si ya es URL directa uc?export=view, devolverla
+        if (url.includes("uc?export=view")) return url;
+        // Si es thumbnail, convertir a vista directa
+        if (url.includes("drive.google.com/thumbnail")) {
+          const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
+          if (m) return "https://drive.google.com/uc?export=view&id=" + m[1];
+          return url;
+        }
+        // Extraer file ID y construir URL directa
         const m =
           url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) ||
           url.match(/\/d\/([a-zA-Z0-9_-]{20,})/) ||
-          url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/); // FIX: era [a-zA.Z0-9_-]
+          url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
         if (m)
-          return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w400";
+          return "https://drive.google.com/uc?export=view&id=" + m[1];
         return url;
       }
 
