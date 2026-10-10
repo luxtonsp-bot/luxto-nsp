@@ -12,9 +12,16 @@ import {
   responder,
   getRemainingTime,
   getTimeToNextPhase,
-  isPreguntaEnTiempo
+  isPreguntaEnTiempo,
+  // KAHOOT Sessions
+  listKahootSessions,
+  getKahootSession,
+  activateKahootSession,
+  finalizeKahootSession,
+  normalizeKahootSessionState,
 } from './asamblea-engine.js';
-import { auth, onAuthStateChanged, rtdb, ref, onValue, set, onDisconnect, esc, KAHOOT_RTDB_PATHS, serverNow } from './firebase-init.js';
+import { auth, onAuthStateChanged, rtdb, ref, onValue, set, onDisconnect, esc, KAHOOT_RTDB_PATHS, serverNow, fsdb } from './firebase-init.js';
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let usuarioActual = null;
 let nombreActual = "";
@@ -27,6 +34,11 @@ let tiempoInicioResp = 0;
 let podioMostrado = false;
 let participoEnAsamblea = false;
 let preguntaPreviaEstado = null;
+
+// KAHOOT Session State
+let kahootSessions = [];
+let selectedKahootSessionId = null;
+let kahootSessionListener = null;
 
 /* ── Utils ── */
 function toast(msg, tipo = "") {
@@ -92,6 +104,17 @@ async function iniciarEscucha() {
   await initAsambleaEngine();
   // El proyector NO llama claimHost(); solo muestra. El control lo toma el admin.
 
+  // Cargar sesiones KAHOOT
+  await cargarKahootSessions();
+
+  // KAHOOT meta (session info) - para actualizar UI cuando cambia la sesión activa
+  engineOn('meta', (state) => {
+    if (state.meta) {
+      // La sesión activa cambió, recargar lista para actualizar estados
+      cargarKahootSessions();
+    }
+  });
+
   // Conectados (para lobby)
   engineOn('conectados', (state) => {
     if (state.fase === 'lobby' || state.fase === 'countdown') {
@@ -132,6 +155,150 @@ async function iniciarEscucha() {
     }
   });
 }
+
+async function cargarKahootSessions() {
+  try {
+    kahootSessions = await listKahootSessions();
+    renderKahootSessionSelector();
+  } catch (e) {
+    console.error("Error cargando sesiones KAHOOT:", e);
+    toast("Error cargando KAHOOTs: " + e.message, "err");
+  }
+}
+
+function renderKahootSessionSelector() {
+  const select = document.getElementById("kahootSessionSelect");
+  const infoDiv = document.getElementById("kahootSessionInfo");
+  if (!select) return;
+
+  select.innerHTML = '<option value="">-- Seleccionar KAHOOT --</option>';
+
+  if (kahootSessions.length === 0) {
+    select.innerHTML += '<option value="" disabled>No hay sesiones KAHOOT preparadas</option>';
+    if (infoDiv) infoDiv.style.display = "none";
+    return;
+  }
+
+  // Find the active session if any
+  const activeSession = kahootSessions.find(s => normalizeKahootSessionState(s.estado) === 'activa');
+  const preparadaSession = kahootSessions.find(s => normalizeKahootSessionState(s.estado) === 'preparada');
+
+  // Default to active session, then preparada
+  const defaultSession = activeSession || preparadaSession || kahootSessions[0];
+
+  kahootSessions.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s.id;
+    const estado = normalizeKahootSessionState(s.estado);
+    const estadoLabel = estado === 'preparada' ? '🟡 Preparada' :
+                        estado === 'activa' ? '🟢 Activa' :
+                        estado === 'finalizada' ? '🔵 Finalizada' : estado;
+    opt.textContent = `${s.titulo} (${s.preguntas?.length || 0} preguntas) — ${estadoLabel}`;
+    if (s.id === defaultSession.id) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  if (defaultSession) {
+    selectedKahootSessionId = defaultSession.id;
+    select.value = defaultSession.id;
+    mostrarInfoKahootSession(defaultSession);
+  }
+
+  // Listen for changes
+  select.onchange = () => {
+    const sessionId = select.value;
+    if (sessionId) {
+      const session = kahootSessions.find(s => s.id === sessionId);
+      if (session) {
+        selectedKahootSessionId = sessionId;
+        mostrarInfoKahootSession(session);
+      }
+    } else {
+      selectedKahootSessionId = null;
+      if (infoDiv) infoDiv.style.display = "none";
+    }
+  };
+}
+
+function mostrarInfoKahootSession(session) {
+  const infoDiv = document.getElementById("kahootSessionInfo");
+  if (!infoDiv) return;
+
+  const estado = normalizeKahootSessionState(session.estado);
+  const estadoLabel = estado === 'preparada' ? '🟡 Preparada' :
+                      estado === 'activa' ? '🟢 Activa' :
+                      estado === 'finalizada' ? '🔵 Finalizada' : estado;
+
+  infoDiv.innerHTML = `
+    <strong>${esc(session.titulo)}</strong>${session.fechaAsamblea ? ` — ${session.fechaAsamblea}` : ''}<br>
+    Estado: ${estadoLabel} · Preguntas: ${session.preguntas?.length || 0}
+  `;
+  infoDiv.style.display = "block";
+}
+
+async function activarKahootSessionDesdeProyector() {
+  if (!selectedKahootSessionId) {
+    toast("Selecciona una sesión KAHOOT primero", "err");
+    return;
+  }
+
+  try {
+    const session = kahootSessions.find(s => s.id === selectedKahootSessionId);
+    if (!session) {
+      toast("Sesión no encontrada", "err");
+      return;
+    }
+
+    if (normalizeKahootSessionState(session.estado) === 'finalizada') {
+      toast("Esta sesión ya está finalizada", "err");
+      return;
+    }
+
+    toast("Activando sesión KAHOOT...", "");
+    await activateKahootSession(selectedKahootSessionId);
+    toast("✅ Sesión KAHOOT activada — lista en proyector y celulares", "ok");
+
+    // Reload sessions to update state
+    await cargarKahootSessions();
+  } catch (e) {
+    console.error("Error activando KAHOOT:", e);
+    toast("Error: " + e.message, "err");
+  }
+}
+
+async function finalizarKahootSessionDesdeProyector() {
+  if (!selectedKahootSessionId) {
+    toast("No hay sesión KAHOOT activa para finalizar", "err");
+    return;
+  }
+
+  const session = kahootSessions.find(s => s.id === selectedKahootSessionId);
+  if (!session || normalizeKahootSessionState(session.estado) !== 'activa') {
+    toast("No hay sesión KAHOOT activa para finalizar", "err");
+    return;
+  }
+
+  const ok = confirm(
+    "¿Finalizar el KAHOOT activo? Se guardará el snapshot histórico completo y se actualizará el ranking global."
+  );
+  if (!ok) return;
+
+  try {
+    toast("Finalizando KAHOOT...", "");
+    await finalizeKahootSession();
+    toast("🏁 KAHOOT finalizado · Snapshot histórico guardado · RankingGlobal actualizado", "ok");
+
+    // Reload sessions to update state
+    await cargarKahootSessions();
+  } catch (e) {
+    console.error("Error finalizando KAHOOT:", e);
+    toast("Error: " + e.message, "err");
+  }
+}
+
+// Expose functions globally for HTML onclick handlers
+window.activarKahootSessionDesdeProyector = activarKahootSessionDesdeProyector;
+window.finalizarKahootSessionDesdeProyector = finalizarKahootSessionDesdeProyector;
 
 function handleFaseChange(state) {
   limpiarTimer();
@@ -177,12 +344,37 @@ function actualizarBotonesAdmin(state) {
   const btnCerrar = document.getElementById("btnCerrar");
   const btnSiguiente = document.getElementById("btnSiguiente");
   const btnFinalizar = document.getElementById("btnFinalizar");
+  // KAHOOT buttons
+  const btnActivarKahoot = document.getElementById("btnActivarKahoot");
+  const btnFinalizarKahoot = document.getElementById("btnFinalizarKahoot");
+  const kahootControl = document.getElementById("kahootControl");
+  const kahootInfo = document.getElementById("kahootSessionInfo");
   const soyHost = isHost();
 
   // Ocultar todos primero
-  [btnRanking, btnLanzar, btnCerrar, btnSiguiente, btnFinalizar].forEach(b => {
+  [btnRanking, btnLanzar, btnCerrar, btnSiguiente, btnFinalizar, btnActivarKahoot, btnFinalizarKahoot].forEach(b => {
     if (b) b.style.display = "none";
   });
+
+  // KAHOOT session selector always visible for host
+  if (soyHost && kahootControl) {
+    kahootControl.style.display = "flex";
+  } else if (kahootControl) {
+    kahootControl.style.display = "none";
+  }
+
+  // Update KAHOOT buttons based on selected session state
+  if (soyHost && selectedKahootSessionId) {
+    const session = kahootSessions.find(s => s.id === selectedKahootSessionId);
+    if (session) {
+      const estado = normalizeKahootSessionState(session.estado);
+      if (estado === 'preparada') {
+        if (btnActivarKahoot) btnActivarKahoot.style.display = "inline-flex";
+      } else if (estado === 'activa') {
+        if (btnFinalizarKahoot) btnFinalizarKahoot.style.display = "inline-flex";
+      }
+    }
+  }
 
   if (soyHost) {
     switch (state.fase) {
