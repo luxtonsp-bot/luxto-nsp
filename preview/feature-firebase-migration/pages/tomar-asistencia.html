@@ -415,7 +415,7 @@
             const photoUrl = getPhotoUrl(data);
             const hasValidPhoto = isValidImageUrl(photoUrl);
             const avatarHtml = hasValidPhoto
-                ? `<img src="${photoUrl}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                ? `<img src="${photoUrl}" alt="${nombre}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
                 : '';
             const initialHtml = hasValidPhoto
                 ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:none; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
@@ -713,9 +713,11 @@
                     <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px;">
                         <div style="display:flex; align-items:center; gap:12px; flex:1;">
                             ${hasValidPhoto
-                                ? `<img src="${photoUrl}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">`
-                                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
-                            }
+                                ? `<img src="${photoUrl}" alt="${nombre}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                                : ''}
+                            ${!hasValidPhoto || hasValidPhoto
+                                ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:${hasValidPhoto ? 'none' : 'flex'}; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
+                                : ''}
                             <div>
                                 <div class="item-title">${nombre}</div>
                                 ${email ? `<div class="item-meta">${email}</div>` : ''}
@@ -804,8 +806,12 @@
             miembros.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
             // 3. Filtrar fechas que TENGAN DATOS en asistencia (no solo habilitadas en config)
+            // EXCLUIR fechas futuras (>= hoy en Lima) porque la asamblea no ha ocurrido aún
+            const hoyLima = getLimaDateStr();
             const fechasConDatos = [];
             for (const fecha of fechasAsambleas) {
+                // Solo incluir fechas pasadas (menores a hoy en Lima)
+                if (fecha >= hoyLima) continue;
                 const snap = await db.collection('asistencia').doc(anio).collection(fecha).limit(1).get();
                 if (!snap.empty) fechasConDatos.push(fecha);
             }
