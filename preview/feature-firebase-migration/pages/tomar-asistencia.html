@@ -17,12 +17,29 @@
     <script>
         function convertirUrlDrive(url) {
             if (!url) return "";
-            if (url.includes("drive.google.com/thumbnail")) return url;
+            // Si ya es thumbnail o URL directa, devolverla
+            if (url.includes("drive.google.com/thumbnail") || url.includes("uc?export=view")) return url;
+            // Extraer file ID de varios formatos de URL de Drive
             const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
                    || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
                    || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
-            if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w400";
+            if (m) return "https://drive.google.com/uc?export=view&id=" + m[1];
             return url;
+        }
+
+        function getPhotoUrl(memberData) {
+            // Prioridad: fotoThumb (URL directa) > fotoDriveId (convertir a URL directa)
+            if (memberData.fotoThumb && memberData.fotoThumb.startsWith('http')) {
+                return memberData.fotoThumb;
+            }
+            if (memberData.fotoDriveId) {
+                return "https://drive.google.com/uc?export=view&id=" + memberData.fotoDriveId;
+            }
+            return null;
+        }
+
+        function isValidImageUrl(url) {
+            return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:'));
         }
     </script>
 </head>
@@ -395,10 +412,7 @@
             const nombre = data.nombre || data.name || 'Sin nombre';
             const email = data.email || '';
             const initial = nombre.charAt(0).toUpperCase();
-            let photoUrl = data.fotoThumb;
-            if (!isValidImageUrl(photoUrl) && data.fotoDriveId) {
-                photoUrl = convertirUrlDrive(data.fotoDriveId);
-            }
+            const photoUrl = getPhotoUrl(data);
             const hasValidPhoto = isValidImageUrl(photoUrl);
             const avatarHtml = hasValidPhoto
                 ? `<img src="${photoUrl}" alt="${nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
@@ -688,8 +702,7 @@
                 const esTardanza = memberAttendance.esTardanza === true;
 
                 const initial = nombre.charAt(0).toUpperCase();
-                let photoUrl = memberData.fotoThumb;
-                if (!isValidImageUrl(photoUrl) && memberData.fotoDriveId) photoUrl = convertirUrlDrive(memberData.fotoDriveId);
+                const photoUrl = getPhotoUrl(memberData);
                 const hasValidPhoto = isValidImageUrl(photoUrl);
 
                 const estadoHtml = presente
@@ -839,8 +852,7 @@
             let html = '';
             resumenMiembros.forEach((m, i) => {
                 const initial = m.nombre.charAt(0).toUpperCase();
-                let photoUrl = m.fotoThumb;
-                if (!isValidImageUrl(photoUrl) && m.fotoDriveId) photoUrl = convertirUrlDrive(m.fotoDriveId);
+                const photoUrl = getPhotoUrl(m);
                 const hasValidPhoto = isValidImageUrl(photoUrl);
 
                 const colorPorcentaje = m.porcentaje >= 80 ? 'var(--ok)' : m.porcentaje >= 50 ? 'var(--y)' : 'var(--err)';
@@ -850,7 +862,7 @@
                         <div style="display:flex; align-items:center; gap:12px; flex:1;">
                             ${hasValidPhoto
                                 ? `<img src="${photoUrl}" alt="${m.nombre}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">`
-                                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
+                                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify_content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
                             }
                             <div>
                                 <div class="item-title">${m.nombre}</div>
