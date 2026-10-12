@@ -1,30 +1,30 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi dashboard — Luz de Cristo</title>
     <link
       rel="icon"
       href="https://luxtonsp-bot.github.io/luxto-nsp/favicon.ico"
-    />
+    >
     <link
       rel="icon"
       type="image/png"
       sizes="32x32"
       href="../assets/images/logo_luxto.png"
-    />
+    >
     <link
       rel="icon"
       type="image/png"
       sizes="16x16"
       href="../assets/images/logo_luxto.png"
-    />
-    <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png" />
+    >
+    <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
     <link
       href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
-    />
+    >
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
       :root {
@@ -1177,13 +1177,13 @@
               this.onerror = null;
               this.style.display = 'none';
             "
-          />
+          >
           <span class="topbar-logo-name">Luz de Cristo</span>
         </a>
         <div class="topbar-sep"></div>
         <div id="adminBtnWrap" style="display: none">
           <div class="dropdown" id="adminDropdown">
-            <button class="btn-admin" id="adminDropdownBtn">
+            <button class="btn-admin" id="adminDropdownBtn" type="button">
               ⚙️ Admin<span class="caret">▼</span>
             </button>
             <div class="dropdown-menu" id="adminDropdownMenu">
@@ -1207,15 +1207,16 @@
           <img
             id="topbarFoto"
             class="topbar-avatar"
+            src="../assets/images/logo_luxto.png"
             alt=""
             crossorigin="anonymous"
             onerror="
               this.onerror = null;
               this.style.display = 'none';
             "
-          />
+          >
         </div>
-        <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+        <button class="btn-logout" onclick="cerrarSesion()" type="button">⎋ Salir</button>
       </div>
     </header>
 
@@ -1252,7 +1253,7 @@
               this.onerror = null;
               this.src = '../assets/images/logo_luxto.png';
             "
-          />
+          >
           <label class="perfil-foto-btn" for="inputFoto" title="Cambiar foto"
             >✏️</label
           >
@@ -1261,7 +1262,7 @@
             id="inputFoto"
             accept="image/*"
             onchange="subirFoto(this)"
-          />
+          >
         </div>
         <div class="perfil-info">
           <div class="perfil-saludo">¡Hola! 👋</div>
@@ -1284,9 +1285,9 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <rect x="2" y="2" width="20" height="20" rx="5" />
-            <circle cx="12" cy="12" r="4" />
-            <circle cx="17.5" cy="6.5" r=".5" fill="currentColor" />
+            <rect x="2" y="2" width="20" height="20" rx="5" >
+            <circle cx="12" cy="12" r="4" >
+            <circle cx="17.5" cy="6.5" r=".5" fill="currentColor" >
           </svg>
           @luxto_nsp
         </a>
@@ -1395,7 +1396,7 @@
               id="txtSugerencia"
               placeholder="¿Qué tema te gustaría tratar en la próxima asamblea? Escríbelo aquí…"
             ></textarea>
-            <button class="btn-enviar" onclick="enviarSugerencia()">
+            <button class="btn-enviar" onclick="enviarSugerencia()" type="button">
               Enviar sugerencia →
             </button>
           </div>
@@ -1417,7 +1418,7 @@
             id="txtFeedback"
             placeholder="Cuéntanos qué te gustó o qué podríamos mejorar (opcional)…"
           ></textarea>
-          <button class="btn-enviar" onclick="enviarFeedback()">
+          <button class="btn-enviar" onclick="enviarFeedback()" type="button">
             Enviar feedback →
           </button>
         </div>
@@ -1469,7 +1470,7 @@
               class="tardanza-legend-dot"
               style="background: rgba(217, 64, 64, 0.8)"
             ></span>
-            > 10 min
+            &gt; 10 min
           </div>
         </div>
       </div>

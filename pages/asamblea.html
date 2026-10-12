@@ -398,11 +398,11 @@ body {
     <div class="topbar-sep"></div>
     <div class="topbar-user">
       <span id="topbarNombre">...</span>
-      <img id="topbarFoto" class="topbar-avatar" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" onerror="this.onerror=null;this.style.display='none'">
+      <img id="topbarFoto" class="topbar-avatar" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Foto de perfil" onerror="this.onerror=null;this.style.display='none'">
     </div>
     <!-- Botón proyector solo visible para admins (JS lo muestra) -->
     <a href="proyector.html" target="_blank" class="btn-proyector" id="btnProyector">🖥️ Proyector</a>
-    <button class="btn-volver" onclick="window.location.href='dashboard.html'">← Salir</button>
+    <button class="btn-volver" onclick="window.location.href='dashboard.html'" type="button">← Salir</button>
   </div>
 </div>
 
@@ -459,7 +459,7 @@ body {
   <div class="resultado-sub" id="resultSub">Muy bien</div>
   <div class="resultado-respuesta">La respuesta correcta era: <span id="resultRespuesta">—</span></div>
   <div class="resultado-pts" id="resultPts">+100 PTS</div>
-  <button class="siguiente-btn" onclick="volverAEsperar()">Siguiente →</button>
+  <button class="siguiente-btn" onclick="volverAEsperar()" type="button">Siguiente →</button>
 </div>
 
 <div class="screen" id="screenPodio">

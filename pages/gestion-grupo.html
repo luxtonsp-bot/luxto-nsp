@@ -27,7 +27,7 @@
     </a>
     <span class="topbar-badge">👥 Gestión</span>
     <div class="topbar-sep"></div>
-    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+    <button class="btn-logout" onclick="cerrarSesion()" type="button">⎋ Salir</button>
   </div>
 </header>
 
@@ -38,8 +38,8 @@
     <p class="section-desc">Marca a los perseverantes del próximo año, agrega nuevos integrantes y realiza el cierre académico del año.</p>
 
     <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'perseverantes')">Perseverantes y Nuevos</button>
-        <button class="tab-button" onclick="openTab(event, 'cierre-anio')">Cierre de Año</button>
+        <button class="tab-button active" onclick="openTab(event, 'perseverantes')" type="button">Perseverantes y Nuevos</button>
+        <button class="tab-button" onclick="openTab(event, 'cierre-anio')" type="button">Cierre de Año</button>
     </div>
 
     <div id="perseverantes" class="tab-content active">
@@ -92,7 +92,7 @@
                 <input type="number" id="year-to-close" min="2020" max="2030" value="2026">
             </div>
             <div style="margin-top:18px;">
-                <button id="close-year-button" class="btn btn-ok" style="padding:14px 28px; font-size:15px;">
+                <button id="close-year-button" class="btn btn-ok" style="padding:14px 28px; font-size:15px;" type="button">
                     🏁 Cerrar Año Académico
                 </button>
             </div>
