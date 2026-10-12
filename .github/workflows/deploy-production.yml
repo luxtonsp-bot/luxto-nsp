@@ -29,6 +29,7 @@ jobs:
           mkdir -p /tmp/sitio
           cp index.html /tmp/sitio/
           cp -r pages assets /tmp/sitio/
+          cp CNAME /tmp/sitio/
 
       - name: Publicar en la raíz de gh-pages
         run: |
