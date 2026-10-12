@@ -36,9 +36,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin gh-pages
           git checkout -B gh-pages origin/gh-pages
-          # Reemplazar la raíz entera, conservando preview/ y .nojekyll
+          # Reemplazar la raíz entera, conservando preview/, .nojekyll y CNAME
           find . -mindepth 1 -maxdepth 1 \
-            -not -name '.git' -not -name 'preview' -not -name '.nojekyll' \
+            -not -name '.git' -not -name 'preview' -not -name '.nojekyll' -not -name 'CNAME' \
             -exec rm -rf {} +
           cp -r /tmp/sitio/. .
           git add -A
