@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificación — Luz de Cristo</title>
+    <link rel="icon" href="https://luxtonsp-bot.github.io/luxto-nsp/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/images/logo_luxto.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/images/logo_luxto.png">
+    <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/portal.css">
+    <!-- Firebase imports (same as other pages) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <!-- html2canvas para imagen HD (scale 4x) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Shared permissions module -->
+    <script src="../assets/js/auth-permissions.js"></script>
+    <style>
+        /* Additional styles for planificacion */
+        .saturday-selector {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .saturday-selector label { font-weight: 600; color: var(--cream); }
+        .saturday-selector select {
+            flex: 1;
+            min-width: 160px;
+            padding: 10px 14px;
+            background: var(--bg3);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--cream);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+        }
+        .saturday-selector select:focus { outline: none; border-color: var(--o); }
+        #yearSelect { min-width: 100px; flex: 0 0 auto; }
+        .saturday-btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            transition: all .2s;
+        }
+        .saturday-btn-primary { background: var(--grad); color: var(--bg); }
+        .saturday-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px -4px rgba(245,197,24,.4); }
+        .saturday-btn-ghost { background: rgba(255,255,255,.06); color: var(--muted); border: 1px solid var(--border); }
+        .saturday-btn-ghost:hover { background: rgba(255,255,255,.1); color: var(--cream); }
+
+        .schema-editor {
+            margin-top: 20px;
+        }
+        .schema-editor textarea {
+            width: 100%;
+            min-height: 280px;
+            padding: 16px;
+            background: var(--bg3);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            color: var(--cream);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .schema-editor textarea:focus {
+            border-color: var(--o);
+            box-shadow: 0 0 0 3px rgba(196,112,58,.12);
+        }
+        .schema-editor .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .schema-editor .toolbar button {
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .schema-editor .toolbar button:hover {
+            background: rgba(255,255,255,.1);
+            color: var(--cream);
+        }
+        .schema-editor .toolbar button.active {
+            background: var(--grad);
+            color: var(--bg);
+            border-color: transparent;
+        }
+
+        .preview-container {
+            margin-top: 24px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--bg2);
+        }
+        .preview-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .preview-header h4 { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: var(--cream); margin: 0; }
+        .preview-content {
+            padding: 20px;
+            min-height: 300px;
+        }
+        .preview-placeholder {
+            text-align: center;
+            color: var(--muted);
+            padding: 40px 20px;
+        }
+        .preview-placeholder .icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+
+        /* Preview template styles (what gets rendered to image) */
+        .preview-template {
+            font-family: 'Outfit', sans-serif;
+            background: #FBF7EE;
+            color: #1c1814;
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 480px;
+            margin: 0 auto;
+            border: 1px solid #e8e2d4;
+        }
+        .preview-template .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #F5C518;
+        }
+        .preview-template .logo-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .preview-template .logo-group img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        .preview-template .logo-group .name {
+            font-family: 'Lora', serif;
+            font-size: 24px;
+            font-weight: 600;
+            color: #1c1814;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+        }
+        .preview-template .subtitle {
+            color: #a35a28;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .preview-template .section {
+            margin-bottom: 20px;
+        }
+        .preview-template .section-title {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: #a35a28;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .preview-template .info-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(196,112,58,.15);
+            align-items: flex-start;
+        }
+        .preview-template .info-row:last-child { border-bottom: none; }
+        .preview-template .info-label {
+            color: #5e554a;
+            font-weight: 500;
+            flex: 0 0 auto;
+            min-width: 100px;
+            white-space: nowrap;
+        }
+        .preview-template .info-value {
+            color: #1c1814;
+            font-weight: 600;
+            flex: 1 1 auto;
+            min-width: 0;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            text-align: right;
+        }
+        .preview-template .schema-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            line-height: 1.8;
+            font-size: 14px;
+            color: #1c1814;
+            background: rgba(245,197,24,.08);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(245,197,24,.2);
+        }
+        .preview-template .footer {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e8e2d4;
+            text-align: center;
+            font-size: 11px;
+            color: #5e554a;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .preview-template .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 8px;
+            flex-shrink: 0;
+        }
+        .preview-template .status-badge.active {
+            background: rgba(45,186,111,.15);
+            color: #2dba6f;
+            border: 1px solid rgba(45,186,111,.3);
+        }
+        .preview-template .status-badge.inactive {
+            background: rgba(212,136,26,.15);
+            color: #d4881a;
+            border: 1px solid rgba(212,136,26,.35);
+        }
+        .preview-template .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .preview-template .status-badge.active::before { background: #2dba6f; }
+        .preview-template .status-badge.inactive::before { background: #d4881a; }
+
+        @media (max-width: 780px) {
+            .preview-template { padding: 20px; }
+            .schema-editor textarea { min-height: 220px; }
+            .preview-template .info-label { min-width: 80px; font-size: 13px; }
+            .preview-template .info-value { font-size: 13px; }
+            .saturday-selector { flex-direction: column; align-items: stretch; gap: 10px; }
+            .saturday-selector label { text-align: left; }
+            .saturday-selector select { width: 100%; min-width: auto; }
+            .saturday-selector .saturday-btn { width: 100%; }
+            .preview-header { flex-direction: column; align-items: stretch; }
+            .preview-header > div { width: 100%; }
+            .preview-header button { width: 100%; }
+            .schema-editor .toolbar { flex-direction: column; }
+            .schema-editor .toolbar button { width: 100%; }
+        }
+        @media (max-width: 480px) {
+            .container { padding: 20px 12px 60px; }
+            .card { padding: 16px; }
+            .card-title { font-size: 16px; }
+            .schema-editor textarea { min-height: 180px; font-size: 13px; }
+            .preview-template { padding: 16px; max-width: 100%; }
+            .preview-template .logo-group .name { font-size: 20px; }
+            .preview-template .section-title { font-size: 16px; }
+            .preview-template .info-row { flex-direction: column; gap: 4px; }
+            .preview-template .info-value { text-align: left; min-width: auto; }
+            .preview-template .footer { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="topbar-inner">
+    <a href="dashboard.html" class="topbar-logo">
+      <img src="../assets/images/logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
+      <span class="topbar-logo-name">Luz de Cristo</span>
+    </a>
+    <span class="topbar-badge">📅 Planificación</span>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+  </div>
+</header>
+
+<main class="container">
+
+    <div class="section-eyebrow">Planificación</div>
+    <h1>Próxima Asamblea</h1>
+    <p class="section-desc">Selecciona el sábado, define los datos, escribe el esquema libremente y genera la imagen con el logo del grupo para compartir.</p>
+
+    <!-- Selector de Sábado -->
+    <div class="card">
+        <div class="card-title">🗓️ Seleccionar Sábado</div>
+        <div class="saturday-selector">
+            <label for="yearSelect">Año:</label>
+            <select id="yearSelect" onchange="generateSaturdayOptions()"></select>
+            <label for="dayTypeSelect">Tipo de día:</label>
+            <select id="dayTypeSelect" onchange="generateSaturdayOptions()">
+                <option value="saturday">Sábado</option>
+                <option value="weekday">Día de semana (asamblea/salida)</option>
+            </select>
+            <label for="weekdaySelect" id="weekdayLabel" style="display:none;">Día de la semana:</label>
+            <select id="weekdaySelect" style="display:none;" onchange="generateSaturdayOptions()">
+                <option value="1">Lunes</option>
+                <option value="2">Martes</option>
+                <option value="3">Miércoles</option>
+                <option value="4">Jueves</option>
+                <option value="5">Viernes</option>
+            </select>
+            <label for="saturdaySelect" id="dateSelectLabel">Sábado a planificar:</label>
+            <select id="saturdaySelect"></select>
+            <button class="saturday-btn saturday-btn-primary" id="loadSaturdayBtn" onclick="loadSelectedSaturday()">Cargar</button>
+            <button class="saturday-btn saturday-btn-ghost" id="addSaturdayBtn" onclick="addNewSaturday()">+ Nuevo día</button>
+        </div>
+        <p id="selectedSaturdayInfo" style="font-size: 13px; color: var(--muted); display: none;"></p>
+    </div>
+
+    <!-- Datos de la asamblea -->
+    <div class="card">
+        <div class="card-title">📋 Datos de la asamblea</div>
+        <form id="planForm">
+            <div class="form-grid">
+                <div>
+                    <label for="activar">Asamblea activa:</label>
+                    <select id="activar" name="activar">
+                        <option value="false">No</option>
+                        <option value="true">Sí</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="hora">Hora de inicio (HH:MM):</label>
+                    <input type="time" id="hora" name="hora">
+                </div>
+            </div>
+            <div style="margin-top:14px;">
+                <label for="tema">Tema:</label>
+                <input type="text" id="tema" name="tema" placeholder="Ej. Amor al prójimo">
+            </div>
+            <div style="margin-top:14px;">
+                <label for="categoria">Categoría del tema:</label>
+                <select id="categoria" name="categoria">
+                    <option value="">-- Seleccionar categoría --</option>
+                    <option value="doctrinal">📖 Doctrinal</option>
+                    <option value="espiritual">🙏 Espiritual</option>
+                    <option value="psicologico">🧠 Psicológico</option>
+                    <option value="sanacion">💚 Sanación</option>
+                    <option value="integracion">🤝 Integración</option>
+                    <option value="salida">🚌 Salida</option>
+                    <option value="actua">🎭 Actúa</option>
+                </select>
+            </div>
+            <div style="margin-top:14px;">
+                <label for="objetivo">Objetivo:</label>
+                <input type="text" id="objetivo" name="objetivo" placeholder="Ej. Reflexionar sobre el servicio">
+            </div>
+            <div style="margin-top:14px;">
+                <label for="ponente">Ponente(s):</label>
+                <input type="text" id="ponente" name="ponente" placeholder="Separados por coma. Ej. Juan Pérez, María García">
+            </div>
+            <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="submit" class="btn btn-primary">💾 Guardar planificación</button>
+                <button type="button" id="generateImageBtn" class="btn btn-ok">
+                    ⬇️ Generar y descargar esquema
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Esquema libre (editor de texto) -->
+    <div class="card schema-editor">
+        <div class="card-title">📝 Esquema de la asamblea <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">(texto libre: hora llegada, oración inicial, dinámica, cierre, etc.)</span></div>
+        <div class="toolbar">
+            <button type="button" onclick="insertTemplate('default')" title="Plantilla base">📄 Plantilla base</button>
+            <button type="button" onclick="insertTemplate('detailed')" title="Plantilla detallada">📋 Plantilla detallada</button>
+            <button type="button" onclick="insertTimestamp()" title="Insertar hora actual">🕐 Insertar hora</button>
+            <button type="button" onclick="clearSchema()" title="Limpiar esquema">🗑️ Limpiar</button>
+        </div>
+        <textarea id="schemaText" placeholder="Escribe aquí el esquema completo de la asamblea..."></textarea>
+    </div>
+
+    <!-- Vista previa -->
+    <div class="card preview-container" id="previewCard" style="display:none;">
+        <div class="preview-header">
+            <h4>🖼️ Vista previa del esquema (con logo del grupo)</h4>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary" onclick="generateAndDisplayPreview()">🔄 Actualizar vista previa</button>
+                <button class="btn btn-ok" onclick="downloadPreviewImage()">⬇️ Descargar imagen</button>
+            </div>
+        </div>
+        <div class="preview-content" id="previewContent">
+            <div class="preview-placeholder">
+                <div class="icon">🖼️</div>
+                <p>La vista previa se generará al hacer clic en "Actualizar vista previa" o al guardar.</p>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+    // Initialize Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+        authDomain: "luxto-nsp.firebaseapp.com",
+        projectId: "luxto-nsp",
+        storageBucket: "luxto-nsp.firebasestorage.app",
+        messagingSenderId: "3542836325",
+        appId: "1:3542836325:web:cf65cd50edcc431500d28c",
+        databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+    };
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // ── Toast (mismo estilo que el resto del proyecto) ──
+    function toast(msg, tipo = "") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "show " + tipo;
+        setTimeout(() => t.className = "", 3200);
+    }
+
+    function cerrarSesion() {
+        firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
+    }
+
+    // ── Variables de estado ──
+    let selectedSaturdayDate = null; // YYYY-MM-DD
+    let currentPreviewDataUrl = null;
+
+    // ── Zona horaria Lima (UTC-5) ──
+    const LIMA_OFFSET_MIN = -300; // UTC-5 en minutos (Perú no tiene DST)
+
+    function getLimaNow() {
+        // Retorna Date nativo (UTC real del navegador)
+        return new Date();
+    }
+
+    function getLimaDateStr(date) {
+        // date es Date en UTC, devuelve YYYY-MM-DD en zona Lima
+        return date.toLocaleDateString('es-ES', {
+            timeZone: 'America/Lima',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).split('/').reverse().join('-');
+    }
+
+    function formatLimaDate(date) {
+        // date es Date en UTC, formatea en zona Lima
+        return date.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: 'America/Lima'
+        });
+    }
+
+    function getSaturdaysForYear(year) {
+        // Devuelve array de Date (UTC medianoche) de todos los sábados del año en Lima
+        const saturdays = [];
+        // Usar Intl para obtener el día de la semana en Lima (short: 'Mon', 'Tue', etc.)
+        const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Lima', weekday: 'short' });
+        const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+        // 1 de enero a medianoche UTC
+        let d = new Date(Date.UTC(year, 0, 1));
+        // Avanzar al primer sábado en Lima
+        while (dayMap[fmt.format(d)] !== 6) {
+            d.setUTCDate(d.getUTCDate() + 1);
+        }
+        // Iterar todos los sábados del año
+        while (d.getUTCFullYear() === year) {
+            const utcMidnight = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+            saturdays.push(utcMidnight);
+            d.setUTCDate(d.getUTCDate() + 7);
+        }
+        return saturdays;
+    }
+
+    function generateYearOptions() {
+        const yearSelect = document.getElementById('yearSelect');
+        const limaNow = getLimaNow();
+        const currentYear = limaNow.getFullYear();
+        // Generar años: actual - 2 hasta actual + 5 (rango escalable, se actualiza cada año automáticamente)
+        for (let y = currentYear - 2; y <= currentYear + 5; y++) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+    }
+
+    function generateSaturdayOptions() {
+        const yearSelect = document.getElementById('yearSelect');
+        const dayTypeSelect = document.getElementById('dayTypeSelect');
+        const weekdaySelect = document.getElementById('weekdaySelect');
+        const weekdayLabel = document.getElementById('weekdayLabel');
+        const saturdaySelect = document.getElementById('saturdaySelect');
+        const year = parseInt(yearSelect.value);
+        const dayType = dayTypeSelect.value;
+        const limaNow = getLimaNow();
+        const todayLimaStr = getLimaDateStr(limaNow);
+
+        // Mostrar/ocultar selector de día de semana y actualizar label
+        const dateSelectLabel = document.getElementById('dateSelectLabel');
+        if (dayType === 'weekday') {
+            weekdaySelect.style.display = 'inline-block';
+            weekdayLabel.style.display = 'inline-block';
+            saturdaySelect.style.display = 'inline-block';
+            dateSelectLabel.textContent = 'Fecha a planificar:';
+        } else {
+            weekdaySelect.style.display = 'none';
+            weekdayLabel.style.display = 'none';
+            saturdaySelect.style.display = 'inline-block';
+            dateSelectLabel.textContent = 'Sábado a planificar:';
+        }
+
+        saturdaySelect.innerHTML = '';
+        let defaultIndex = 0;
+
+        if (dayType === 'weekday') {
+            // Generar días de semana para el año seleccionado
+            const weekday = parseInt(weekdaySelect.value);
+            const weekdays = getWeekdaysForYear(year, weekday);
+
+            weekdays.forEach((wd, i) => {
+                const dateStr = getLimaDateStr(wd);
+                const displayStr = formatLimaDate(wd);
+                const isNext = dateStr === todayLimaStr;
+                const isFuture = dateStr > todayLimaStr && defaultIndex === 0;
+
+                const option = document.createElement('option');
+                option.value = dateStr;
+                option.textContent = displayStr + (isNext ? ' (hoy)' : isFuture && defaultIndex === 0 ? ' (próximo)' : '');
+                if (isNext || (isFuture && defaultIndex === 0)) {
+                    option.selected = true;
+                    defaultIndex = i;
+                }
+                saturdaySelect.appendChild(option);
+            });
+        } else {
+            // Generar sábados (comportamiento original)
+            const saturdays = getSaturdaysForYear(year);
+
+            saturdays.forEach((sat, i) => {
+                const dateStr = getLimaDateStr(sat);
+                const displayStr = formatLimaDate(sat);
+                const isNext = dateStr === todayLimaStr;
+                const isFuture = dateStr > todayLimaStr && defaultIndex === 0;
+
+                const option = document.createElement('option');
+                option.value = dateStr;
+                option.textContent = displayStr + (isNext ? ' (hoy)' : isFuture && defaultIndex === 0 ? ' (próximo)' : '');
+                if (isNext || (isFuture && defaultIndex === 0)) {
+                    option.selected = true;
+                    defaultIndex = i;
+                }
+                saturdaySelect.appendChild(option);
+            });
+        }
+
+        // Actualizar selectedSaturdayDate al seleccionado por defecto
+        const selectedOpt = saturdaySelect.options[saturdaySelect.selectedIndex];
+        if (selectedOpt) selectedSaturdayDate = selectedOpt.value;
+    }
+
+    // Obtener todos los días de semana específicos de un año (ej. todos los lunes, martes, etc.)
+    function getWeekdaysForYear(year, targetWeekday) {
+        // targetWeekday: 1=Lunes, 2=Martes, ..., 5=Viernes (0=Domingo, 6=Sábado) - formato JS getDay
+        const days = [];
+        const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Lima', weekday: 'short' });
+        const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+        // 1 de enero a medianoche UTC
+        let d = new Date(Date.UTC(year, 0, 1));
+        // Avanzar al primer día objetivo en Lima
+        while (dayMap[fmt.format(d)] !== targetWeekday) {
+            d.setUTCDate(d.getUTCDate() + 1);
+        }
+        // Iterar todos los días de ese tipo en el año
+        while (d.getUTCFullYear() === year) {
+            const utcMidnight = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+            days.push(utcMidnight);
+            d.setUTCDate(d.getUTCDate() + 7);
+        }
+        return days;
+    }
+
+    // ── Cargar datos del sábado seleccionado ──
+    async function loadSelectedSaturday() {
+        const select = document.getElementById('saturdaySelect');
+        const dateStr = select.value;
+        if (!dateStr) {
+            toast('Selecciona un sábado', 'err');
+            return;
+        }
+        selectedSaturdayDate = dateStr;
+        await loadAssemblyData(dateStr);
+        updateSelectedSaturdayInfo(dateStr);
+    }
+
+    // ── Añadir nuevo sábado (crear doc vacío) ──
+    async function addNewSaturday() {
+        const select = document.getElementById('saturdaySelect');
+        const dateStr = select.value;
+        if (!dateStr) {
+            toast('Selecciona un día', 'err');
+            return;
+        }
+        selectedSaturdayDate = dateStr;
+        // Crear doc vacío en Firestore
+        try {
+            await db.collection('asambleas').doc(dateStr).set({
+                hayAsamblea: false,
+                horaInicio: '',
+                tema: { titulo: '', categoria: '', objetivo: '' },
+                ponentes: [],
+                esquema: '',
+                creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            toast('Día creado ✓', 'ok');
+            await loadAssemblyData(dateStr);
+            updateSelectedSaturdayInfo(dateStr);
+        } catch (err) {
+            console.error(err);
+            toast('Error al crear día', 'err');
+        }
+    }
+
+    function updateSelectedSaturdayInfo(dateStr) {
+        const infoEl = document.getElementById('selectedSaturdayInfo');
+        const date = new Date(dateStr + 'T00:00:00');
+        const displayStr = formatLimaDate(date);
+        infoEl.textContent = `Editando: ${displayStr}`;
+        infoEl.style.display = 'block';
+    }
+
+    // Función global para que se llame desde el onchange del selector de día de semana
+    function onDayTypeChange() {
+        generateSaturdayOptions();
+    }
+
+    // ── Cargar datos de asamblea desde Firestore ──
+    async function loadAssemblyData(dateStr) {
+        try {
+            const assemblyDoc = await db.collection('asambleas').doc(dateStr).get();
+            if (assemblyDoc.exists) {
+                const data = assemblyDoc.data();
+                document.getElementById('activar').value = data.hayAsamblea ? 'true' : 'false';
+                document.getElementById('hora').value = data.horaInicio || '';
+                document.getElementById('tema').value = data.tema?.titulo || '';
+                document.getElementById('categoria').value = data.tema?.categoria || '';
+                document.getElementById('objetivo').value = data.tema?.objetivo || '';
+                const ponentes = data.ponentes || [];
+                document.getElementById('ponente').value = ponentes.map(p => p.nombre).join(', ');
+                document.getElementById('schemaText').value = data.esquema || '';
+            } else {
+                // Limpiar formulario
+                document.getElementById('planForm').reset();
+                document.getElementById('schemaText').value = '';
+            }
+            // Mostrar preview card
+            document.getElementById('previewCard').style.display = 'block';
+            await generateAndDisplayPreview();
+        } catch (error) {
+            console.error("Error loading assembly data:", error);
+            toast('Error cargando datos', 'err');
+        }
+    }
+
+    // ── Guardar planificación ──
+    document.getElementById('planForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (!selectedSaturdayDate) {
+            toast('Selecciona un sábado primero', 'err');
+            return;
+        }
+
+        const activar = document.getElementById('activar').value === 'true';
+        const hora = document.getElementById('hora').value;
+        const tema = document.getElementById('tema').value;
+        const categoria = document.getElementById('categoria').value;
+        const objetivo = document.getElementById('objetivo').value;
+        const ponenteStr = document.getElementById('ponente').value;
+        const ponentes = ponenteStr.split(',').map(p => p.trim()).filter(p => p);
+        const esquema = document.getElementById('schemaText').value;
+
+        try {
+            await db.collection('asambleas').doc(selectedSaturdayDate).set({
+                hayAsamblea: activar,
+                horaInicio: hora,
+                tema: { titulo: tema, categoria: categoria, objetivo: objetivo },
+                ponentes: ponentes.map(n => ({ nombre: n })),
+                esquema: esquema,
+                actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            toast('Planificación guardada ✓', 'ok');
+            // Generate preview after saving
+            await generateAndDisplayPreview();
+        } catch (err) {
+            console.error(err);
+            toast('Error al guardar planificación', 'err');
+        }
+    });
+
+    // ── Plantillas de esquema ──
+    function insertTemplate(type) {
+        const textarea = document.getElementById('schemaText');
+        const hora = document.getElementById('hora').value || '18:30';
+        const tema = document.getElementById('tema').value || '[Tema]';
+
+        let template = '';
+        if (type === 'default') {
+            template = `${hora} - Llegada y registro de asistencia
+${addMinutes(hora, 15)} - Oración inicial
+${addMinutes(hora, 30)} - Dinámica de integración
+${addMinutes(hora, 60)} - Tema central: ${tema}
+${addMinutes(hora, 105)} - Reflexión grupal
+${addMinutes(hora, 135)} - Avisos y oración final
+${addMinutes(hora, 150)} - Cierre y convivencia`;
+        } else if (type === 'detailed') {
+            template = `${hora} - Llegada y registro de asistencia
+${addMinutes(hora, 10)} - Bienvenida y presentación
+${addMinutes(hora, 15)} - Oración inicial
+${addMinutes(hora, 25)} - Dinámica de integración / Rompehielos
+${addMinutes(hora, 45)} - Lectura bíblica / Motivación
+${addMinutes(hora, 55)} - Tema central: ${tema}
+${addMinutes(hora, 65)} - Desarrollo del tema
+${addMinutes(hora, 85)} - Trabajo en grupos / Reflexión personal
+${addMinutes(hora, 105)} - Compartir en plenaria
+${addMinutes(hora, 120)} - Aplicación práctica / Compromiso
+${addMinutes(hora, 130)} - Avisos de la semana
+${addMinutes(hora, 135)} - Oración final
+${addMinutes(hora, 145)} - Cierre y convivencia`;
+        }
+        textarea.value = template;
+        // Trigger preview update
+        generateAndDisplayPreview();
+    }
+
+    function addMinutes(timeStr, minutes) {
+        if (!timeStr) return 'HH:MM';
+        const [h, m] = timeStr.split(':').map(Number);
+        const date = new Date(0, 0, 0, h, m + minutes);
+        return date.toTimeString().slice(0, 5);
+    }
+
+    function insertTimestamp() {
+        const textarea = document.getElementById('schemaText');
+        const now = new Date();
+        const timeStr = now.toTimeString().slice(0, 5);
+        const pos = textarea.selectionStart;
+        textarea.value = textarea.value.slice(0, pos) + timeStr + ' - ' + textarea.value.slice(pos);
+        textarea.focus();
+        textarea.setSelectionRange(pos + 6, pos + 6);
+    }
+
+    function clearSchema() {
+        if (confirm('¿Limpiar todo el esquema?')) {
+            document.getElementById('schemaText').value = '';
+            generateAndDisplayPreview();
+        }
+    }
+
+    // ── Generar vista previa ──
+    document.getElementById('generateImageBtn').addEventListener('click', async () => {
+        await generateAndDisplayPreview();
+    });
+
+    async function generateAndDisplayPreview() {
+        try {
+            const previewContent = document.getElementById('previewContent');
+            previewContent.innerHTML = '<p style="color:var(--muted); text-align:center; padding:40px;">Generando vista previa...</p>';
+
+            // Create the preview template element (attached to DOM for html2canvas)
+            const templateElement = createPreviewTemplateElement();
+
+            // Append to body temporarily for rendering
+            templateElement.style.position = 'fixed';
+            templateElement.style.left = '-9999px';
+            templateElement.style.top = '0';
+            document.body.appendChild(templateElement);
+
+            // Wait a tick for fonts/styles to apply
+            await new Promise(r => requestAnimationFrame(r));
+
+            // Generate image using html2canvas at 2x for preview
+            const canvas = await html2canvas(templateElement, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#FBF7EE',
+                logging: false
+            });
+
+            // Remove temporary element
+            document.body.removeChild(templateElement);
+
+            // Convert to image and display
+            currentPreviewDataUrl = canvas.toDataURL('image/png');
+            previewContent.innerHTML = `
+                <img src="${currentPreviewDataUrl}" alt="Esquema de asamblea" style="max-width: 100%; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);">
+                <div style="margin-top: 12px; text-align: center; font-size: 13px; color: var(--muted);">
+                    Vista previa generada — Usa "Descargar imagen" para guardar (HD 4x)
+                </div>
+            `;
+
+        } catch (error) {
+            console.error("Error generating image:", error);
+            document.getElementById('previewContent').innerHTML =
+                '<p style="color: var(--err); text-align: center; padding: 20px;">Error al generar la vista previa: ' + error.message + '</p>';
+        }
+    }
+
+    function createPreviewTemplateElement() {
+        const div = document.createElement('div');
+        div.className = 'preview-template';
+
+        const fechaStr = selectedSaturdayDate || getLimaDateStr(getLimaNow());
+        // fechaStr ya está en YYYY-MM-DD de Lima, parsear como UTC medianoche
+        const date = new Date(fechaStr + 'T00:00:00');
+        const fechaFormateada = formatLimaDate(date);
+
+        const hora = document.getElementById('hora').value || 'Por definir';
+        const tema = document.getElementById('tema').value || 'Por definir';
+        const objetivo = document.getElementById('objetivo').value || 'Por definir';
+        const ponente = document.getElementById('ponente').value || 'Por definir';
+        const activar = document.getElementById('activar').value === 'true';
+        const categoria = document.getElementById('categoria').value;
+        const esquema = document.getElementById('schemaText').value || 'Esquema no definido';
+
+        // Mapear valor a label bonito
+        const categoriaLabels = {
+            'doctrinal': '📖 Doctrinal',
+            'espiritual': '🙏 Espiritual',
+            'psicologico': '🧠 Psicológico',
+            'sanacion': '💚 Sanación',
+            'integracion': '🤝 Integración',
+            'salida': '🚌 Salida',
+            'actua': '🎭 Actúa'
+        };
+        const categoriaLabel = categoria ? categoriaLabels[categoria] : 'No definida';
+
+        div.innerHTML = `
+            <div class="header">
+                <div class="logo-group">
+                    <img src="../assets/images/logo_luxto.png" alt="Logo Luz de Cristo" onerror="this.style.display='none'">
+                    <span class="name">Luz de Cristo</span>
+                </div>
+                <p class="subtitle">Asamblea Juvenil — #SábadoDeLuxto</p>
+                <span class="status-badge ${activar ? 'active' : 'inactive'}">
+                    ${activar ? '🟢 Asamblea Activa' : '⚫ Asamblea No Activa'}
+                </span>
+            </div>
+            <div class="section">
+                <div class="section-title">📅 Información General</div>
+                <div class="info-row">
+                    <span class="info-label">Fecha</span>
+                    <span class="info-value">${fechaFormateada}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hora de inicio</span>
+                    <span class="info-value">${hora}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Tema</span>
+                    <span class="info-value">${tema}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Categoría</span>
+                    <span class="info-value">${categoriaLabel}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Objetivo</span>
+                    <span class="info-value">${objetivo}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Ponente(s)</span>
+                    <span class="info-value">${ponente}</span>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">📝 Esquema Detallado</div>
+                <div class="schema-content">${esquema.replace(/</g, '<').replace(/>/g, '>')}</div>
+            </div>
+            <div class="footer">
+                Luz de Cristo - Parroquia Nuestra Señora de la Piedad<br>
+                Generado el ${getLimaNow().toLocaleDateString('es-ES', { timeZone: 'America/Lima' })}
+            </div>
+        `;
+        return div;
+    }
+
+    // Generar PNG alta resolución (scale 4x) para WhatsApp
+    async function generateHighResPNG() {
+        const templateElement = createPreviewTemplateElement();
+
+        // Append to body temporarily for rendering
+        templateElement.style.position = 'fixed';
+        templateElement.style.left = '-9999px';
+        templateElement.style.top = '0';
+        document.body.appendChild(templateElement);
+
+        // Wait a tick for fonts/styles to apply
+        await new Promise(r => requestAnimationFrame(r));
+
+        // Generate image using html2canvas at 4x for WhatsApp HD
+        const canvas = await html2canvas(templateElement, {
+            scale: 4,  // 4x = 1920px ancho, calidad HD para WhatsApp
+            useCORS: true,
+            backgroundColor: '#FBF7EE',
+            logging: false
+        });
+
+        // Remove temporary element
+        document.body.removeChild(templateElement);
+
+        return canvas.toDataURL('image/png', 1.0);
+    }
+
+    function downloadPreviewImage() {
+        if (!currentPreviewDataUrl) {
+            toast('Primero genera la vista previa', 'err');
+            return;
+        }
+        const fechaStr = selectedSaturdayDate || getLimaDateStr(getLimaNow());
+
+        // Generar PNG 4x HD para WhatsApp
+        generateHighResPNG().then(pngDataUrl => {
+            const filename = `esquema-asamblea-${fechaStr}.png`;
+            const link = document.createElement('a');
+            link.href = pngDataUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast('Imagen HD (4x) para WhatsApp descargada ✓', 'ok');
+        }).catch(err => {
+            console.error(err);
+            toast('Error generando imagen HD', 'err');
+        });
+    }
+
+    // ── Initialize ──
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
+            await AuthPermissions.initStaffPermissionCheck();
+            generateYearOptions();
+            generateSaturdayOptions();
+            // Load the selected Saturday by default
+            const select = document.getElementById('saturdaySelect');
+            selectedSaturdayDate = select.value;
+            await loadAssemblyData(selectedSaturdayDate);
+            updateSelectedSaturdayInfo(selectedSaturdayDate);
+        } else {
+            window.location.href = 'login.html';
+        }
+    });
+</script>
+</body>
+</html>

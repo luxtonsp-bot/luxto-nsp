@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reconciliación Completa - Luxto NSP</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #eee; max-width: 900px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 5px; background: #2dba6f; border: none; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        button.secondary { background: #d4881a; }
+        button.danger { background: #e03c3c; }
+        #log { background: #0f0f23; padding: 15px; border-radius: 8px; height: 400px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.4; }
+        .ok { color: #7fe8aa; } .warn { color: #f5c518; } .err { color: #ff6b6b; }
+        .stats { display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
+        .stat { background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px; min-width: 120px; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #2dba6f; }
+        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Reconciliación Completa Excel → Firestore</h1>
+    <p>Esta página migra TODA la asistencia histórica del Excel, fotos, y recalcula totales.</p>
+
+    <div class="stats">
+        <div class="stat"><div class="stat-value" id="s-mapped">-</div><div class="stat-label">Mapeados</div></div>
+        <div class="stat"><div class="stat-value" id="s-dates">-</div><div class="stat-label">Fechas</div></div>
+        <div class="stat"><div class="stat-value" id="s-written">-</div><div class="stat-label">Escritos</div></div>
+        <div class="stat"><div class="stat-value" id="s-photos">-</div><div class="stat-label">Fotos</div></div>
+        <div class="stat"><div class="stat-value" id="s-totals">-</div><div class="stat-label">Totales</div></div>
+    </div>
+
+    <button id="btn-start" onclick="start()">🚀 Iniciar Reconciliación</button>
+    <button id="btn-verify" class="secondary" onclick="verify()" disabled>🔍 Verificar</button>
+    <button id="btn-clear" onclick="clearLog()">🗑️ Limpiar Log</button>
+
+    <div id="log"></div>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+            authDomain: "luxto-nsp.firebaseapp.com",
+            projectId: "luxto-nsp",
+            storageBucket: "luxto-nsp.firebasestorage.app",
+            messagingSenderId: "3542836325",
+            appId: "1:3542836325:web:cf65cd50edcc431500d28c",
+            databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const logEl = document.getElementById('log');
+        function log(msg, cls = '') { logEl.innerHTML += `<div class="${cls}">${msg}</div>`; logEl.scrollTop = logEl.scrollHeight; }
+        function setStat(id, val) { document.getElementById(id).textContent = val; }
+
+        // CSV data embedded (se cargan via fetch)
+        let excelMembers = [], excelAttendance = [], attendanceHeaders = [], fechaColumns = [];
+        let memberMap = new Map(), asistenciaPorUid = new Map();
+        let firestoreMembers = new Map(), firestoreMembersByName = new Map();
+
+        function convertirUrlDrive(url) {
+            if (!url) return "";
+            if (url.includes("drive.google.com/thumbnail")) return url;
+            const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+            if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w400";
+            return url;
+        }
+
+        function parseExcelDate(cell) {
+            if (!cell) return null;
+            const str = String(cell).trim();
+            if (/^\d{2}\/\d{2}$/.test(str)) { const [d, m] = str.split('/'); return `2026-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+            if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.split(' ')[0];
+            return null;
+        }
+
+        function parseCsv(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(',');
+                if (cols.length < headers.length) continue;
+                const row = {}; headers.forEach((h, idx) => row[h] = (cols[idx] || '').trim()); rows.push(row);
+            }
+            return rows;
+        }
+
+        async function loadCsvs() {
+            log('📥 Cargando CSVs exportados...');
+            const [membersResp, attendanceResp] = await Promise.all([
+                fetch('/migration/sheets_export/members.csv'),
+                fetch('/migration/sheets_export/attendance.csv')
+            ]);
+            const membersText = await membersResp.text();
+            const attendanceText = await attendanceResp.text();
+            excelMembers = parseCsv(membersText);
+            excelAttendance = parseCsv(attendanceText);
+            attendanceHeaders = attendanceText.split('\n')[0].split(',').map(h => h.trim());
+
+            // Detectar columnas de fecha
+            for (let i = 1; i < attendanceHeaders.length - 1; i++) {
+                const fecha = parseExcelDate(attendanceHeaders[i]);
+                if (fecha) fechaColumns.push({ index: i, fecha });
+            }
+
+            log(`📊 Excel members: ${excelMembers.length} | attendance: ${excelAttendance.length} | fechas: ${fechaColumns.length}`, 'ok');
+            fechaColumns.forEach(fc => log(`   ${fc.fecha}`));
+        }
+
+        async function loadFirestoreMembers() {
+            log('🔥 Leyendo members de Firestore...');
+            const snap = await db.collection('members').get();
+            snap.forEach(doc => {
+                const data = doc.data();
+                if (data.email) firestoreMembers.set(data.email.toLowerCase().trim(), { uid: doc.id, data });
+                if (data.nombre) firestoreMembersByName.set(data.nombre.toLowerCase().trim(), { uid: doc.id, data });
+            });
+            log(`🔥 Firestore: ${firestoreMembers.size} con email, ${firestoreMembersByName.size} con nombre`, 'ok');
+        }
+
+        async function mapMembers() {
+            log('🔗 Mapeando Excel → Firestore...');
+            let mapped = 0, unmapped = 0;
+            for (const em of excelMembers) {
+                const excelNombre = (em['Nombres '] || '').trim();
+                const excelEmail = (em['Correo'] || '').trim().toLowerCase();
+                const excelFoto = (em['Codigo Foto'] || '').trim();
+                const excelUid = (em['Columna 1'] || '').trim();
+                if (!excelNombre) continue;
+
+                let match = null;
+                if (excelEmail && firestoreMembers.has(excelEmail)) match = firestoreMembers.get(excelEmail);
+                else if (firestoreMembersByName.has(excelNombre.toLowerCase())) match = firestoreMembersByName.get(excelNombre.toLowerCase());
+                else if (excelUid) { const doc = await db.collection('members').doc(excelUid).get(); if (doc.exists) match = { uid: doc.id, data: doc.data() }; }
+
+                if (match) {
+                    let fotoDriveId = '';
+                    if (excelFoto.includes('drive.google.com')) { const m = excelFoto.match(/[?&]id=([a-zA-Z0-9_-]{20,})/); if (m) fotoDriveId = m[1]; }
+                    memberMap.set(excelNombre, { uid: match.uid, email: excelEmail, fotoThumb: excelFoto.startsWith('http') ? excelFoto : '', fotoDriveId });
+                    mapped++;
+                } else { log(`⚠️ Sin mapear: "${excelNombre}" (email: ${excelEmail || 'N/A'})`, 'warn'); unmapped++; }
+            }
+            log(`✅ Mapeados: ${mapped} | ⚠️ Sin mapear: ${unmapped}`, mapped > 0 ? 'ok' : 'err');
+            setStat('s-mapped', mapped);
+        }
+
+        async function migrateAttendance() {
+            log('\n📝 Migrando asistencia histórica...');
+            let totalEscritos = 0;
+            for (const fc of fechaColumns) {
+                const fecha = fc.fecha, colIndex = fc.index;
+                let escritosFecha = 0;
+                for (const row of excelAttendance) {
+                    const excelNombre = (row['Nombre'] || '').trim();
+                    if (!excelNombre) continue;
+                    const mapEntry = memberMap.get(excelNombre);
+                    if (!mapEntry) continue;
+                    const valor = parseFloat(row[attendanceHeaders[colIndex]] || '0');
+                    if (valor >= 1) {
+                        const uid = mapEntry.uid;
+                        await db.collection('asistencia').doc('2026').collection(fecha).doc(uid).set({
+                            uid, presente: true, fecha,
+                            timestamp: firebase.firestore.Timestamp.fromDate(new Date(fecha + 'T16:00:00-05:00')),
+                            tardanzaMinutos: 0, esTardanza: false
+                        }, { merge: true });
+                        if (!asistenciaPorUid.has(uid)) asistenciaPorUid.set(uid, new Set());
+                        asistenciaPorUid.get(uid).add(fecha);
+                        escritosFecha++; totalEscritos++;
+                    }
+                }
+                log(`   ${fecha}: ${escritosFecha} registros`);
+            }
+            log(`\n✅ Total asistencia migrada: ${totalEscritos} documentos`, 'ok');
+            setStat('s-written', totalEscritos); setStat('s-dates', fechaColumns.length);
+        }
+
+        async function migratePhotos() {
+            log('\n🖼️  Migrando fotos a members...');
+            let fotosActualizadas = 0;
+            for (const [excelNombre, mapEntry] of memberMap) {
+                const { uid, fotoThumb, fotoDriveId } = mapEntry;
+                if (fotoThumb || fotoDriveId) {
+                    await db.collection('members').doc(uid).update({ fotoThumb: fotoThumb || firebase.firestore.FieldValue.delete(), fotoDriveId: fotoDriveId || firebase.firestore.FieldValue.delete() });
+                    fotosActualizadas++;
+                }
+            }
+            log(`✅ Fotos actualizadas: ${fotosActualizadas}`, 'ok');
+            setStat('s-photos', fotosActualizadas);
+        }
+
+        async function recalcTotals() {
+            log('\n🔢 Recalculando asistenciasTotales...');
+            let totalesActualizados = 0;
+            for (const [uid, fechasSet] of asistenciaPorUid) {
+                const total = fechasSet.size;
+                await db.collection('members').doc(uid).update({ asistenciasTotales: total, ultimaAsistencia: Array.from(fechasSet).sort().pop() || null });
+                totalesActualizados++; log(`   ${uid}: ${total} asistencias totales`);
+            }
+            // Members sin historial → 0
+            const allMembersSnap = await db.collection('members').get();
+            for (const doc of allMembersSnap.docs) {
+                if (!asistenciaPorUid.has(doc.id)) {
+                    await doc.ref.update({ asistenciasTotales: 0, ultimaAsistencia: null });
+                    totalesActualizados++;
+                }
+            }
+            log(`\n✅ Totales recalculados: ${totalesActualizados} miembros`, 'ok');
+            setStat('s-totals', totalesActualizados);
+        }
+
+        async function verify() {
+            log('\n🔍 Verificación final...');
+            const testNames = ['Bryan Ballon', 'Diego García', 'Gianfranco Camones', 'Maje Roncal', 'Paolo Alfaro', 'Ricardo Mantilla', 'Ricardo Castañeda'];
+            for (const nombre of testNames) {
+                const mapEntry = memberMap.get(nombre);
+                if (mapEntry) {
+                    const doc = await db.collection('members').doc(mapEntry.uid).get();
+                    const data = doc.data();
+                    const asistio = asistenciaPorUid.get(mapEntry.uid)?.size || 0;
+                    log(`   ${nombre}: asistenciasTotales=${data.asistenciasTotales}, calculado=${asistio}, foto=${data.fotoThumb ? '✅' : '❌'}`, 'ok');
+                } else { log(`   ${nombre}: NO MAPEADO`, 'warn'); }
+            }
+        }
+
+        async function start() {
+            document.getElementById('btn-start').disabled = true;
+            logEl.innerHTML = '';
+            memberMap.clear(); asistenciaPorUid.clear(); firestoreMembers.clear(); firestoreMembersByName.clear();
+            setStat('s-mapped', '-'); setStat('s-dates', '-'); setStat('s-written', '-'); setStat('s-photos', '-'); setStat('s-totals', '-');
+
+            try {
+                await loadCsvs();
+                await loadFirestoreMembers();
+                await mapMembers();
+                await migrateAttendance();
+                await migratePhotos();
+                await recalcTotals();
+                log('\n🎉 ¡RECONCILIACIÓN COMPLETA!', 'ok');
+                document.getElementById('btn-verify').disabled = false;
+            } catch (e) { log('\n❌ ERROR: ' + e.message, 'err'); console.error(e); }
+            document.getElementById('btn-start').disabled = false;
+        }
+
+        function clearLog() { logEl.innerHTML = ''; }
+
+        // Auto-load CSVs on page load
+        loadCsvs().catch(e => log('❌ Error cargando CSVs: ' + e.message, 'err'));
+    </script>
+</body>
+</html>

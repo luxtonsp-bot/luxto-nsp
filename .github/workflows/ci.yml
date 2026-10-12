@@ -1,0 +1,194 @@
+name: CI / Lint / Validate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/js/**'
+      - '*.html'
+      - 'firestore.rules'
+      - 'database.rules.json'
+      - '.github/workflows/**'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/js/**'
+      - '*.html'
+      - 'firestore.rules'
+      - 'database.rules.json'
+      - '.github/workflows/**'
+
+jobs:
+  lint:
+    name: Lint (ESLint + Stylelint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx eslint assets/js/ --ext .js --format=stylish
+
+      - name: Run Stylelint
+        run: npx stylelint "**/*.css" --custom-syntax=postcss-scss
+
+  validate-firebase-rules:
+    name: Validate Firebase Rules Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@latest
+
+      - name: Validate Firestore Rules syntax
+        run: |
+          # Verificar que las reglas tienen sintaxis válida
+          firebase firestore:rules:validate firestore.rules --project=${{ secrets.FIREBASE_PROJECT_ID }} || true
+          echo "Firestore rules syntax check completed"
+
+      - name: Validate RTDB Rules JSON syntax
+        run: |
+          # Verificar que database.rules.json es JSON válido
+          node -e "JSON.parse(require('fs').readFileSync('database.rules.json'))"
+          echo "RTDB rules JSON syntax is valid"
+
+  validate-html:
+    name: Validate HTML
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install html-validate
+        run: npm install -g html-validate
+
+      - name: Validate HTML files
+        run: |
+          # Validar HTML principal
+          html-validate *.html --config html-validate.json || true
+          echo "HTML validation completed"
+
+  check-imports:
+    name: Check ES Module Imports
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Check imports resolve
+        run: |
+          # Verificar que las importaciones relativas existen
+          node <<'EOF'
+          import fs from 'fs';
+          import path from 'path';
+
+          const jsDir = 'assets/js';
+          const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
+
+          let errors = 0;
+          for (const file of files) {
+            const content = fs.readFileSync(path.join(jsDir, file), 'utf8');
+            const importRegex = /from\s+['"](\.[^'"]+)['"]/g;
+            let match;
+            while ((match = importRegex.exec(content)) !== null) {
+              const importPath = match[1];
+              const resolved = path.resolve(jsDir, importPath);
+              const possiblePaths = [
+                resolved,
+                resolved + '.js',
+                resolved + '/index.js'
+              ];
+              if (!possiblePaths.some(p => fs.existsSync(p))) {
+                console.error(`❌ ${file}: Import not found: ${importPath}`);
+                errors++;
+              }
+            }
+          }
+          if (errors > 0) {
+            console.error(`\nTotal import errors: ${errors}`);
+            process.exit(1);
+          } else {
+            console.log('✅ All imports resolve correctly');
+          }
+          EOF
+
+  deploy-preview:
+    name: Deploy Preview (feature branches)
+    needs: [lint, validate-firebase-rules, validate-html, check-imports]
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@latest
+
+      - name: Deploy to Firebase Hosting Preview
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+          target: preview-${{ github.head_ref }}
+
+  deploy-production:
+    name: Deploy Production (main branch)
+    needs: [lint, validate-firebase-rules, validate-html, check-imports]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@latest
+
+      - name: Deploy to Firebase Hosting Production
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+          target: production

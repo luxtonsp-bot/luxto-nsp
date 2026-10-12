@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<link rel="icon" href="https://luxtonsp-bot.github.io/luxto-nsp/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/images/logo_luxto.png">
+<link rel="icon" type="image/png" sizes="16x16" href="../assets/images/logo_luxto.png">
+<link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
 <title>Modo Asamblea — Luz de Cristo</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
@@ -24,7 +28,7 @@
   --shadow:    0 8px 32px -8px rgba(0,0,0,.4);
   --shadow-lg: 0 24px 64px -16px rgba(0,0,0,.6);
   --t: .3s cubic-bezier(.4,0,.2,1);
-  --spring: .55s cubic-bezier(.34,1.4,.64,1);
+  --spring: .55s cubic-bezier(0.19,1,0.22,1);
 }
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html, body { height:100%; }
@@ -116,7 +120,7 @@ body {
   font-size:14px; font-weight:600; color:var(--muted);
 }
 .dot-anim { display:flex; gap:5px; align-items:center; }
-.dot-anim span { width:6px; height:6px; border-radius:50%; background:var(--y); animation: dotBounce 1.4s ease-in-out infinite; }
+.dot-anim span { width:6px; height:6px; border-radius:50%; background:var(--y); animation: none; }
 .dot-anim span:nth-child(2){animation-delay:.2s;}
 .dot-anim span:nth-child(3){animation-delay:.4s;}
 @keyframes dotBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
@@ -126,7 +130,7 @@ body {
     margin-top:24px; padding:16px 20px;
     background:rgba(255,255,255,.04); border:1px solid var(--border);
     border-radius:16px; max-width:360px; width:100%;
-    animation:fadeUp .5s .3s cubic-bezier(.34,1.4,.64,1) both;
+    animation:fadeUp .5s .3s cubic-bezier(0.19,1,0.22,1) both;
   }
   .conectados-header{
     display:flex; align-items:center; gap:10px; margin-bottom:12px;
@@ -149,7 +153,7 @@ body {
   .conectado-foto{width:36px; height:36px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.1); background:var(--bg3); flex-shrink:0}
   .conectado-nombre{flex:1; font-size:13px; font-weight:600; color:var(--cream); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .conectado-status{font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--ok); display:flex; align-items:center; gap:4px}
-  .conectado-status::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--ok); animation:blink 1.5s infinite}
+  .conectado-status::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--ok); opacity:1;}
 
   /* ── PANTALLA PREGUNTA ── */
 #screenPregunta { justify-content:flex-start; padding-top:72px; }
@@ -161,7 +165,7 @@ body {
 .timer-fill { fill:none; stroke:var(--y); stroke-width:4; stroke-linecap:round; stroke-dasharray:138.2; stroke-dashoffset:0; transition:stroke-dashoffset 1s linear, stroke .5s; }
 .timer-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:22px; color:white; letter-spacing:1px; }
 .tiempo-bar-wrap { width:100%; height:5px; background:rgba(255,255,255,.07); border-radius:5px; overflow:hidden; margin-bottom:20px; }
-.tiempo-bar { height:100%; background:var(--y); border-radius:5px; transition:width 1s linear, background .5s; }
+.tiempo-bar { height:100%; background:var(--y); border-radius:5px; transition:transform 1s linear, background .5s; transform-origin:left; }
 .pregunta-txt { font-family:'Lora',serif; font-size:clamp(18px,3.5vw,28px); font-weight:600; line-height:1.3; color:var(--cream); margin-bottom:10px; text-align:center; width:100%; }
 
 /* ── HINT "Mira el proyector" ── */
@@ -181,7 +185,7 @@ body {
 .opcion-btn {
   padding:0; border-radius:20px; border:2px solid transparent;
   cursor:pointer; text-align:center;
-  transition:all .2s cubic-bezier(.34,1.4,.64,1);
+  transition:all .2s cubic-bezier(0.19,1,0.22,1);
   position:relative; overflow:hidden;
   aspect-ratio:1;
   display:flex; flex-direction:column;
@@ -220,7 +224,7 @@ body {
 .opcion-btn.incorrecto .opcion-letra-big { color:rgba(255,255,255,.3)!important; }
 
 /* ── RESULTADO ── */
-.resultado-emoji { font-size:64px; margin-bottom:14px; animation:popIn .5s cubic-bezier(.34,1.4,.64,1) both; }
+.resultado-emoji { font-size:64px; margin-bottom:14px; animation:popIn .5s cubic-bezier(0.19,1,0.22,1) both; }
 @keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 .resultado-titulo { font-family:'Lora',serif; font-size:clamp(28px,6vw,46px); font-weight:600; letter-spacing:-.01em; margin-bottom:8px; }
 .resultado-sub { font-size:15px; color:var(--muted); margin-bottom:20px; }
@@ -299,12 +303,84 @@ body {
 #toast.show  { opacity:1; transform:translateX(-50%) translateY(0); }
 #toast.ok    { border-color:var(--ok);  color:#7fe8aa; }
 #toast.err   { border-color:var(--err); color:#f08080; }
-@media(max-width:500px) {
+@media(max-width:780px) {
+  .topbar-inner { height:56px; padding:0 16px; }
+  .topbar-logo-name { font-size:15px; }
+  .btn-volver { padding:6px 12px; font-size:11px; }
+  .btn-proyector { display:none !important; } /* Hide on mobile - takes too much space */
+  .screen { padding:72px 16px 40px; max-width:100%; }
+  .screen-title { font-size:clamp(26px,6vw,42px); }
+  .screen-sub { font-size:15px; margin-bottom:24px; }
+  .waiting-icon { font-size:56px; }
+  .waiting-pill { padding:12px 20px; font-size:13px; }
+  .conectados-panel { max-width:100%; padding:14px 16px; }
+  .conectado-foto { width:32px; height:32px; }
+  .conectado-nombre { font-size:12px; }
+
+  /* Pregunta screen */
+  #screenPregunta { padding-top:64px; }
+  .pregunta-header { flex-wrap:wrap; justify-content:center; gap:12px; }
+  .timer-wrap { width:50px; height:50px; }
+  .timer-num { font-size:18px; }
+  .tiempo-bar-wrap { height:4px; }
+  .pregunta-txt { font-size:clamp(16px,4vw,24px); margin-bottom:8px; }
+  .proyector-hint { padding:6px 14px; font-size:11px; margin-bottom:16px; }
   .opciones-grid { grid-template-columns:1fr 1fr; gap:10px; }
-  .screen { padding-top:68px; }
+  .opcion-btn { aspect-ratio:1; min-height:80px; }
+  .opcion-letra-big { font-size:clamp(36px,10vw,56px); }
+
+  /* Resultado screen */
+  .resultado-emoji { font-size:56px; }
+  .resultado-titulo { font-size:clamp(24px,5vw,36px); }
+  .resultado-respuesta { padding:12px 16px; font-size:14px; max-width:100%; }
+  .resultado-pts { font-size:28px; }
+  .siguiente-btn { padding:12px 28px; font-size:15px; }
+
+  /* Podio screen */
+  #screenPodio { padding-top:72px; padding-bottom:32px; }
+  .podio-top3 { gap:8px; margin:24px 0 20px; }
   .podio-lugar.pos-1 .podio-foto { width:76px; height:76px; }
   .podio-lugar.pos-2 .podio-foto { width:62px; height:62px; }
   .podio-lugar.pos-3 .podio-foto { width:56px; height:56px; }
+  .podio-nombre { font-size:12px; max-width:80px; }
+  .podio-puntos { font-size:16px; }
+  .podio-lugar.pos-1 .podio-puntos { font-size:20px; }
+  .podio-pedestal { padding-top:8px; }
+  .podio-lugar.pos-1 .podio-pedestal { height:78px; }
+  .podio-lugar.pos-2 .podio-pedestal { height:58px; }
+  .podio-lugar.pos-3 .podio-pedestal { height:44px; }
+  .podio-num { font-size:24px; }
+  .ranking-titulo { font-size:16px; }
+  .rank-item { padding:10px 12px; gap:10px; }
+  .rank-foto { width:34px; height:34px; }
+  .rank-nombre { font-size:13px; }
+  .rank-pts { font-size:18px; }
+  .podio-actions { flex-direction:column; gap:10px; }
+  .btn-dashboard-back { width:100%; justify-content:center; padding:14px 24px; }
+
+  /* Fin screen */
+  #screenFin { padding-top:72px; }
+  .fin-stars { font-size:36px; }
+  .fin-score-num { font-size:52px; }
+  .fin-score { padding:20px 28px; }
+
+  /* Toast */
+  #toast { bottom:16px; left:16px; right:16px; transform:none; border-radius:12px; text-align:center; }
+  #toast.show { transform:none; }
+}
+
+@media(max-width:480px) {
+  .opciones-grid { grid-template-columns:1fr 1fr; gap:8px; }
+  .opcion-btn { min-height:70px; }
+  .opcion-letra-big { font-size:clamp(32px,9vw,48px); }
+  .podio-lugar.pos-1 .podio-foto { width:68px; height:68px; }
+  .podio-lugar.pos-2 .podio-foto { width:56px; height:56px; }
+  .podio-lugar.pos-3 .podio-foto { width:50px; height:50px; }
+  .podio-lugar.pos-1 .podio-pedestal { height:70px; }
+  .podio-lugar.pos-2 .podio-pedestal { height:52px; }
+  .podio-lugar.pos-3 .podio-pedestal { height:40px; }
+  .rank-item { padding:8px 10px; }
+  .conectados-lista { max-height:150px; }
 }
 </style>
 </head>
@@ -322,7 +398,7 @@ body {
     <div class="topbar-sep"></div>
     <div class="topbar-user">
       <span id="topbarNombre">...</span>
-      <img src="" id="topbarFoto" class="topbar-avatar" onerror="this.onerror=null;this.style.display='none'">
+      <img id="topbarFoto" class="topbar-avatar" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" onerror="this.onerror=null;this.style.display='none'">
     </div>
     <!-- Botón proyector solo visible para admins (JS lo muestra) -->
     <a href="proyector.html" target="_blank" class="btn-proyector" id="btnProyector">🖥️ Proyector</a>
@@ -414,468 +490,6 @@ body {
 
 <div id="toast"></div>
 
-<script type="module">
-import { initializeApp }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged }
-                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, onValue, set, serverTimestamp, onDisconnect }
-                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey:            "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
-  authDomain:        "luxto-nsp.firebaseapp.com",
-  projectId:         "luxto-nsp",
-  storageBucket:     "luxto-nsp.firebasestorage.app",
-  messagingSenderId: "3542836325",
-  appId:             "1:3542836325:web:cf65cd50edcc431500d28c",
-  databaseURL:       "https://luxto-nsp-default-rtdb.firebaseio.com"
-};
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getDatabase(app);
-const API  = "https://script.google.com/macros/s/AKfycbykddHb1fYX7TOK6tt6Dx11f_SDjJOcFawZbjAjgQn7oJ9Zj0Jm8IWJ1BvMX_XuGOgK6g/exec";
-
-const ADMINS = [
-  "henry.alfaro1@unmsm.edu.pe",
-  "paolosotil97@gmail.com",
-  "jorgediego.123.2002@gmail.com",
-  "gianfracamones@gmail.com",
-  "alvarorodrigosalazar.2001@gmail.com"
-];
-
-let usuarioActual    = null;
-let nombreActual     = "";
-let fotoActual       = "";
-let fotoOriginal     = "";
-let puntosTotal      = 0;
-let preguntaActualId = null;
-let timerInterval    = null;
-let tiempoRestante   = 0;
-let respondioActual  = false;
-let tiempoInicioResp = 0;
-let podioMostrado    = false;
-let participoEnAsamblea = false;
-let preguntaPreviaEstado = null; // para detectar fin de pregunta
-
-function toast(msg, tipo="") {
-  const t = document.getElementById("toast");
-  t.textContent = msg; t.className = "show " + tipo;
-  setTimeout(() => t.className="", 2800);
-}
-function show(id) {
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-function convertirUrlDrive(url) {
-  if (!url) return "";
-  if (url.includes("drive.google.com/thumbnail")) return url;
-  let m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
-       || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
-       || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
-  if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w160";
-  return url;
-}
-function avatarFallback(nombre) {
-  const inicial = (nombre || "?").charAt(0).toUpperCase();
-  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>${inicial}</text></svg>`;
-}
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) { window.location.href = "login.html"; return; }
-  usuarioActual = user;
-
-  // Mostrar botón proyector solo para admins
-  if (ADMINS.includes(user.email)) {
-    document.getElementById("btnProyector").style.display = "inline-flex";
-  }
-
-  try {
-    const res  = await fetch(API, { method:"POST", body: JSON.stringify({ accion:"getDashboard", email:user.email }) });
-    const data = await res.json();
-    if (data.ok) {
-      nombreActual = data.nombre;
-      fotoOriginal = data.fotoUrl || "";
-      fotoActual   = fotoOriginal ? convertirUrlDrive(fotoOriginal) : "";
-      document.getElementById("topbarNombre").textContent = nombreActual.split(" ")[0];
-      const avatarEl = document.getElementById("topbarFoto");
-      if (fotoActual) {
-        avatarEl.src = fotoActual;
-      } else {
-        avatarEl.src = avatarFallback(nombreActual);
-        avatarEl.style.display = "block";
-      }
-    }
-  } catch(e) {}
-  iniciarEscucha();
-});
-
-function iniciarEscucha() {
-  // ── LISTENER DE CONECTADOS (para panel en screenEsperando) ──
-  onValue(ref(db, "asamblea/conectados"), (snap) => {
-    const data = snap.val() || {};
-    const panel = document.getElementById("conectadosPanel");
-    const countEl = document.getElementById("conectadosCount");
-    const listaEl = document.getElementById("conectadosLista");
-    const total = Object.keys(data).length;
-
-    if (countEl) countEl.textContent = total;
-
-    if (total === 0) {
-      if (panel) panel.style.display = "none";
-      if (listaEl) listaEl.innerHTML = "";
-      return;
-    }
-
-    if (panel) panel.style.display = "block";
-
-    const participantes = Object.values(data).sort((a, b) => (a.ts || 0) - (b.ts || 0));
-
-    listaEl.innerHTML = participantes.map((u, i) => {
-      const fotoSrc = u.fotoMostrar || (u.fotoUrl ? convertirUrlDrive(u.fotoUrl) : "");
-      const fallback = avatarFallback(u.nombre);
-      return `
-        <div class="conectado-item" style="animation-delay:${i * 0.05}s">
-          <img class="conectado-foto" src="${fotoSrc || fallback}" data-foto-url="${u.fotoUrl||''}" data-nombre="${u.nombre}" alt="${u.nombre}" onerror="this.onerror=null;this.src='${fallback}'">
-          <div class="conectado-nombre">${u.nombre}</div>
-          <div class="conectado-status">Conectado</div>
-        </div>`;
-    }).join("");
-  });
-
-  onValue(ref(db, "asamblea"), (snap) => {
-    const data = snap.val();
-
-    if (!data) {
-      podioMostrado = false;
-      show("screenNoActiva"); limpiarTimer(); return;
-    }
-
-    // ── PRESENCIA: registrar/desregistrar usuario conectado ──
-    const conectadosRef = ref(db, "asamblea/conectados/" + usuarioActual.uid);
-    if (data.activa === true) {
-      // Registrar presencia
-      set(conectadosRef, {
-        nombre: nombreActual,
-        email: usuarioActual.email,
-        fotoUrl: fotoOriginal,
-        fotoMostrar: fotoActual,
-        ts: serverTimestamp()
-      });
-      // Auto-eliminar al desconectar
-      onDisconnect(conectadosRef).remove();
-    } else {
-      // Asamblea no activa: quitar presencia
-      onDisconnect(conectadosRef).cancel();
-      set(conectadosRef, null);
-    }
-
-    if (data.estado === "finalizada" && podioMostrado === "sesion") {
-      return;
-    }
-
-    if (data.estado === "finalizada" && !data.activa && (preguntaActualId !== null || participoEnAsamblea)) {
-      if (podioMostrado !== "sesion") {
-        podioMostrado = "sesion";
-        construirPodio(data.respuestas || {});
-      }
-      limpiarTimer();
-      return;
-    }
-
-    if (!data.activa && data.estado !== "finalizada") {
-      podioMostrado = false;
-      show("screenNoActiva"); limpiarTimer(); return;
-    }
-
-    if (data.estado === "finalizada" && preguntaActualId === null && !participoEnAsamblea) {
-      podioMostrado = false;
-      show("screenNoActiva"); limpiarTimer(); return;
-    }
-
-    if (data.activa && podioMostrado) {
-      podioMostrado = false;
-      participoEnAsamblea = false;
-      preguntaActualId = null;
-    }
-
-    if (!data.preguntaActual || data.preguntaActual.estado !== "activa") {
-      // Detectar fin de pregunta: si estaba "activa" y ahora no lo está
-      const p = data.preguntaActual;
-      if (preguntaPreviaEstado === "activa" && p && p.estado === "cerrada" && window._ultimaRespuesta) {
-        // Pregunta cerrada por admin o timer → mostrar resultado
-        const r = window._ultimaRespuesta;
-        const opTexto = (r.pregunta.opciones || [])[r.pregunta.correcta] || "—";
-        mostrarResultado(r.esCorrecta, r.pts, r.texto, opTexto, false);
-        window._ultimaRespuesta = null;
-      }
-      // Asamblea activa pero sin pregunta → MOSTRAR ESPERANDO
-      show("screenEsperando");
-      limpiarTimer();
-      respondioActual = false;
-      preguntaPreviaEstado = p ? p.estado : null;
-      return;
-    }
-
-    const p = data.preguntaActual;
-
-    if (p.estado === "activa" && p.id !== preguntaActualId) {
-      preguntaActualId = p.id;
-      respondioActual  = false;
-      tiempoInicioResp = Date.now();
-      preguntaPreviaEstado = "activa";
-      mostrarPregunta(p);
-      return;
-    }
-  });
-}
-
-function mostrarPregunta(p) {
-  document.getElementById("preguntaNum").textContent = "PREGUNTA " + (p.numero || "?");
-  // Mostrar el texto de la pregunta también en el celular
-  document.getElementById("preguntaTxt").textContent = p.texto;
-
-  const grid   = document.getElementById("opcionesGrid");
-  const letras = ["A","B","C","D"];
-  const clases = ["op-a","op-b","op-c","op-d"];
-  grid.innerHTML = "";
-  (p.opciones || []).forEach((op, i) => {
-    const btn = document.createElement("button");
-    btn.className = "opcion-btn " + clases[i];
-    btn.dataset.idx = i;
-    // Solo letra grande — el texto se lee en el proyector
-    btn.innerHTML = `<div class="opcion-letra-big">${letras[i]}</div>`;
-    btn.onclick = () => responderOpcion(i, op, p);
-    grid.appendChild(btn);
-  });
-  const dur = p.duracion || 20;
-  tiempoRestante = dur;
-  iniciarTimer(dur);
-  show("screenPregunta");
-}
-
-function iniciarTimer(duracion) {
-  limpiarTimer();
-  const circum   = 138.2;
-  const barEl    = document.getElementById("tiempoBar");
-  const circleEl = document.getElementById("timerCircle");
-  const numEl    = document.getElementById("timerNum");
-  barEl.style.width               = "100%";
-  circleEl.style.strokeDashoffset = "0";
-  numEl.textContent               = duracion;
-  timerInterval = setInterval(() => {
-    tiempoRestante--;
-    const pct = tiempoRestante / duracion;
-    barEl.style.width               = (pct * 100) + "%";
-    barEl.style.background          = pct > .4 ? "var(--y)" : pct > .2 ? "var(--o)" : "var(--err)";
-    circleEl.style.strokeDashoffset = circum * (1 - pct);
-    circleEl.style.stroke           = pct > .4 ? "#F5C518" : pct > .2 ? "#C4703A" : "#e03c3c";
-    numEl.textContent               = tiempoRestante;
-    if (tiempoRestante <= 0) {
-      limpiarTimer();
-      if (!respondioActual) mostrarResultado(false, null, "", "", true);
-    }
-  }, 1000);
-}
-function limpiarTimer() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-}
-
-function responderOpcion(idx, texto, pregunta) {
-  if (respondioActual) return;
-  respondioActual = true;
-  participoEnAsamblea = true;
-  limpiarTimer();
-  document.querySelectorAll(".opcion-btn").forEach(b => b.disabled = true);
-  document.querySelectorAll(".opcion-btn")[idx].classList.add("selected");
-  const tiempoResp = Math.max(0, (Date.now() - tiempoInicioResp) / 1000);
-  const esCorrecta = idx === (pregunta.correcta ?? -1);
-  let pts = 0;
-  if (esCorrecta) {
-    const dur = pregunta.duracion || 20;
-    pts = Math.round(1000 * (1 - tiempoResp / dur / 2));
-    pts = Math.max(pts, 200);
-    puntosTotal += pts;
-  }
-
-  set(ref(db, "asamblea/respuestas/" + pregunta.id + "/" + usuarioActual.uid), {
-    nombre:      nombreActual,
-    email:       usuarioActual.email,
-    fotoUrl:     fotoOriginal,
-    fotoMostrar: fotoActual,
-    respuesta:   texto,
-    idx,
-    correcta:    esCorrecta,
-    puntos:      pts,
-    tiempo:      tiempoResp,
-    ts:          serverTimestamp()
-  });
-
-  // NO mostrar correcto/incorrecto aquí — se muestra al terminar la pregunta
-  // Guardamos la respuesta local para usarla después
-  window._ultimaRespuesta = { idx, esCorrecta, pts, texto, pregunta };
-}
-
-function mostrarResultado(esCorrecta, pts, respUser, respCorrecta, timeout) {
-  if (timeout) {
-    document.getElementById("resultEmoji").textContent  = "⏰";
-    document.getElementById("resultTitulo").textContent = "¡Tiempo!";
-    document.getElementById("resultSub").textContent    = "Se te acabó el tiempo";
-    document.getElementById("resultPts").textContent    = "+0 PTS";
-  } else if (esCorrecta) {
-    document.getElementById("resultEmoji").textContent  = "🎉";
-    document.getElementById("resultTitulo").textContent = "¡Correcto!";
-    document.getElementById("resultSub").textContent    = "Excelente respuesta";
-    document.getElementById("resultPts").textContent    = "+" + pts + " PTS";
-  } else {
-    document.getElementById("resultEmoji").textContent  = "❌";
-    document.getElementById("resultTitulo").textContent = "Incorrecto";
-    document.getElementById("resultSub").textContent    = "Sigue intentando";
-    document.getElementById("resultPts").textContent    = "+0 PTS";
-  }
-
-  // Aplicar clases visuales a los botones de opción (verde/rojo)
-  const btns = document.querySelectorAll(".opcion-btn");
-  if (window._ultimaRespuesta && window._ultimaRespuesta.pregunta) {
-    const correctIdx = window._ultimaRespuesta.pregunta.correcta ?? -1;
-    btns.forEach((b, i) => {
-      b.classList.remove("selected");
-      if (i === correctIdx) b.classList.add("correcto");
-      else if (i === window._ultimaRespuesta.idx) b.classList.add("incorrecto");
-    });
-  }
-
-  document.getElementById("resultRespuesta").textContent = respCorrecta || "—";
-  show("screenResultado");
-
-  // Auto-avanzar a "esperando" después de 4s si el usuario no pulsa "Siguiente"
-  clearTimeout(window._autoAdvanceTimer);
-  window._autoAdvanceTimer = setTimeout(() => {
-    volverAEsperar();
-  }, 4000);
-
-  // Limpiar para evitar duplicados
-  window._ultimaRespuesta = null;
-}
-
-window.volverAEsperar = function() {
-  show("screenEsperando");
-  respondioActual  = false;
-  preguntaActualId = null;
-  // El listener de conectados ya está activo y actualizará el panel automáticamente
-};
-
-function construirPodio(todasRespuestas) {
-  const acum = {};
-  Object.values(todasRespuestas).forEach(pregResp => {
-    Object.values(pregResp).forEach(r => {
-      if (!acum[r.email]) {
-        acum[r.email] = {
-          nombre:      r.nombre || "?",
-          email:       r.email,
-          fotoUrl:     r.fotoUrl     || "",
-          fotoMostrar: r.fotoMostrar || "",
-          pts: 0
-        };
-      }
-      acum[r.email].pts += (r.puntos || 0);
-    });
-  });
-
-  const ranking = Object.values(acum).sort((a,b) => b.pts - a.pts);
-
-  if (ranking.length === 0) {
-    document.getElementById("finScore").textContent = puntosTotal;
-    show("screenFin"); return;
-  }
-
-  const top3El     = document.getElementById("podioTop3");
-  top3El.innerHTML = "";
-  const ordenVisual = [ ranking[1]||null, ranking[0]||null, ranking[2]||null ];
-  const posClases   = ["pos-2","pos-1","pos-3"];
-  const coronas     = ["🥈","👑","🥉"];
-  const pedestalNums= ["2","1","3"];
-
-  ordenVisual.forEach((r, vi) => {
-    if (!r) return;
-    const wrap = document.createElement("div");
-    wrap.className = "podio-lugar " + posClases[vi];
-
-    const fotoSrc = r.fotoMostrar
-      || (r.fotoUrl ? convertirUrlDrive(r.fotoUrl) : "")
-      || avatarFallback(r.nombre);
-    const fallback = avatarFallback(r.nombre);
-    wrap.innerHTML = `
-      <div class="podio-foto-wrap">
-        <img class="podio-foto" src="${fotoSrc}" alt="${r.nombre}"
-             onerror="this.onerror=null;this.src='${fallback}'">
-        <div class="podio-corona">${coronas[vi]}</div>
-      </div>
-      <div class="podio-nombre">${r.nombre.split(" ")[0]}</div>
-      <div class="podio-puntos">${r.pts} pts</div>
-      <div class="podio-pedestal"><div class="podio-num">${pedestalNums[vi]}</div></div>`;
-    top3El.appendChild(wrap);
-  });
-
-  const listaEl     = document.getElementById("rankingCompleto");
-  listaEl.innerHTML = "";
-  const medallas    = ["🥇","🥈","🥉"];
-  ranking.forEach((r, i) => {
-    const item = document.createElement("div");
-    item.className = "rank-item";
-    item.style.animationDelay = (i * 0.06) + "s";
-
-    const fotoSrc  = r.fotoMostrar
-      || (r.fotoUrl ? convertirUrlDrive(r.fotoUrl) : "")
-      || avatarFallback(r.nombre);
-    const fallback = avatarFallback(r.nombre);
-    const posClass = i < 3 ? ["top1","top2","top3"][i] : "";
-    const posLabel = i < 3 ? medallas[i] : (i + 1);
-
-    item.innerHTML = `
-      <div class="rank-pos ${posClass}">${posLabel}</div>
-      <img class="rank-foto" src="${fotoSrc}" alt="${r.nombre}"
-           onerror="this.onerror=null;this.src='${fallback}'">
-      <div class="rank-nombre">${r.nombre}</div>
-      <div style="text-align:right">
-        <div class="rank-pts">${r.pts}</div>
-        <div class="rank-pts-label">pts</div>
-      </div>`;
-    listaEl.appendChild(item);
-  });
-
-  show("screenPodio");
-  lanzarConfetti();
-}
-
-function lanzarConfetti() {
-  const canvas = document.getElementById("confettiCanvas");
-  const ctx    = canvas.getContext("2d");
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const colors = ["#F5C518","#C4703A","#4A8FA8","#C4869A","#2dba6f","#ffffff"];
-  const pieces = Array.from({length:120}, () => ({
-    x: Math.random() * canvas.width, y: Math.random() * -canvas.height,
-    w: Math.random() * 10 + 5, h: Math.random() * 5 + 3,
-    color: colors[Math.floor(Math.random()*colors.length)],
-    rot: Math.random() * Math.PI * 2,
-    vx: (Math.random() - .5) * 3, vy: Math.random() * 3 + 2,
-    vr: (Math.random() - .5) * .15
-  }));
-  let frame = 0; const MAX_FRAMES = 220;
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    pieces.forEach(p => {
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-      ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, 1 - frame / MAX_FRAMES);
-      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore();
-      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
-    });
-    frame++;
-    if (frame < MAX_FRAMES) requestAnimationFrame(draw);
-    else ctx.clearRect(0,0,canvas.width,canvas.height);
-  }
-  draw();
-}
-</script>
+<script type="module" src="../assets/js/asamblea-participant.js"></script>
 </body>
 </html>

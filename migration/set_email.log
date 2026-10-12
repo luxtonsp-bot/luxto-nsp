@@ -1,0 +1,11 @@
+============================================================
+SET EMAIL EN ASISTENCIA (subcolecciones) — EJECUTANDO
+============================================================
+Cargando emails de members...
+  Emails cargados: 45
+
+Recorriendo subcolecciones asistencia/{anio}/{fecha}...
+
+============================================================
+Total docs recorridos: 758
+RESUMEN: actualizados=669, sin cambios=89, errores=0

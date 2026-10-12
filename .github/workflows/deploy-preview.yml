@@ -1,0 +1,50 @@
+name: Deploy Preview (rama de trabajo)
+
+# Publica cada rama de trabajo en una subcarpeta propia de gh-pages:
+#   https://luxtonsp-bot.github.io/luxto-nsp/preview/<nombre-de-la-rama>/
+# NO toca la raíz de gh-pages (ahí vive producción, de la rama main).
+# Copia SOLO el sitio estático — nunca credenciales ni datos personales.
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - gh-pages
+  workflow_dispatch:
+
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push a gh-pages
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copiar sitio estático de la rama
+        run: |
+          mkdir -p /tmp/sitio
+          cp index.html /tmp/sitio/
+          cp -r pages assets /tmp/sitio/
+
+      - name: Publicar en subcarpeta de gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git checkout -B gh-pages origin/gh-pages
+          # feature/firebase-migration -> feature-firebase-migration
+          SLUG=$(echo "${{ github.ref_name }}" | sed 's|/|-|g')
+          rm -rf "preview/$SLUG"
+          mkdir -p "preview/$SLUG"
+          cp -r /tmp/sitio/. "preview/$SLUG/"
+          git add "preview/$SLUG"
+          if git diff --cached --quiet; then
+            echo "Sin cambios que publicar"
+          else
+            git commit -m "preview: ${{ github.ref_name }} @ ${{ github.sha }}"
+            git push origin gh-pages
+          fi

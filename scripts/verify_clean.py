@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Verificación limpia: comparar totales Excel vs Firestore para mismas fechas"""
+
+import firebase_admin
+from firebase_admin import credentials, firestore
+import csv
+import re
+
+cred = credentials.Certificate('/home/odoo-01/Escritorio/pagina_Luxto/luxto-nsp/luxto-nsp-firebase-adminsdk-fbsvc-b80cad13e2.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+def parseExcelDate(cell):
+    if not cell: return None
+    s = str(cell).strip()
+    if re.match(r'^\d{2}/\d{2}$', s):
+        d, m = s.split('/')
+        return f"2026-{m.zfill(2)}-{d.zfill(2)}"
+    if re.match(r'^\d{4}-\d{2}-\d{2}', s):
+        return s.split(' ')[0]
+    return None
+
+# 1. LEER EXCEL - SOLO FECHAS HASTA 2026-10-03 (última real con datos)
+attendance = []
+with open('/home/odoo-01/Escritorio/pagina_Luxto/luxto-nsp/migration/sheets_export/attendance.csv', 'r') as f:
+    reader = csv.DictReader(f)
+    attendance = list(reader)
+
+headers = list(attendance[0].keys())
+fecha_cols = []
+for i, h in enumerate(headers[1:-1], 1):
+    f = parseExcelDate(h)
+    if f and f <= '2026-10-03':  # Solo hasta la última fecha real
+        fecha_cols.append((i, f))
+
+print(f"📅 Fechas Excel hasta 2026-10-03: {len(fecha_cols)}")
+
+# Calcular totales por nombre desde Excel (solo fechas reales)
+excel_totals = {}
+for row in attendance:
+    nombre = (row.get('Nombre') or '').strip()
+    if not nombre or nombre == 'Total de asistentes:': continue
+    total = 0
+    for col_idx, fecha in fecha_cols:
+        header_name = headers[col_idx]
+        try:
+            valor = float(row.get(header_name, '0') or '0')
+        except: valor = 0
+        if valor >= 1: total += 1
+    excel_totals[nombre] = total
+
+# 2. FIRESTORE MEMBERS
+firestore_members = {}
+for doc in db.collection('members').stream():
+    d = doc.to_dict()
+    nombre = d.get('nombre', '').strip()
+    if nombre:
+        firestore_members[nombre] = {
+            'uid': doc.id,
+            'asistenciasTotales': d.get('asistenciasTotales', 0),
+            'email': d.get('email', ''),
+        }
+
+# 3. RECALCULAR FIRESTORE HISTÓRICO SOLO FECHAS HASTA 2026-10-03
+firestore_hist = {}
+for col in db.collection('asistencia').document('2026').collections():
+    fecha = col.id
+    if fecha > '2026-10-03': continue
+    for doc in col.stream():
+        d = doc.to_dict()
+        if d.get('presente'):
+            uid = doc.id
+            firestore_hist[uid] = firestore_hist.get(uid, 0) + 1
+
+uid_to_nombre = {v['uid']: k for k, v in firestore_members.items()}
+
+# 4. COMPARAR
+print(f"\n{'NOMBRE':<30} {'EXCEL':>6} {'FS_TOTAL':>10} {'FS_HIST':>10} {'DIFF':>6} {'STATUS'}")
+print("="*80)
+
+matches = 0
+mismatches = 0
+all_names = set(excel_totals.keys()) | set(firestore_members.keys())
+
+for nombre in sorted(all_names):
+    excel_total = excel_totals.get(nombre, 0)
+    fs_data = firestore_members.get(nombre)
+
+    if fs_data:
+        fs_total = fs_data['asistenciasTotales']
+        uid = fs_data['uid']
+        fs_hist = firestore_hist.get(uid, 0)
+
+        # Comparar: excel_total vs fs_hist (histórico real migrado)
+        diff = excel_total - fs_hist
+        if diff == 0:
+            status = "✅ OK"
+            matches += 1
+        else:
+            status = f"❌ DIFF {diff}"
+            mismatches += 1
+        print(f"{nombre:<30} {excel_total:>6} {fs_total:>10} {fs_hist:>10} {diff:>6} {status}")
+    else:
+        print(f"{nombre:<30} {excel_total:>6} {'N/A':>10} {'N/A':>10} {'N/A':>6} ❌ NO EN FIRESTORE")
+        mismatches += 1
+
+print("="*80)
+print(f"✅ Coinciden (Excel vs Hist migrado): {matches} | ❌ Diferencias: {mismatches}")
+
+# 5. NOMBRES EN FIRESTORE PERO NO EN EXCEL (hasta 10/03)
+print("\n📋 En Firestore pero NO en Excel (hasta 10/03):")
+for nombre, data in firestore_members.items():
+    if nombre not in excel_totals:
+        print(f"   - {nombre} (uid: {data['uid']}, total: {data['asistenciasTotales']})")
+
+# 6. FECHAS EN FIRESTORE VS EXCEL
+print("\n📅 Fechas con asistencia en Firestore:")
+fs_fechas = []
+for col in db.collection('asistencia').document('2026').collections():
+    fecha = col.id
+    docs = list(col.stream())
+    presentes = sum(1 for d in docs if d.to_dict().get('presente'))
+    if presentes > 0:
+        fs_fechas.append((fecha, presentes))
+
+for fecha, cnt in sorted(fs_fechas):
+    marker = " ✅" if fecha <= '2026-10-03' else " ⚠️ (futura)"
+    print(f"   {fecha}: {presentes}{marker}")
+
+print(f"\nTotal fechas con datos: {len(fs_fechas)}")

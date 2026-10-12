@@ -1,0 +1,91 @@
+// Firestore Security Rules for LUXTO-NSP
+// Modelo de colecciones: PLAN_MIGRACION_LUXTO_NSP.md (sección 3)
+// Reglas por rol: miembro / líder / coordinador (sección 4)
+// NOTA: sin allows duplicados — Firestore rechaza statements solapados.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() { return request.auth != null; }
+    function getUserRole(uid) {
+      let doc = get(/databases/$(database)/documents/members/$(uid));
+      return doc.data != null ? doc.data.rol : null;
+    }
+    function isAdminEmail() {
+      return isAuth() && (
+        request.auth.token.email == "henry.alfaro1@unmsm.edu.pe" ||
+        request.auth.token.email == "paolosotil97@gmail.com" ||
+        request.auth.token.email == "jorgediego.123.2002@gmail.com" ||
+        request.auth.token.email == "gianfracamones@gmail.com" ||
+        request.auth.token.email == "alvarorodrigosalazar.2001@gmail.com"
+      );
+    }
+    function isCoordinator() { return isAuth() && (getUserRole(request.auth.uid) == "coordinador" || isAdminEmail()); }
+    function isStaff() {
+      let role = getUserRole(request.auth.uid);
+      return isAuth() && (role == "servidor" || role == "apoyo" || role == "coordinador" || isAdminEmail());
+    }
+
+    match /members/{uid} {
+      // En esta app interna, los miembros y líderes se autentican con Firebase Auth y necesitan
+      // leer/listar la colección para cargar el panel de administración y cambiar roles.
+      allow read: if isAuth();
+      allow list: if isAuth();
+      // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
+      allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
+      // Nadie puede crearse a sí mismo con un rol elevado; coordinador puede crear para nuevos
+      allow create: if isCoordinator() || (isAuth() && request.auth.uid == uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro'));
+      allow delete: if false;
+    }
+
+    match /miembros_registro/{uid} { allow read: if true; allow write: if isCoordinator(); }
+
+    match /asambleas/{fecha} { allow read: if true; allow create, update, delete: if isStaff(); }
+
+    match /asamblea/{docId} { allow read: if isAuth(); allow create, update: if isStaff(); allow delete: if isCoordinator(); }
+
+    // ASISTENCIA (ruta real: asistencia/{anio}/{fecha}/{uid}; cada {fecha} es una subcolección)
+    // Lee: el propio miembro o un líder. Escribe: solo líderes (los docs no tienen campo email).
+    match /asistencia/{docId} {
+      allow read: if isAuth() && request.auth.uid == resource.data.uid;
+    }
+    match /asistencia/{anio}/{fecha}/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isStaff());
+      allow create, update: if isStaff();
+      allow delete: if false;
+    }
+
+    match /tablas_definiciones/{tablaId} { allow read: if isAuth(); allow create, update, delete: if isStaff(); }
+    match /tablas_dinamicas/{anio}/{tablaId}/{rowId} {
+      function tablaRestringida() { return tablaId == 'lista-asistentes-ejutor-2026'; }
+      allow read: if isAuth() && (!tablaRestringida() || isCoordinator());
+      allow create, update: if (isStaff() && !tablaRestringida()) || isCoordinator();
+      allow delete: if isCoordinator();
+    }
+    match /asambleas_kahoot/{fecha} { allow read: if isAuth(); allow create, update: if isStaff(); allow delete: if false; }
+    match /historico/{anio}/{collection}/{docId} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
+    // Docs de año (historico/2026) y doc raíz: necesarios para collectionGroup('historico') y listados de años
+    match /historico/{anio} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
+    match /suggestions/{id} { allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol in ["servidor", "apoyo", "coordinador"]); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
+    match /feedback/{id} { allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol in ["servidor", "apoyo", "coordinador"]); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
+    match /attendance_log/{docId} { allow read: if isAuth() && resource.data.uid == request.auth.uid; allow write: if false; }
+    // Banco de preguntas (contiene "correcta" — solo staff read/write)
+    match /preguntas/{id} {
+      allow read: if isAuth();  // assertStaff() validado en cliente (engine)
+      allow create, update: if isAuth() && (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol in ["servidor", "apoyo", "coordinador"]);
+      allow delete: if isAuth() && (get(/databases/$(database)/documents/members/$(request.auth.uid)).data.rol == "coordinador");
+    }
+    // Sesiones KAHOOT preparadas/activas/finalizadas (histórico completo)
+    match /kahoot_sessions/{sessionId} {
+      allow read: if isAuth();  // assertStaff() validado en cliente (engine)
+      allow create, update: if isStaff();
+      allow delete: if isCoordinator();
+    }
+    // Histórico anual de sesiones KAHOOT completadas
+    match /historico/{anio}/kahoot_sessions/{sessionId} {
+      allow read: if isAuth();
+      allow create, update: if isCoordinator();
+      allow delete: if false;
+    }
+  }
+}

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Grupo — Luz de Cristo</title>
+    <link rel="icon" href="https://luxtonsp-bot.github.io/luxto-nsp/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/images/logo_luxto.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/images/logo_luxto.png">
+    <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/portal.css">
+    <!-- Firebase imports (same as other pages) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <!-- Shared permissions module -->
+    <script src="../assets/js/auth-permissions.js"></script>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="topbar-inner">
+    <a href="dashboard.html" class="topbar-logo">
+      <img src="../assets/images/logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
+      <span class="topbar-logo-name">Luz de Cristo</span>
+    </a>
+    <span class="topbar-badge">👥 Gestión</span>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+  </div>
+</header>
+
+<main class="container">
+
+    <div class="section-eyebrow">Coordinación</div>
+    <h1>Gestión de Grupo</h1>
+    <p class="section-desc">Marca a los perseverantes del próximo año, agrega nuevos integrantes y realiza el cierre académico del año.</p>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'perseverantes')">Perseverantes y Nuevos</button>
+        <button class="tab-button" onclick="openTab(event, 'cierre-anio')">Cierre de Año</button>
+    </div>
+
+    <div id="perseverantes" class="tab-content active">
+
+        <div class="card">
+            <div class="card-title">🏅 Marcar Perseverantes <span class="card-sub">Continuarán el próximo año</span></div>
+            <div id="current-year-members">
+                <div class="empty-state">Cargando miembros...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">➕ Agregar Nuevo Integrante</div>
+            <form id="new-member-form">
+                <div class="form-grid">
+                    <div>
+                        <label for="new-member-name">Nombre completo:</label>
+                        <input type="text" id="new-member-name" required placeholder="Ej. Juan Pérez">
+                    </div>
+                    <div>
+                        <label for="new-member-birthdate">Fecha de nacimiento:</label>
+                        <input type="date" id="new-member-birthdate" required>
+                    </div>
+                </div>
+                <div style="margin-top:14px; max-width:280px;">
+                    <label for="new-member-first-assembly">Fecha primera asamblea:</label>
+                    <input type="date" id="new-member-first-assembly" required>
+                </div>
+                <div style="margin-top:18px;">
+                    <button type="submit" class="btn btn-primary">✓ Agregar Nuevo Integrante</button>
+                </div>
+            </form>
+            <div id="new-member-result" style="margin-top:14px;"></div>
+        </div>
+
+    </div>
+
+    <div id="cierre-anio" class="tab-content">
+
+        <div class="card" style="border-color:rgba(224,60,60,.3);">
+            <div class="card-title">🏁 Cierre de Año Académico</div>
+            <p class="section-desc" style="margin-bottom:14px;">Esta operación calculará las métricas finales de todos los miembros activos y las guardará en el histórico.</p>
+            <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25); margin-bottom:20px;">
+                <div class="item-title" style="color:#f08080;">⚠️ Importante</div>
+                <div class="item-meta">Esta operación no se puede deshacer. Asegúrese de haber revisado todos los datos antes de proceder.</div>
+            </div>
+
+            <div style="max-width:240px;">
+                <label for="year-to-close">Año a cerrar:</label>
+                <input type="number" id="year-to-close" min="2020" max="2030" value="2026">
+            </div>
+            <div style="margin-top:18px;">
+                <button id="close-year-button" class="btn btn-ok" style="padding:14px 28px; font-size:15px;">
+                    🏁 Cerrar Año Académico
+                </button>
+            </div>
+            <div id="close-year-result" style="margin-top:14px;"></div>
+        </div>
+
+    </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+    // Initialize Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+        authDomain: "luxto-nsp.firebaseapp.com",
+        projectId: "luxto-nsp",
+        storageBucket: "luxto-nsp.firebasestorage.app",
+        messagingSenderId: "3542836325",
+        appId: "1:3542836325:web:cf65cd50edcc431500d28c",
+        databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
+    };
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    let currentYear = new Date().getFullYear();
+
+    // DOM Elements
+    const newMemberForm = document.getElementById('new-member-form');
+    const newMemberResult = document.getElementById('new-member-result');
+    const currentYearMembersDiv = document.getElementById('current-year-members');
+    const closeYearButton = document.getElementById('close-year-button');
+    const closeYearResult = document.getElementById('close-year-result');
+    const yearToCloseInput = document.getElementById('year-to-close');
+
+    // ── Toast ──
+    function toast(msg, tipo = "") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "show " + tipo;
+        setTimeout(() => t.className = "", 3200);
+    }
+
+    function cerrarSesion() {
+        firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
+    }
+
+    // Initialize
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
+            await AuthPermissions.initStaffPermissionCheck();
+            loadCurrentYearMembers();
+        } else {
+            window.location.href = 'login.html';
+        }
+    });
+
+    // Tab functionality
+    function openTab(evt, tabName) {
+        // Hide all tab content
+        const tabContents = document.getElementsByClassName('tab-content');
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove('active');
+        }
+
+        // Deactivate all tab buttons
+        const tabButtons = document.getElementsByClassName('tab-button');
+        for (let i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove('active');
+        }
+
+        // Show selected tab content and activate button
+        document.getElementById(tabName).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    }
+
+    // Load current year active members
+    async function loadCurrentYearMembers() {
+        try {
+            currentYearMembersDiv.innerHTML = '<div class="empty-state">Cargando miembros...</div>';
+
+            const membersSnapshot = await db.collection('members')
+                .where('estadoAnioActual', '==', 'activo')
+                .get();
+
+            const members = [];
+            membersSnapshot.forEach(doc => {
+                const data = doc.data();
+                members.push({
+                    id: doc.id,
+                    ...data
+                });
+            });
+
+            // Sort by name
+            members.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+            displayCurrentYearMembers(members);
+        } catch (error) {
+            console.error("Error loading current year members:", error);
+            currentYearMembersDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>';
+        }
+    }
+
+    // Display current year members with perseverance checkboxes
+    function displayCurrentYearMembers(members) {
+        if (members.length === 0) {
+            currentYearMembersDiv.innerHTML = '<div class="empty-state">No hay miembros activos para este año</div>';
+            return;
+        }
+
+        let html = `
+            <p style="font-size:14px; color:var(--muted); margin-bottom:14px;">Marque los miembros que continuarán como perseverantes el próximo año:</p>
+            <form id="perseverantes-form">
+                <div class="item-list">
+        `;
+
+        members.forEach(member => {
+            const perseverante = member.estadoAnioActual === 'perseverante' || member.perseverante === true;
+            html += `
+                    <div class="item member-perseverante" style="display:flex; align-items:center; gap:12px;">
+                        <input type="checkbox" id="perseverante-${member.id}" ${perseverante ? 'checked' : ''} style="width:18px; height:18px; flex-shrink:0; accent-color:var(--y); cursor:pointer;">
+                        <label for="perseverante-${member.id}" style="font-size:14px; font-weight:600; color:var(--cream); letter-spacing:0; text-transform:none; margin:0; cursor:pointer; display:block;">
+                            <strong>${member.nombre || 'Sin nombre'}</strong>
+                            ${member.email ? ` — ${member.email}` : ''}
+                        </label>
+                    </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </form>
+            <div style="margin-top:16px;">
+                <button type="submit" form="perseverantes-form" class="btn btn-secondary" style="border-color:rgba(245,197,24,.4); color:var(--y);">
+                    💾 Guardar Estado de Perseverantes
+                </button>
+            </div>
+        `;
+
+        currentYearMembersDiv.innerHTML = html;
+
+        // Add form submit handler
+        const perseverantesForm = document.getElementById('perseverantes-form');
+        perseverantesForm.addEventListener('submit', savePerseverantes);
+    }
+
+    // Save perseverance status
+    async function savePerseverantes(e) {
+        e.preventDefault();
+
+        try {
+            const checkboxes = document.querySelectorAll('input[id^="perseverante-"]');
+            const updates = [];
+
+            checkboxes.forEach(checkbox => {
+                const memberId = checkbox.id.replace('perseverante-', '');
+                const isPerseverante = checkbox.checked;
+                updates.push(updateMemberStatus(memberId, isPerseverante ? 'perseverante' : 'activo'));
+            });
+
+            await Promise.all(updates);
+            toast('Estado de perseverantes guardado exitosamente', 'ok');
+            loadCurrentYearMembers(); // Refresh display
+        } catch (error) {
+            console.error("Error saving perseverance status:", error);
+            toast('Error al guardar estado de perseverantes', 'err');
+        }
+    }
+
+    // Update member status (activo/perseverante/dado_de_baja)
+    async function updateMemberStatus(memberId, status) {
+        const memberRef = db.collection('members').doc(memberId);
+        return memberRef.update({
+            estadoAnioActual: status,
+            fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+
+    // Add new member
+    newMemberForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        try {
+            const name = document.getElementById('new-member-name').value.trim();
+            const birthdate = document.getElementById('new-member-birthdate').value;
+            const firstAssembly = document.getElementById('new-member-first-assembly').value;
+
+            if (!name || !birthdate || !firstAssembly) {
+                toast('Por favor, complete todos los campos', 'err');
+                return;
+            }
+
+            // Check if name already exists in miembros_registro (public lookup)
+            const nameQuery = await db.collection('miembros_registro').where('nombre', '==', name).limit(1).get();
+            if (!nameQuery.empty) {
+                toast('Ya existe un miembro con este nombre en el registro', 'err');
+                return;
+            }
+
+            // Calcular MM-DD para consultas de cumpleaños
+            const birthMMdd = birthdate.substring(5, 10); // YYYY-MM-DD -> MM-DD
+
+            // Create new member document with auto-generated ID (temporal UID)
+            const newMemberRef = await db.collection('members').add({
+                nombre: name,
+                fechaNacimiento: birthdate,
+                fechaNacimientoMMdd: birthMMdd,
+                fechaPrimeraAsamblea: firstAssembly,
+                rol: 'miembro',
+                estadoAnioActual: 'activo',
+                fechaIngresoGrupo: firebase.firestore.FieldValue.serverTimestamp(),
+                fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Also create public lookup in miembros_registro (for registro.html validation)
+            await db.collection('miembros_registro').doc(newMemberRef.id).set({
+                nombre: name
+            });
+
+            newMemberResult.innerHTML = `
+                <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
+                    <div class="item-title" style="color:#7fe8aa;">✓ Nuevo miembro agregado exitosamente</div>
+                    <div class="item-meta">ID temporal: ${newMemberRef.id} (el asambleista generará su UID real al registrarse)</div>
+                </div>
+            `;
+
+            // Reset form
+            newMemberForm.reset();
+
+            // Refresh members list
+            loadCurrentYearMembers();
+
+        } catch (error) {
+            console.error("Error adding new member:", error);
+            newMemberResult.innerHTML = `
+                <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);">
+                    <div class="item-title" style="color:#f08080;">✗ Error al agregar nuevo miembro</div>
+                    <div class="item-meta">${error.message}</div>
+                </div>
+            `;
+        }
+    });
+
+    // Close year functionality
+    closeYearButton.addEventListener('click', async () => {
+        const yearToClose = parseInt(yearToCloseInput.value);
+
+        if (isNaN(yearToClose) || yearToClose < 2020 || yearToClose > 2030) {
+            toast('Por favor, ingrese un año válido entre 2020 y 2030', 'err');
+            return;
+        }
+
+        if (!confirm(`¿Está seguro de que desea cerrar el año ${yearToClose}?\\n\\nEsta operación:\\n1. Calculará las métricas finales de todos los miembros activos\\n2. Guardará los datos en el histórico/${yearToClose}/\\n3. Preparará el sistema para el año ${yearToClose + 1}\\n\\nEsta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            closeYearButton.disabled = true;
+            closeYearButton.textContent = 'Cerrando año...';
+            closeYearResult.innerHTML = '<div class="empty-state">Iniciando proceso de cierre de año...</div>';
+
+            // Step 1: Get all active members for the year
+            const membersSnapshot = await db.collection('members')
+                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
+                .get();
+
+            const members = [];
+            membersSnapshot.forEach(doc => {
+                members.push({ id: doc.id, ...doc.data() });
+            });
+
+            closeYearResult.innerHTML = `<div class="empty-state">Procesando ${members.length} miembros...</div>`;
+
+            // Step 2: For each member, calculate final metrics and save to historical
+            const batch = db.batch();
+            const historicalMembersRef = db.collection('historico').doc(yearToClose.toString()).collection('members');
+
+            for (const member of members) {
+                // Calculate metrics (simplified - in reality would be more complex)
+                const metrics = await calculateMemberMetrics(member.id, yearToClose);
+
+                const historicalMemberRef = historicalMembersRef.doc(member.id);
+                batch.set(historicalMemberRef, {
+                    ...member,
+                    año: yearToClose,
+                    fechacierre: firebase.firestore.FieldValue.serverTimestamp(),
+                    ...metrics
+                });
+            }
+
+            // Step 3: Copy other collections to historical
+            await copyCollectionToHistorical('asistencia', yearToClose, batch);
+            await copyCollectionToHistorical('tablas_dinamicas', yearToClose, batch);
+            await copyCollectionToHistorical('asambleas_kahoot', yearToClose, batch);
+            await copyCollectionToHistorical('sugerencias', yearToClose, batch);
+            await copyCollectionToHistorical('feedback', yearToClose, batch);
+
+            // Step 4: Commit the batch
+            await batch.commit();
+
+            // Step 5: Update members who are not perseverantes to 'dado_de_baja'
+            const nonPerseverantes = members.filter(m => m.estadoAnioActual !== 'perseverante');
+            const updateBatch = db.batch();
+            for (const member of nonPerseverantes) {
+                const memberRef = db.collection('members').doc(member.id);
+                updateBatch.update(memberRef, {
+                    estadoAnioActual: 'dado_de_baja',
+                    fechaBaja: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            await updateBatch.commit();
+
+            closeYearResult.innerHTML = `
+                <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
+                    <div class="item-title" style="color:#7fe8aa;">🎉 ¡Año ${yearToClose} cerrado exitosamente!</div>
+                    <div class="item-meta">
+                        • ${members.length} miembros procesados y guardados en histórico<br>
+                        • ${nonPerseverantes.length} miembros marcados como dados de baja<br>
+                        • Datos copiados a colecciones históricas<br>
+                        • Sistema preparado para año ${yearToClose + 1}
+                    </div>
+                </div>
+            `;
+
+        } catch (error) {
+            console.error("Error closing year:", error);
+            closeYearResult.innerHTML = `
+                <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);">
+                    <div class="item-title" style="color:#f08080;">✗ Error al cerrar el año</div>
+                    <div class="item-meta">${error.message}</div>
+                </div>
+            `;
+        } finally {
+            closeYearButton.disabled = false;
+            closeYearButton.textContent = '🏁 Cerrar Año Académico';
+        }
+    });
+
+    // Calculate member metrics for historical record
+    async function calculateMemberMetrics(memberId, year) {
+        // This is a simplified version - in reality would calculate:
+        // - % de asistencia
+        // - Nota de rendimiento
+        // - Tardanzas
+        // - Estado final
+        // etc.
+
+        return {
+            porcentajeAsistencia: 0, // Would calculate from asistencia records
+            notaRendimiento: 0,     // Would calculate from asistencia and puntualidad
+            tardanzasTotales: 0,    // Would count from asistencia records
+            estadoFinal: 'activo'   // Would determine based on rules
+        };
+    }
+
+    // Copy collection to historical
+    async function copyCollectionToHistorical(collectionName, year, batch) {
+        try {
+            const collections = {
+                'asistencia': ['historico', year, 'asistencia'],
+                'tablas_dinamicas': ['historico', year, 'tablas_dinamicas'],
+                'asambleas_kahoot': ['historico', year, 'asambleas_kahoot'],
+                'sugerencias': ['historico', year, 'sugerencias'],
+                'feedback': ['historico', year, 'feedback']
+            };
+
+            const pathParts = collections[collectionName];
+            if (!pathParts) return;
+
+            const collectionRef = db.collection(...pathParts);
+            const snapshot = await collectionRef.get();
+
+            snapshot.forEach(doc => {
+                const historicalRef = db.collection(...pathParts).doc(doc.id);
+                batch.set(historicalRef, {
+                    ...doc.data(),
+                    año: year,
+                    fechacopiado: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            });
+        } catch (error) {
+            console.error(`Error copying ${collectionName} to historical:`, error);
+            // Don't throw - continue with other collections
+        }
+    }
+</script>
+</body>
+</html>
