@@ -3,122 +3,119 @@
     ".read": false,
     ".write": false,
     "asamblea": {
-      ".read": "auth != null",
-      ".write": "auth != null",
       "sesion": {
         "fase": {
           ".read": "auth != null",
-          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
         },
         "cola": {
           ".read": "auth != null",
-          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
         },
         "indice": {
           ".read": "auth != null",
-          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
         },
         "claves": {
           "$qid": {
-            ".read": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')",
-            ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+            ".read": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
+            ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
           }
         },
         "puntos": {
           "$uid": {
-            ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
-            ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+            ".read": "auth.uid === $uid || (root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
+            ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
           }
         },
         "resumen": {
           ".read": "auth != null",
-          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
         },
         "acumulada": {
-          ".read": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')",
-          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+          ".read": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
+          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
         },
         "hostUid": {
           ".read": "auth != null",
-          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
         },
         "sesionId": {
           ".read": "auth != null",
-          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
         },
         "cerradas": {
           "$sid": {
             "$qid": {
-              ".read": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')",
-              ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+              ".read": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
+              ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
             }
           }
         },
         "meta": {
           ".read": "auth != null",
-          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+          ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
         }
       },
       "activa": {
         ".read": "auth != null",
-        ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+        ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
       },
       "estado": {
         ".read": "auth != null",
-        ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+        ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
       },
       "preguntaNum": {
         ".read": "auth != null",
-        ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+        ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')"
       },
       "preguntaActual": {
         ".read": "auth != null",
-        ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')",
-        ".validate": "newData.hasChildren(['id', 'texto', 'opciones', 'duracion', 'abreEn', 'cierraEn']) && newData.child('opciones').val().length >= 2 && newData.child('opciones').val().length <= 4 && newData.child('duracion').val() > 0 && newData.child('duracion').val() <= 300"
+        ".write": "(root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
+        ".validate": "newData.hasChildren(['id', 'texto', 'opciones', 'duracion', 'abreEn', 'cierraEn']) && newData.child('opciones').hasChild('1') && !newData.child('opciones').hasChild('4') && newData.child('duracion').val() > 0 && newData.child('duracion').val() <= 300"
       },
       "respuestas": {
         ".read": "auth != null",
         ".write": "auth != null",
         "$qid": {
           "$uid": {
-            ".read": "auth.uid === $uid || auth != null",
-            ".write": "auth.uid === $uid && ((root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' && $qid === root.child('asamblea').child('preguntaActual').child('id').val() && newData.child('ts').val() === now && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && !data.exists() && now < root.child('asamblea').child('preguntaActual').child('cierraEn').val()) || (root.child('asamblea').child('estado').val() === 'activa' && newData.child('ts').val() === now && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && !data.exists() && (now < root.child('asamblea').child('preguntaActual').child('cierraEn').val() || !root.child('asamblea').child('preguntaActual').child('cierraEn').exists())))",
+            ".read": "auth.uid === $uid || (root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
+            ".write": "auth.uid === $uid && ((root.child('asamblea').child('sesion').child('fase').val() === 'pregunta' && $qid === root.child('asamblea').child('preguntaActual').child('id').val() && newData.child('ts').isNumber() && newData.child('ts').val() > 0 && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && newData.child('nombre').isString() && newData.child('nombre').val().length <= 80 && !data.exists() && now < root.child('asamblea').child('preguntaActual').child('cierraEn').val()) || (root.child('asamblea').child('estado').val() === 'activa' && newData.child('ts').isNumber() && newData.child('ts').val() > 0 && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && newData.child('nombre').isString() && newData.child('nombre').val().length <= 80 && !data.exists() && (now < root.child('asamblea').child('preguntaActual').child('cierraEn').val() || !root.child('asamblea').child('preguntaActual').child('cierraEn').exists())))",
             ".validate": "newData.hasChildren(['idx', 'ts', 'nombre']) && newData.child('idx').isNumber() && newData.child('idx').val() >= 0 && newData.child('idx').val() <= 3 && newData.child('nombre').isString() && newData.child('nombre').val().length <= 80"
           }
         }
       },
       "conectados": {
         ".read": "auth != null",
-        ".write": "auth != null",
         "$uid": {
           ".read": "auth != null",
-          ".write": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
+          ".write": "auth.uid === $uid || (root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
           ".validate": "newData.hasChildren(['nombre', 'ts']) && newData.child('nombre').isString() && newData.child('nombre').val().length <= 80 && newData.child('ts').isNumber()"
         }
       },
       "borradores": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).child('rol').val() === 'servidor' || root.child('admins').child(auth.uid).child('rol').val() === 'apoyo' || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador')"
+        ".read": "auth != null && ((root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo') || (root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'))",
+        ".write": "auth != null && ((root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo') || (root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'))"
       }
     },
     "preguntaActual": {
       ".read": "auth != null",
       ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
-      ".validate": "newData.hasChildren(['id', 'texto', 'opciones', 'duracion', 'abreEn', 'cierraEn']) && newData.child('opciones').val().length >= 2 && newData.child('opciones').val().length <= 4 && newData.child('duracion').val() > 0 && newData.child('duracion').val() <= 300"
+      ".validate": "newData.hasChildren(['id', 'texto', 'opciones', 'duracion', 'abreEn', 'cierraEn']) && newData.child('opciones').hasChild('1') && !newData.child('opciones').hasChild('4') && newData.child('duracion').val() > 0 && newData.child('duracion').val() <= 300"
     },
     "rankingGlobal": {
       ".read": "auth != null",
       ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
       "$uid": {
-        ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).exists()",
+        ".read": "auth.uid === $uid || (root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
         ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
         ".validate": "newData.hasChildren(['pts', 'nombre']) && newData.child('pts').isNumber() && newData.child('pts').val() >= 0 && newData.child('nombre').isString() && newData.child('nombre').val().length <= 80"
       }
     },
     "admins": {
       "$uid": {
-        ".read": "auth.uid === $uid || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
-        ".write": "(auth.uid === $uid && newData.child('rol').val() !== null && (newData.child('rol').val() === 'servidor' || newData.child('rol').val() === 'apoyo' || newData.child('rol').val() === 'coordinador')) || root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
+        ".read": "auth.uid === $uid || (root.child('admins').child(auth.uid).child('rol').val() === 'coordinador') || (root.child('admins').child(auth.uid).child('rol').val() === 'servidor') || (root.child('admins').child(auth.uid).child('rol').val() === 'apoyo')",
+        ".write": "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'",
         ".validate": "newData.hasChildren(['rol']) && (newData.child('rol').val() === 'servidor' || newData.child('rol').val() === 'apoyo' || newData.child('rol').val() === 'coordinador')"
       }
     },
