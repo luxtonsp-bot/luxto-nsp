@@ -315,7 +315,7 @@
     </a>
     <span class="topbar-badge">📅 Planificación</span>
     <div class="topbar-sep"></div>
-    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+    <button class="btn-logout" onclick="cerrarSesion()" type="button">⎋ Salir</button>
   </div>
 </header>
 
@@ -346,8 +346,8 @@
             </select>
             <label for="saturdaySelect" id="dateSelectLabel">Sábado a planificar:</label>
             <select id="saturdaySelect"></select>
-            <button class="saturday-btn saturday-btn-primary" id="loadSaturdayBtn" onclick="loadSelectedSaturday()">Cargar</button>
-            <button class="saturday-btn saturday-btn-ghost" id="addSaturdayBtn" onclick="addNewSaturday()">+ Nuevo día</button>
+            <button class="saturday-btn saturday-btn-primary" id="loadSaturdayBtn" onclick="loadSelectedSaturday()" type="button">Cargar</button>
+            <button class="saturday-btn saturday-btn-ghost" id="addSaturdayBtn" onclick="addNewSaturday()" type="button">+ Nuevo día</button>
         </div>
         <p id="selectedSaturdayInfo" style="font-size: 13px; color: var(--muted); display: none;"></p>
     </div>
@@ -420,8 +420,8 @@
         <div class="preview-header">
             <h4>🖼️ Vista previa del esquema (con logo del grupo)</h4>
             <div style="display:flex; gap:8px;">
-                <button class="btn btn-primary" onclick="generateAndDisplayPreview()">🔄 Actualizar vista previa</button>
-                <button class="btn btn-ok" onclick="downloadPreviewImage()">⬇️ Descargar imagen</button>
+                <button class="btn btn-primary" onclick="generateAndDisplayPreview()" type="button">🔄 Actualizar vista previa</button>
+                <button class="btn btn-ok" onclick="downloadPreviewImage()" type="button">⬇️ Descargar imagen</button>
             </div>
         </div>
         <div class="preview-content" id="previewContent">

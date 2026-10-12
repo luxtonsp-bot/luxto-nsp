@@ -96,7 +96,7 @@
     </a>
     <span class="topbar-badge">📊 Tablas</span>
     <div class="topbar-sep"></div>
-    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+    <button class="btn-logout" onclick="cerrarSesion()" type="button">⎋ Salir</button>
   </div>
 </header>
 
@@ -107,8 +107,8 @@
     <p class="section-desc">Cree y administre tablas personalizadas para seguimiento de grupos especiales (Caporales, EJUTOR, polladas, etc.)</p>
 
     <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'crear-tabla')">Crear Nueva Tabla</button>
-        <button class="tab-button" onclick="openTab(event, 'mis-tablas')">Mis Tablas</button>
+        <button class="tab-button active" onclick="openTab(event, 'crear-tabla')" type="button">Crear Nueva Tabla</button>
+        <button class="tab-button" onclick="openTab(event, 'mis-tablas')" type="button">Mis Tablas</button>
     </div>
 
     <div id="crear-tabla" class="tab-content active">
@@ -608,10 +608,10 @@
                         <p><strong>Creada:</strong> ${fecha}</p>
                     </div>
                     <div class="table-footer">
-                        <button onclick="viewTableData('${table.id}', '${table.nombre}')" class="btn btn-secondary">
+                        <button onclick="viewTableData('${table.id}', '${table.nombre}')" class="btn btn-secondary" type="button">
                             👁️ Ver Datos
                         </button>
-                        <button onclick="editTable('${table.id}')" class="btn btn-secondary">
+                        <button onclick="editTable('${table.id}')" class="btn btn-secondary" type="button">
                             ✎ Editar
                         </button>
                     </div>

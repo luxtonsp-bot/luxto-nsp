@@ -357,22 +357,22 @@
         <option value="">-- Cargando KAHOOTs... --</option>
       </select>
       <div class="bar-sep"></div>
-      <button class="btn btn-primary" id="btnActivarKahoot" onclick="activarKahootSessionDesdeProyector()" style="display:none;">▶ Activar KAHOOT</button>
-      <button class="btn btn-warn" id="btnFinalizarKahoot" onclick="finalizarKahootSessionDesdeProyector()" style="display:none;">🏁 Finalizar KAHOOT</button>
+      <button class="btn btn-primary" id="btnActivarKahoot" onclick="activarKahootSessionDesdeProyector()" style="display:none;" type="button">▶ Activar KAHOOT</button>
+      <button class="btn btn-warn" id="btnFinalizarKahoot" onclick="finalizarKahootSessionDesdeProyector()" style="display:none;" type="button">🏁 Finalizar KAHOOT</button>
     </div>
     <div id="kahootSessionInfo" style="font-size:11px;color:var(--muted);min-width:180px;display:none;"></div>
     <div class="bar-sep"></div>
 
     <!-- Asamblea Control (preguntas normales) -->
-    <button class="btn btn-ghost" id="btnRanking" onclick="mostrarRankingManual()">📊 Ranking</button>
+    <button class="btn btn-ghost" id="btnRanking" onclick="mostrarRankingManual()" type="button">📊 Ranking</button>
     <div class="bar-sep"></div>
-    <button class="btn btn-primary" id="btnLanzar" onclick="lanzarPrimeraPregunta()">🚀 Lanzar pregunta 1</button>
-    <button class="btn btn-danger" id="btnCerrar" onclick="cerrarPreguntaManual()" style="display:none;">⏹ Cerrar</button>
-    <button class="btn btn-primary" id="btnSiguiente" onclick="lanzarSiguientePregunta()" style="display:none;">Siguiente →</button>
+    <button class="btn btn-primary" id="btnLanzar" onclick="lanzarPrimeraPregunta()" type="button">🚀 Lanzar pregunta 1</button>
+    <button class="btn btn-danger" id="btnCerrar" onclick="cerrarPreguntaManual()" style="display:none;" type="button">⏹ Cerrar</button>
+    <button class="btn btn-primary" id="btnSiguiente" onclick="lanzarSiguientePregunta()" style="display:none;" type="button">Siguiente →</button>
     <div class="bar-sep"></div>
-    <button class="btn btn-warn" id="btnFinalizar" onclick="finalizarAsamblea()" style="display:none;">🏁 Finalizar Asamblea</button>
+    <button class="btn btn-warn" id="btnFinalizar" onclick="finalizarAsamblea()" style="display:none;" type="button">🏁 Finalizar Asamblea</button>
   </div>
-  <button class="admin-toggle" id="adminToggle" onclick="toggleAdminBar()" style="display:none;">⚙️ Admin</button>
+  <button class="admin-toggle" id="adminToggle" onclick="toggleAdminBar()" style="display:none;" type="button">⚙️ Admin</button>
 
   <div id="toast"></div>
 

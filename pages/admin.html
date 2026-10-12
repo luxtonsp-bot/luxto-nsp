@@ -497,7 +497,7 @@ option:checked, option:hover, option:focus {
     <span class="topbar-badge">⚙️ Admin</span>
     <div class="topbar-sep"></div>
     <a href="proyector.html" target="_blank" class="btn-logout" style="margin-left:8px;">🖥️ Proyector</a>
-    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+    <button class="btn-logout" onclick="cerrarSesion()" type="button">⎋ Salir</button>
   </div>
 </header>
 
@@ -512,9 +512,9 @@ option:checked, option:hover, option:focus {
 
   <div class="tab-container">
     <div class="tab-buttons">
-      <button class="tab-button active" onclick="openTab(event, 'asamblea')">Modo Asamblea</button>
-      <button class="tab-button" id="tab-gestion-lideres" onclick="openTab(event, 'gestion-lideres')">Gestión de Líderes</button>
-      <button class="tab-button" id="tab-sugerencias-feedback" onclick="openTab(event, 'sugerencias-feedback')">Sugerencias y Feedback</button>
+      <button class="tab-button active" onclick="openTab(event, 'asamblea')" type="button">Modo Asamblea</button>
+      <button class="tab-button" id="tab-gestion-lideres" onclick="openTab(event, 'gestion-lideres')" type="button">Gestión de Líderes</button>
+      <button class="tab-button" id="tab-sugerencias-feedback" onclick="openTab(event, 'sugerencias-feedback')" type="button">Sugerencias y Feedback</button>
     </div>
 
     <!-- ══ TAB: MODO ASAMBLEA ══ -->
@@ -536,8 +536,8 @@ option:checked, option:hover, option:focus {
           </div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
-          <button class="btn btn-primary" onclick="crearKahootSession()">➕ Crear sesión KAHOOT</button>
-          <button class="btn btn-ghost" onclick="loadKahootSessions()">🔄 Recargar lista</button>
+          <button class="btn btn-primary" onclick="crearKahootSession()" type="button">➕ Crear sesión KAHOOT</button>
+          <button class="btn btn-ghost" onclick="loadKahootSessions()" type="button">🔄 Recargar lista</button>
         </div>
 
         <!-- Selector de sesión preparada -->
@@ -547,8 +547,8 @@ option:checked, option:hover, option:focus {
             <select class="np-select" id="kahootSessionSelect" onchange="verKahootSession()" style="flex:1; min-width:200px;">
               <option value="">-- Seleccionar sesión KAHOOT --</option>
             </select>
-            <button class="btn btn-primary" id="btnCargarKahoot" onclick="activarKahootSession()" style="display:none;">📥 Cargar en sesión activa</button>
-            <button class="btn btn-warn" id="btnVerKahoot" onclick="verKahootSession()" style="display:none;">👁️ Ver detalles</button>
+            <button class="btn btn-primary" id="btnCargarKahoot" onclick="activarKahootSession()" style="display:none;" type="button">📥 Cargar en sesión activa</button>
+            <button class="btn btn-warn" id="btnVerKahoot" onclick="verKahootSession()" style="display:none;" type="button">👁️ Ver detalles</button>
           </div>
           <div id="kahootSessionInfo" style="margin-top:10px; font-size:13px; color:var(--muted); display:none;"></div>
         </div>
@@ -600,8 +600,8 @@ option:checked, option:hover, option:focus {
               <div class="np-field">
                 <div class="np-label">Acciones</div>
                 <div class="np-actions">
-                  <button class="btn btn-primary" onclick="savePreguntaAdmin()">💾 Guardar en banco</button>
-                  <button class="btn btn-ghost" onclick="guardarBorrador()">💾 Guardar borrador</button>
+                  <button class="btn btn-primary" onclick="savePreguntaAdmin()" type="button">💾 Guardar en banco</button>
+                  <button class="btn btn-ghost" onclick="guardarBorrador()" type="button">💾 Guardar borrador</button>
                 </div>
               </div>
             </div>
@@ -612,13 +612,13 @@ option:checked, option:hover, option:focus {
         <div style="border-top:1px solid var(--border); padding-top:20px;">
           <div class="np-label" style="margin-bottom:12px;">📚 Banco de Preguntas (para agregar a la sesión nueva)</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-            <button class="btn btn-primary" onclick="loadPreguntasBanco()">🔄 Recargar banco</button>
+            <button class="btn btn-primary" onclick="loadPreguntasBanco()" type="button">🔄 Recargar banco</button>
           </div>
           <div class="hist-lista" id="preguntas-banco" style="max-height:300px;">
             <div class="hist-vacio">Cargando banco...</div>
           </div>
           <div style="margin-top:12px; display:flex; gap:8px;">
-            <button class="btn btn-ok" id="btnAgregarAlKahoot" onclick="agregarPreguntasAKahoot()" style="display:none;">➕ Agregar seleccionadas al KAHOOT actual</button>
+            <button class="btn btn-ok" id="btnAgregarAlKahoot" onclick="agregarPreguntasAKahoot()" style="display:none;" type="button">➕ Agregar seleccionadas al KAHOOT actual</button>
             <span id="kahootPreguntasCount" style="align-self:center; color:var(--muted); font-size:13px;"></span>
           </div>
         </div>
@@ -634,26 +634,26 @@ option:checked, option:hover, option:focus {
               <div class="estado-sub" id="estadoSub">Activa el modo, carga una sesión KAHOOT, y controla todo desde el proyector</div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
-              <button class="btn btn-primary" id="btnTomarControl" hidden onclick="tomarControl()">
+              <button class="btn btn-primary" id="btnTomarControl" hidden onclick="tomarControl()" type="button">
                 👑 Tomar control
               </button>
-              <button class="btn btn-primary" id="btnIniciarSesion" hidden onclick="iniciarSesion()">
+              <button class="btn btn-primary" id="btnIniciarSesion" hidden onclick="iniciarSesion()" type="button">
                 🟢 Iniciar sesión
               </button>
-              <button class="btn btn-danger" id="btnResetRanking" style="display:none;" onclick="reiniciarRanking()">
+              <button class="btn btn-danger" id="btnResetRanking" style="display:none;" onclick="reiniciarRanking()" type="button">
                 🔄 Reiniciar ranking sesión
               </button>
-              <button class="btn btn-danger" id="btnResetGlobal" onclick="reiniciarRankingGlobal()" title="Borra el acumulado histórico de todas las asambleas">
+              <button class="btn btn-danger" id="btnResetGlobal" onclick="reiniciarRankingGlobal()" title="Borra el acumulado histórico de todas las asambleas" type="button">
                 ♻️ Reiniciar ranking global
               </button>
-              <button class="btn btn-warn" id="btnFinalizar" style="display:none;" onclick="finalizarKahootSession()">
+              <button class="btn btn-warn" id="btnFinalizar" style="display:none;" onclick="finalizarKahootSession()" type="button">
                 🏁 Finalizar KAHOOT
               </button>
               <label class="toggle">
                 <input type="checkbox" id="toggleAsamblea" onchange="toggleModoAsamblea(this.checked)">
-                <div class="toggle-track">
-                  <div class="toggle-thumb"></div>
-                </div>
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
               </label>
             </div>
           </div>
@@ -682,8 +682,8 @@ option:checked, option:hover, option:focus {
         <div class="pa-header">
           <span class="live-badge">🔴 EN VIVO</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-danger" onclick="cerrarPregunta()">Cerrar pregunta</button>
-            <button class="btn btn-ok"     onclick="siguientePregunta()">Siguiente →</button>
+            <button class="btn btn-danger" onclick="cerrarPregunta()" type="button">Cerrar pregunta</button>
+            <button class="btn btn-ok"     onclick="siguientePregunta()" type="button">Siguiente →</button>
           </div>
         </div>
         <div class="pa-txt" id="paTexto">—</div>
@@ -712,7 +712,7 @@ option:checked, option:hover, option:focus {
       <div class="card historial">
         <div class="card-title">📜 Historial KAHOOTs finalizados <span style="font-size:12px;color:var(--muted);font-weight:400;font-family:Outfit,sans-serif;margin-left:4px;">Resultados completos guardados</span></div>
         <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="loadKahootHistorial()">🔄 Recargar historial</button>
+          <button class="btn btn-primary" onclick="loadKahootHistorial()" type="button">🔄 Recargar historial</button>
         </div>
         <div class="hist-lista" id="kahoot-historial" style="max-height:400px;">
           <div class="hist-vacio">Cargando historial...</div>
@@ -757,7 +757,7 @@ option:checked, option:hover, option:focus {
                 <option value="apoyo">Apoyo</option>
                 <option value="coordinador">Coordinador</option>
               </select>
-              <button class="btn btn-primary" id="update-role-button">Actualizar Rol</button>
+              <button class="btn btn-primary" id="update-role-button" type="button">Actualizar Rol</button>
             </div>
             <div id="role-change-result" style="margin-top:12px;"></div>
           </div>

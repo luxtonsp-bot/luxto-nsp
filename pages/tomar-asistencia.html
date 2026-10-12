@@ -55,7 +55,7 @@
     </a>
     <span class="topbar-badge">✅ Asistencia</span>
     <div class="topbar-sep"></div>
-    <button class="btn-logout" onclick="cerrarSesion()">⎋ Salir</button>
+    <button class="btn-logout" onclick="cerrarSesion()" type="button">⎋ Salir</button>
   </div>
 </header>
 
@@ -68,8 +68,8 @@
     <!-- MAIN TABS -->
     <div class="tab-container">
         <div class="tabs" id="mainTabs">
-            <button class="tab-button active" data-tab="tomar">📝 Tomar Asistencia</button>
-            <button class="tab-button" data-tab="ver">📊 Ver Asistencia</button>
+            <button class="tab-button active" data-tab="tomar" type="button">📝 Tomar Asistencia</button>
+            <button class="tab-button" data-tab="ver" type="button">📊 Ver Asistencia</button>
         </div>
     </div>
 
@@ -86,7 +86,7 @@
                     <input type="text" id="member-search" placeholder="Buscar miembro por nombre...">
                 </div>
                 <div style="flex:0;">
-                    <button id="search-button" class="btn btn-primary">Buscar</button>
+                    <button id="search-button" class="btn btn-primary" type="button">Buscar</button>
                 </div>
             </div>
         </div>
@@ -101,9 +101,9 @@
         <div class="card" id="attendance-actions" style="display: none;">
             <div class="card-title">Acciones de asistencia</div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button id="mark-present" class="btn btn-ok">✓ Marcar como presente</button>
-                <button id="mark-absent" class="btn btn-secondary">✗ Marcar como ausente</button>
-                <button id="finalize-attendance" class="btn btn-danger">🏁 Finalizar Asistencia</button>
+                <button id="mark-present" class="btn btn-ok" type="button">✓ Marcar como presente</button>
+                <button id="mark-absent" class="btn btn-secondary" type="button">✗ Marcar como ausente</button>
+                <button id="finalize-attendance" class="btn btn-danger" type="button">🏁 Finalizar Asistencia</button>
             </div>
         </div>
     </div>
@@ -112,8 +112,8 @@
     <div class="tab-content" id="tab-ver">
         <div class="tab-container" style="margin-bottom:16px;">
             <div class="tabs" id="subTabs">
-                <button class="tab-button active" data-subtab="dia">📅 Día Específico</button>
-                <button class="tab-button" data-subtab="anual">📈 Resumen Anual</button>
+                <button class="tab-button active" data-subtab="dia" type="button">📅 Día Específico</button>
+                <button class="tab-button" data-subtab="anual" type="button">📈 Resumen Anual</button>
             </div>
         </div>
 
@@ -126,7 +126,7 @@
                         <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Fecha</label>
                         <input type="date" id="fecha-selector" class="np-input" style="width:100%;">
                     </div>
-                    <button id="cargar-fecha-btn" class="btn btn-primary" style="height:44px;">Cargar</button>
+                    <button id="cargar-fecha-btn" class="btn btn-primary" style="height:44px;" type="button">Cargar</button>
                 </div>
             </div>
 
@@ -150,7 +150,7 @@
                         <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Año</label>
                         <select id="anio-selector" class="np-select" style="width:100%;"></select>
                     </div>
-                    <button id="cargar-anual-btn" class="btn btn-primary" style="height:44px;">Generar</button>
+                    <button id="cargar-anual-btn" class="btn btn-primary" style="height:44px;" type="button">Generar</button>
                 </div>
             </div>
 
@@ -436,8 +436,8 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn btn-ok" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', '${nombre}', true)">✓</button>
-                        <button class="btn btn-danger" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', '${nombre}', false)">✗</button>
+                        <button class="btn btn-ok" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', '${nombre}', true)" type="button">✓</button>
+                        <button class="btn btn-danger" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', '${nombre}', false)" type="button">✗</button>
                     </div>
                 </div>
             `;

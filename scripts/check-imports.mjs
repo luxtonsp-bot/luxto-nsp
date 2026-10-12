@@ -31,7 +31,7 @@ function getExportedNames(filePath) {
   }
 
   // export { name, name2, name3 as alias }
-  const braceExportRegex = /export\s*\{([^}]+)\}/g;
+  const braceExportRegex = /export\s*\{([\s\S]+?)\}/g;
   while ((match = braceExportRegex.exec(content)) !== null) {
     const items = match[1].split(',');
     for (const item of items) {
@@ -47,7 +47,7 @@ function getExportedNames(filePath) {
   }
 
   // re-export: export { ref, onValue as get } from '...'
-  const reExportRegex = /export\s*\{([^}]+)\}\s*from/g;
+  const reExportRegex = /export\s*\{([\s\S]+?)\}\s*from/g;
   while ((match = reExportRegex.exec(content)) !== null) {
     const items = match[1].split(',');
     for (const item of items) {
@@ -69,10 +69,10 @@ function getImportedNames(filePath) {
   const imports = [];
 
   // import { name, name2 } from './path'
-  const namedImportRegex = /import\s*\{([^}]+)\}\s*from\s*['"](\.[^'"]+)['"]/g;
+  const namedImportRegex = /import\s*\{([^{}]*?)\}\s*from\s*['"](\.[^'"]*)['"]/g;
   let match;
   while ((match = namedImportRegex.exec(content)) !== null) {
-    const names = match[1].split(',').map(n => n.trim().split(' as ')[0].trim());
+    const names = match[1].split(',').map(n => n.trim().split(' as ')[0].trim()).filter(n => n);
     const from = match[2];
     imports.push({ names, from });
   }
