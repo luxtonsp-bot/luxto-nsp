@@ -533,18 +533,19 @@ export async function cerrarPregunta() {
     const rapidez = Math.max(0, 1 - (r.ts - abreEn) / (q.duracion * 1000));
     const pts = esCorrecta ? Math.round(1000 + 500 * rapidez) : 0;
     deltaPuntos[uid] = pts;
-    resumenNuevo.push({ uid, nombre: r.nombre, esCorrecta, pts, ts: r.ts });
+    resumenNuevo.push({ uid, nombre: r.nombre, fotoUrl: r.fotoUrl || "", esCorrecta, pts, ts: r.ts });
   });
 
-  // SUMA atómica a puntos de sesión (transacción por uid) — guarda {pts, nombre}
+  // SUMA atómica a puntos de sesión (transacción por uid) — guarda {pts, nombre, fotoUrl}
   for (const [uid, delta] of Object.entries(deltaPuntos)) {
     if (delta <= 0) continue;
     await runTransaction(ref(rtdb, RTDB_PATHS.puntos(uid)), (current) => {
       const prev = current || {
         pts: 0,
         nombre: resumenNuevo.find((r) => r.uid === uid)?.nombre || uid,
+        fotoUrl: resumenNuevo.find((r) => r.uid === uid)?.fotoUrl || "",
       };
-      return { pts: prev.pts + delta, nombre: prev.nombre };
+      return { pts: prev.pts + delta, nombre: prev.nombre, fotoUrl: prev.fotoUrl };
     });
   }
 
@@ -552,7 +553,7 @@ export async function cerrarPregunta() {
   const puntosSnap = await get(ref(rtdb, RTDB_PATHS.puntosRoot));
   const puntosTotales = puntosSnap.val() || {};
   const ranking = Object.entries(puntosTotales)
-    .map(([uid, data]) => ({ uid, pts: data.pts, nombre: data.nombre }))
+    .map(([uid, data]) => ({ uid, pts: data.pts, nombre: data.nombre, fotoUrl: data.fotoUrl || "" }))
     .sort((a, b) => b.pts - a.pts);
   await set(ref(rtdb, RTDB_PATHS.resumen), ranking.slice(0, 20));
 
@@ -598,13 +599,22 @@ export async function finalizarSesion() {
     if (!pts) continue;
     const m = memberByUid[uid];
     // Key = uid (no email-sanitized). Las reglas RTDB ya validan estructura.
+    // Prioridad para foto: fotoThumb (base64 128px) > fotoDriveId (Drive) > fotoUrl
+    let fotoUrl = "";
+    if (m?.fotoThumb) {
+      fotoUrl = m.fotoThumb;
+    } else if (m?.fotoDriveId) {
+      fotoUrl = `https://drive.google.com/thumbnail?id=${m.fotoDriveId}&sz=w100`;
+    } else {
+      fotoUrl = m?.fotoUrl || "";
+    }
     await runTransaction(
       ref(rtdb, RTDB_PATHS.rankingGlobal(uid)),
       (current) => {
         const prev = current || {
           pts: 0,
           nombre: m?.nombre || "Anónimo",
-          fotoUrl: m?.fotoUrl || "",
+          fotoUrl,
         };
         return {
           ...prev,
@@ -1053,8 +1063,13 @@ export async function finalizeKahootSession() {
 /* ── ACCIONES PARTICIPANTE (celular) ─────────────────────── */
 
 /** Registrar conexión (lobby) */
-export async function conectar(uid, nombre) {
-  await set(ref(rtdb, RTDB_PATHS.conectados(uid)), { nombre, ts: rtdbTS() });
+export async function conectar(uid, nombre, fotoUrl = "", fotoMostrar = "") {
+  await set(ref(rtdb, RTDB_PATHS.conectados(uid)), {
+    nombre,
+    fotoUrl,
+    fotoMostrar,
+    ts: rtdbTS()
+  });
   onDisconnect(ref(rtdb, RTDB_PATHS.conectados(uid))).remove();
 }
 
@@ -1098,11 +1113,31 @@ export async function responder(qid, uid, idx) {
   // Validar que qid coincide con pregunta actual
   if (localState.preguntaActual?.id !== qid)
     throw new Error("Pregunta inválida");
-  await set(r, { idx, ts: rtdbTS(), nombre: await getUserName(uid) });
-}
-async function getUserName(uid) {
-  const snap = await getDoc(doc(fsdb, "members", uid));
-  return snap.exists() ? snap.data().nombre : uid;
+
+  // Obtener nombre y foto del usuario
+  const conectado = localState.conectados?.[uid];
+  let nombre = conectado?.nombre;
+  let fotoUrl = conectado?.fotoUrl || conectado?.fotoMostrar || "";
+
+  if (!nombre) {
+    const memberSnap = await getDoc(doc(fsdb, "members", uid));
+    if (memberSnap.exists()) {
+      const data = memberSnap.data();
+      nombre = data.nombre || uid;
+      // Prioridad: fotoThumb (base64) > fotoDriveId (Drive) > fotoUrl
+      if (data.fotoThumb) {
+        fotoUrl = data.fotoThumb;
+      } else if (data.fotoDriveId) {
+        fotoUrl = `https://drive.google.com/thumbnail?id=${data.fotoDriveId}&sz=w100`;
+      } else {
+        fotoUrl = data.fotoUrl || "";
+      }
+    } else {
+      nombre = uid;
+    }
+  }
+
+  await set(r, { idx, ts: rtdbTS(), nombre, fotoUrl });
 }
 
 /* ── CONSULTAS PARA DASHBOARD (Historial KAHOOT por usuario) ─────────────────── */
