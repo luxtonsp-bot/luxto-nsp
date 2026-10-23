@@ -1829,7 +1829,7 @@
           let memberSnap = await getDoc(memberRef);
 
           // 2. Fallback: buscar por email si no existe por UID
-          let data, realUid;
+          let data, memberId;
           if (!memberSnap.exists()) {
             const q = query(
               collection(db, "members"),
@@ -1842,17 +1842,19 @@
               return;
             }
             memberSnap = qSnap.docs[0];
-            realUid = memberSnap.id; // El Doc ID real es el UID correcto
+            memberId = memberSnap.id; // El Doc ID real es el memberId (UUID)
           } else {
-            realUid = authUid;
+            memberId = authUid;
           }
           data = memberSnap.data();
           memberData = data;
-          realUidActual = realUid;
-          if (realUid !== authUid)
+          // Guardar AMBOS: authUid (para asistencia) y memberId (para Firestore)
+          realUidActual = authUid; // Auth UID para leer asistencia
+          memberIdActual = memberId; // memberId (UUID) para Firestore
+          if (memberId !== authUid)
             console.warn(
               "UID distinto: members/" +
-                realUid +
+                memberId +
                 " vs Auth " +
                 authUid +
                 " (las reglas de asistencia comparan con el uid de Auth)",
@@ -2014,7 +2016,7 @@
           let ultimaAsistencia = null;
           let ultimaFechaAsistencia = null;
 
-          const asistenciasMap = await leerAsistenciasMiembro(realUid);
+          const asistenciasMap = await leerAsistenciasMiembro(realUidActual);
 
           for (const a of asambleasDesdeIngreso) {
             const aData = asistenciasMap.get(a.fecha);
@@ -2138,7 +2140,7 @@
           const realUid = realUidActual || usuarioActual.uid;
 
           // Mismo mapa que usa el resumen (cacheado): no repite lecturas
-          const mapa = await leerAsistenciasMiembro(realUid);
+          const mapa = await leerAsistenciasMiembro(realUidActual);
           const docs = [...mapa.values()];
           // Ordenar en cliente por fecha DESC
           docs.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
