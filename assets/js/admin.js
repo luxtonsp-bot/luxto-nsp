@@ -1194,10 +1194,10 @@ window.updateMemberRole = async function (memberId, newRole) {
 
 /* ── Sugerencias y Feedback ────────────────────────── */
 function sugerenciaTema(d) {
-  return d.tema || d.suggestion_tema || "Sin tema";
+  return d.texto || d.tema || d.suggestion_tema || d.descripcion || d.suggestion || "Sin tema";
 }
 function sugerenciaDesc(d) {
-  return d.descripcion || d.suggestion || "Sin descripción";
+  return d.texto || d.descripcion || d.suggestion || "Sin descripción";
 }
 function feedbackComent(d) {
   return d.comentario || d.comment || "Sin comentario";
@@ -1215,6 +1215,10 @@ function docFecha(d) {
     return new Date(d.createdAt.seconds * 1000).toLocaleString();
   if (d.fechaCreacion?.seconds)
     return new Date(d.fechaCreacion.seconds * 1000).toLocaleString();
+  if (d.fecha) {
+    const f = new Date(d.fecha);
+    return isNaN(f) ? "Fecha desconocida" : f.toLocaleString();
+  }
   if (d.created_at) {
     const f = new Date(d.created_at);
     return isNaN(f) ? "Fecha desconocida" : f.toLocaleString();
