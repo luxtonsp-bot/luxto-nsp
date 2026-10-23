@@ -1425,7 +1425,13 @@
 
       <!-- ── FEEDBACK ESTRELLAS ── -->
       <div class="card reveal">
-        <div class="card-title">⭐ ¿Cómo estuvo la última asamblea?</div>
+        <div class="card-title">⭐ ¿Cómo estuvo la asamblea?</div>
+        <div class="field" style="margin-bottom:12px;">
+          <label for="feedbackAsambleaSelect">Asamblea <span style="color:var(--o)">*</span></label>
+          <select id="feedbackAsambleaSelect" required>
+            <option value="">Selecciona una asamblea…</option>
+          </select>
+        </div>
         <div class="stars">
           <span class="star" onclick="selectStar(1)">☆</span>
           <span class="star" onclick="selectStar(2)">☆</span>
@@ -1905,6 +1911,26 @@
 
           // 4. Calcular estadísticas completas (replicando Code.gs / Excel)
           await calcularYRenderizarEstadisticas(realUidActual, data);
+
+          // 5. Poblar selector de asamblea para feedback (después de cargar asambleas)
+          const asambleasParaFeedback = await cargarAsambleas();
+          const select = document.getElementById("feedbackAsambleaSelect");
+          if (select) {
+            const hoyISO = new Date().toISOString().split("T")[0];
+            // Filtrar asambleas con hayAsamblea=true y fecha <= hoy
+            const opciones = asambleasParaFeedback
+              .filter(a => a.hayAsamblea === true && a.fecha && a.fecha <= hoyISO)
+              .sort((x, y) => y.fecha.localeCompare(x.fecha)); // más reciente primero
+            opciones.forEach(a => {
+              const opt = document.createElement("option");
+              opt.value = a.fecha;
+              // Mostrar fecha + hora si existe
+              const fechaFmt = new Date(a.fecha + "T00:00:00").toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" });
+              const hora = a.horaInicio ? ` · ${a.horaInicio}` : "";
+              opt.textContent = `${fechaFmt}${hora}`;
+              select.appendChild(opt);
+            });
+          }
         } catch (err) {
           console.error("Error cargarDashboard:", err);
           toast("Error de conexión con el servidor.", "err");
@@ -2439,8 +2465,14 @@
 
       window.enviarFeedback = async () => {
         const txt = document.getElementById("txtFeedback").value.trim();
+        const select = document.getElementById("feedbackAsambleaSelect");
+        const fechaAsamblea = select.value;
         if (!calificacion) {
           toast("Selecciona una calificación ⭐", "err");
+          return;
+        }
+        if (!fechaAsamblea) {
+          toast("Selecciona una asamblea", "err");
           return;
         }
         const btn = document.querySelector("#txtFeedback ~ .btn-enviar");
@@ -2448,23 +2480,12 @@
         btn.textContent = "Enviando...";
         try {
           if (usuarioActual) {
-            // Calcular fecha de asamblea: última con hayAsamblea=true <= hoy
-            const asambleasSnap = await getDocs(collection(db, "asambleas"));
-            let fechaAsamblea = null;
-            const hoyISO = new Date().toISOString().split("T")[0];
-            asambleasSnap.forEach((d) => {
-              const ad = d.data();
-              if (ad.hayAsamblea === true && ad.fecha && ad.fecha <= hoyISO) {
-                if (!fechaAsamblea || ad.fecha > fechaAsamblea)
-                  fechaAsamblea = ad.fecha;
-              }
-            });
             await addDoc(collection(db, "feedback"), {
               nombre: nombreActual,
               email: usuarioActual.email,
               calificacion: calificacion,
               comentario: txt,
-              fechaAsamblea: fechaAsamblea, // última asamblea con hayAsamblea <= hoy
+              fechaAsamblea: fechaAsamblea, // asamblea seleccionada por el usuario
               fecha: new Date().toISOString(),
               uid: usuarioActual.uid,
             });
@@ -2472,6 +2493,7 @@
           document.getElementById("txtFeedback").value = "";
           window.selectStar(0);
           calificacion = 0;
+          select.value = "";
           toast("¡Feedback enviado! Gracias por tu opinión 🙏", "ok");
         } catch (e) {
           console.error("Error enviarFeedback:", e);
