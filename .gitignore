@@ -12,6 +12,9 @@ fotos_miembros/
 migration/sheets_export/
 migration/photos_export/
 migration/__pycache__/
+# Migración asistencia → UUID (reportes y backups)
+migration/reporte_asistencia_uuid.json
+migration/backup_asistencia_*.json
 
 # Python
 __pycache__/

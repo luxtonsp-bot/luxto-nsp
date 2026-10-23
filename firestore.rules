@@ -7,10 +7,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAuth() { return request.auth != null; }
-    function getUserRole(uid) {
-      let doc = get(/databases/$(database)/documents/members/$(uid));
-      return doc.data != null ? doc.data.rol : null;
-    }
+      function getMemberId(uid) {
+        let m = get(/databases/$(database)/documents/uid_map/$(uid));
+        return m.data != null ? m.data.memberId : uid;
+      }
+      function getUserRole(uid) {
+        let d = get(/databases/$(database)/documents/members/$(getMemberId(uid)));
+        return d.data != null ? d.data.rol : null;
+      }
     function isAdminEmail() {
       return isAuth() && (
         request.auth.token.email == "henry.alfaro1@unmsm.edu.pe" ||
