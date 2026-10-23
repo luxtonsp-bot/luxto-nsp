@@ -102,54 +102,6 @@ input.valid{border-color:var(--ok);}
 .validacion-nombre.ok{display:flex;background:rgba(46,158,107,.1);color:var(--ok);border:1px solid rgba(46,158,107,.25);}
 .validacion-nombre.err{display:flex;background:rgba(217,64,64,.08);color:var(--err);border:1px solid rgba(217,64,64,.2);}
 .validacion-nombre.loading{display:flex;background:rgba(74,143,168,.08);color:var(--b);border:1px solid rgba(74,143,168,.2);}
-.sugerencias{
-  display:none;
-  flex-direction:column;
-  gap:8px;
-  margin-top:8px;
-  padding:12px;
-  background:white;
-  border:1.5px solid var(--border);
-  border-radius:12px;
-  max-height:300px;
-  overflow-y:auto;
-  box-shadow:0 8px 24px -8px rgba(28,24,20,.12);
-}
-.sugerencias.visible{display:flex;}
-.sugerencia-item{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:10px 12px;
-  border-radius:8px;
-  background:rgba(245,197,24,.08);
-  cursor:pointer;
-  transition:all .15s;
-  border:1px solid transparent;
-}
-.sugerencia-item:hover{
-  background:rgba(196,112,58,.15);
-  border-color:rgba(196,112,58,.3);
-}
-.sugerencia-item.selected{
-  background:rgba(196,112,58,.2);
-  border-color:var(--o);
-}
-.sugerencia-avatar{
-  width:40px;height:40px;border-radius:50%;
-  object-fit:cover;
-  background:var(--border);
-  flex-shrink:0;
-}
-.sugerencia-info{flex:1;min-width:0;}
-.sugerencia-nombre{font-weight:600;color:var(--ink);font-size:14px;}
-.sugerencia-meta{font-size:11px;color:var(--muted);display:flex;gap:8px;margin-top:2px;}
-.sugerencia-badge{
-  font-size:10px;font-weight:700;
-  padding:2px 6px;border-radius:4px;
-  background:var(--grad);color:white;
-}
-.sugerencia-badge.con-cuenta{background:var(--ok);}
 .btn-submit{
   width:100%;padding:16px;border-radius:100px;
   background:var(--grad);color:white;
@@ -233,10 +185,9 @@ input.valid{border-color:var(--ok);}
   <form id="formRegistro" novalidate>
     <div class="field">
       <label for="nombre">Tu nombre <span style="color:var(--o)">*</span></label>
-      <span class="field-hint">Escribe como quieras: ignoramos tildes, mayúsculas y orden</span>
-      <input type="text" id="nombre" placeholder="Ej: luana doming" autocomplete="name">
+      <span class="field-hint">Escribe tu nombre completo tal como está registrado</span>
+      <input type="text" id="nombre" placeholder="Ej: Juan Pérez" autocomplete="name">
       <div class="validacion-nombre" id="validNombre"></div>
-      <div class="sugerencias" id="sugerencias" role="listbox" aria-label="Coincidencias encontradas"></div>
     </div>
     <div id="paso2">
       <div class="field">
@@ -268,42 +219,6 @@ input.valid{border-color:var(--ok);}
 </div>
 <div id="toast"></div>
 <script type="module">
-function normalizeName(name) {
-  if (!name) return '';
-  return name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-function tokenize(name) {
-  return normalizeName(name).split(' ').filter(t => t.length > 0);
-}
-function matchScore(query, target) {
-  const qTokens = tokenize(query);
-  const tTokens = tokenize(target);
-  if (qTokens.length === 0 || tTokens.length === 0) return 0;
-  let matches = 0;
-  for (const qt of qTokens) {
-    if (tTokens.includes(qt)) { matches++; continue; }
-    for (const tt of tTokens) {
-      if (tt.startsWith(qt) || qt.startsWith(tt)) { matches++; break; }
-    }
-  }
-  return matches / Math.max(qTokens.length, tTokens.length);
-}
-function findMatches(query, candidates, threshold = 0.3) {
-  const results = [];
-  for (const candidate of candidates) {
-    const score = matchScore(query, candidate.nombre);
-    if (score >= threshold) {
-      results.push({ ...candidate, score });
-    }
-  }
-  return results.sort((a, b) => b.score - a.score || a.nombre.localeCompare(b.nombre));
-}
 import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword }
                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -344,42 +259,21 @@ function mostrarValidacion(estado, msg) {
   el.className = "validacion-nombre " + estado;
   el.innerHTML = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg;
 }
-function renderSugerencias(sugerencias) {
-  const cont = document.getElementById("sugerencias");
-  cont.innerHTML = "";
-  if (sugerencias.length === 0) {
-    cont.classList.remove("visible");
-    return;
-  }
-  for (const s of sugerencias) {
-    const item = document.createElement("div");
-    item.className = "sugerencia-item";
-    item.dataset.memberId = s.memberId;
-    item.setAttribute("role", "option");
-    item.innerHTML = `
-      <img class="sugerencia-avatar" src="${s.fotoThumb || '../assets/images/avatar-placeholder.png'}" alt="" onerror="this.src='../assets/images/avatar-placeholder.png'">
-      <div class="sugerencia-info">
-        <div class="sugerencia-nombre">${s.nombre}</div>
-        <div class="sugerencia-meta">
-          ${s.tieneCuenta ? '<span class="sugerencia-badge con-cuenta">Ya tiene cuenta</span>' : '<span class="sugerencia-badge">Registrar cuenta</span>'}
-          <span>${s.rol || 'miembro'}</span>
-        </div>
-      </div>
-    `;
-    item.addEventListener("click", () => seleccionarMiembro(s));
-    cont.appendChild(item);
-  }
-  cont.classList.add("visible");
+
+// Buscar miembro exacto por nombre (insensible a tildes/mayúsculas/orden)
+function findExactMember(query, candidates) {
+  const norm = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/\s+/).sort().join(" ");
+  const q = norm(query);
+  const matches = candidates.filter(c => norm(c.nombre) === q);
+  return matches;
 }
+
+// Seleccionar miembro y avanzar al paso 2
 function seleccionarMiembro(miembro) {
   miembroSeleccionado = miembro;
-  document.querySelectorAll(".sugerencia-item").forEach(el => el.classList.remove("selected"));
-  const selectedEl = document.querySelector('.sugerencia-item[data-member-id="' + miembro.memberId + '"]');
-  if (selectedEl) selectedEl.classList.add("selected");
   document.getElementById("nombre").value = miembro.nombre;
   document.getElementById("nombre").classList.add("valid");
   document.getElementById("nombre").readOnly = true;
-  document.getElementById("sugerencias").classList.remove("visible");
   document.getElementById("paso2").classList.add("visible");
   document.getElementById("paso2").style.display = "contents";
   document.getElementById("step1").classList.add("done");
@@ -409,11 +303,9 @@ document.getElementById("nombre").addEventListener("input", (e) => {
     document.getElementById("step1").classList.remove("done");
     document.getElementById("btnSubmit").textContent = "Buscar mi nombre →";
   }
+  // Validación visual simple mientras escribe
   if (query.length >= 2) {
-    const sugerencias = findMatches(query, allMiembros);
-    renderSugerencias(sugerencias.slice(0, 8));
-  } else {
-    document.getElementById("sugerencias").classList.remove("visible");
+    document.getElementById("nombre").classList.add("valid");
   }
 });
 document.getElementById("formRegistro").addEventListener("submit", async (e) => {
@@ -424,16 +316,15 @@ document.getElementById("formRegistro").addEventListener("submit", async (e) => 
       toast("Escribe al menos 2 letras de tu nombre", "err");
       return;
     }
-    const sugerencias = findMatches(query, allMiembros);
-    if (sugerencias.length === 1) {
-      seleccionarMiembro(sugerencias[0]);
+    const matches = findExactMember(query, allMiembros);
+    if (matches.length === 1) {
+      seleccionarMiembro(matches[0]);
       return;
     }
-    renderSugerencias(sugerencias.slice(0, 8));
-    if (sugerencias.length > 0) {
-      toast("Selecciona tu nombre de la lista", "");
+    if (matches.length === 0) {
+      toast("No se encontró ese nombre en el registro. ¿Escribiste bien?", "err");
     } else {
-      toast("No se encontraron coincidencias. ¿Escribiste bien?", "err");
+      toast("Múltiples coincidencias. Escribe tu nombre completo tal como está registrado.", "err");
     }
     return;
   }
