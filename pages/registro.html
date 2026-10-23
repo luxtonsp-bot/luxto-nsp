@@ -340,7 +340,24 @@ function findExactMember(query, candidates) {
   }
   
   // Ordenar por score descendente
-  return matches.sort((a, b) => b.score - a.score || a.nombre.localeCompare(b.nombre));
+  const sorted = matches.sort((a, b) => b.score - a.score || a.nombre.localeCompare(b.nombre));
+  
+  // Deduplicar por nombre normalizado: quedarse con el de mayor score (y preferir con email)
+  const visto = new Map();
+  for (const m of sorted) {
+    const key = normalizar(m.nombre);
+    const existing = visto.get(key);
+    if (!existing) {
+      visto.set(key, m);
+    } else {
+      // Preferir el que tenga email o mayor score
+      const hasEmail = !!(m.email && m.email.includes('@'));
+      const existingHasEmail = !!(existing.email && existing.email.includes('@'));
+      if (hasEmail && !existingHasEmail) visto.set(key, m);
+      else if (hasEmail === existingHasEmail && m.score > existing.score) visto.set(key, m);
+    }
+  }
+  return Array.from(visto.values());
 }
 
 // Seleccionar miembro y avanzar al paso 2
