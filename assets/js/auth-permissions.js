@@ -1,8 +1,10 @@
 // Módulo compartido de permisos por rol — usa uid_map + memberId permanente
-// Roles con permisos de STAFF (servidores, coordinador, apoyos)
-const STAFF_ROLES = ['servidor', 'coordinador', 'apoyo'];
+// Usa Firebase COMPAT SDK global (window.firebase)
+// Roles: coordinador | servidor | apoyo | miembro
 
-// Páginas que requieren permisos de STAFF
+const STAFF_ROLES = ['coordinador', 'servidor', 'apoyo'];
+
+// Páginas que requieren ser STAFF (coordinador/servidor/apoyo)
 const STAFF_PAGES = [
     'tomar-asistencia.html',
     'gestion-grupo.html',
@@ -11,65 +13,68 @@ const STAFF_PAGES = [
     'planificacion.html'
 ];
 
-import { db, auth } from "./firebase-init.js";
+// Solo admin.html requiere COORDINADOR
+const COORDINATOR_ONLY_PAGES = ['admin.html'];
 
-// Verificar si la página actual requiere permisos de staff
+function getFirebase() {
+    if (!window.firebase || !window.firebase.apps.length) {
+        throw new Error('Firebase compat SDK no inicializado');
+    }
+    return window.firebase;
+}
+
+function getDb() { return getFirebase().firestore(); }
+function getAuth() { return getFirebase().auth(); }
+
 function isStaffPage() {
     const currentPage = window.location.pathname.split('/').pop();
     return STAFF_PAGES.includes(currentPage);
 }
 
-// Obtener memberId del usuario autenticado vía uid_map
+function isCoordinatorOnlyPage() {
+    const currentPage = window.location.pathname.split('/').pop();
+    return COORDINATOR_ONLY_PAGES.includes(currentPage);
+}
+
 async function getMemberIdFromAuth(uid) {
     if (!uid) return null;
     try {
-        const uidMapRef = db.collection('uid_map').doc(uid);
-        const snap = await uidMapRef.get();
-        if (!snap.exists) return null;
-        return snap.data().memberId;
-    } catch (error) {
-        console.error("Error getting memberId from uid_map:", error);
-        return null;
-    }
+        const db = getDb();
+        const snap = await db.collection('uid_map').doc(uid).get();
+        return snap.exists ? snap.data().memberId : null;
+    } catch { return null; }
 }
 
-// Obtener rol del usuario actual desde members/{memberId}
-async function getCurrentUserRole(uid) {
+async function getUserRole(uid) {
     const memberId = await getMemberIdFromAuth(uid);
     if (!memberId) return null;
     try {
-        const memberRef = db.collection('members').doc(memberId);
-        const snap = await memberRef.get();
-        if (!snap.exists) return null;
-        const data = snap.data();
-        return (data.rol || data.role || '').toLowerCase();
-    } catch (error) {
-        console.error("Error getting user role:", error);
-        return null;
-    }
-}
-
-// Verificar si el usuario tiene permisos de staff
-async function checkStaffPermission(uid) {
-    const role = await getCurrentUserRole(uid);
-    return role && STAFF_ROLES.includes(role);
-}
-
-// Obtener datos completos del miembro (para dashboards, etc.)
-async function getMemberData(uid) {
-    const memberId = await getMemberIdFromAuth(uid);
-    if (!memberId) return null;
-    try {
+        const db = getDb();
         const snap = await db.collection('members').doc(memberId).get();
-        return snap.exists ? { memberId, ...snap.data() } : null;
-    } catch (error) {
-        console.error("Error getting member data:", error);
-        return null;
-    }
+        return snap.exists ? (snap.data().rol || snap.data().role || '').toLowerCase() : null;
+    } catch { return null; }
 }
 
-// Mostrar página de acceso denegado
-function showAccessDenied(message = 'No tienes permisos para acceder a esta página') {
+async function checkPermission(uid) {
+    const role = await getUserRole(uid);
+    if (!role) return false;
+
+    const currentPage = window.location.pathname.split('/').pop();
+
+    // Coordinador: acceso a TODO
+    if (role === 'coordinador') return true;
+
+    // Servidor/Apoyo: acceso a STAFF_PAGES, NO a admin.html
+    if (['servidor', 'apoyo'].includes(role)) {
+        if (COORDINATOR_ONLY_PAGES.includes(currentPage)) return false;
+        return STAFF_PAGES.includes(currentPage) || !isStaffPage() && !isCoordinatorOnlyPage();
+    }
+
+    // Miembro: solo páginas públicas (no staff, no coordinator-only)
+    return !isStaffPage() && !isCoordinatorOnlyPage();
+}
+
+function showAccessDenied(message = 'No tienes permisos para acceder a esta sección') {
     document.body.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center; padding:24px;">
             <div style="font-size:48px; margin-bottom:16px;">🚫</div>
@@ -80,38 +85,34 @@ function showAccessDenied(message = 'No tienes permisos para acceder a esta pág
     `;
 }
 
-// Inicializar verificación de permisos (llamar en cada página que lo requiera)
 async function initStaffPermissionCheck() {
     return new Promise((resolve) => {
+        const auth = getFirebase().auth();
         auth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = 'login.html';
                 return;
             }
 
-            if (isStaffPage()) {
-                const hasPermission = await checkStaffPermission(user.uid);
-                if (!hasPermission) {
-                    showAccessDenied('Solo servidores, coordinador y apoyos pueden acceder a esta sección.');
-                    return;
+            const hasPermission = await checkPermission(user.uid);
+            if (!hasPermission) {
+                const role = await getUserRole(user.uid);
+                const currentPage = window.location.pathname.split('/').pop();
+                let msg = 'No tienes permisos para acceder a esta sección.';
+                if (currentPage === 'admin.html' && role !== 'coordinador') {
+                    msg = 'Solo el coordinador puede acceder al Panel de Administración.';
                 }
+                showAccessDenied(msg);
+                return;
             }
 
-            // Usuario autenticado y con permisos (o página que no requiere staff)
             resolve(user);
         });
     });
 }
 
-// Exportar para uso en módulos
 window.AuthPermissions = {
-    STAFF_ROLES,
-    STAFF_PAGES,
-    isStaffPage,
-    getCurrentUserRole,
-    checkStaffPermission,
-    getMemberData,
-    getMemberIdFromAuth,
-    showAccessDenied,
-    initStaffPermissionCheck
+    initStaffPermissionCheck,
+    getUserRole,
+    checkPermission
 };
