@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planificación — Luz de Cristo</title>
-    <link rel="icon" href="https://luxtonsp-bot.github.io/luxto-nsp/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="../assets/images/logo_luxto.png">
     <link rel="icon" type="image/png" sizes="16x16" href="../assets/images/logo_luxto.png">
     <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
@@ -986,7 +985,11 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
-            await AuthPermissions.initStaffPermissionCheck();
+            try {
+                await AuthPermissions.initStaffPermissionCheck();
+            } catch (e) {
+                console.warn('AuthPermissions check failed, continuando:', e);
+            }
             generateYearOptions();
             generateSaturdayOptions();
             // Load the selected Saturday by default

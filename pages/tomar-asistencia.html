@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tomar Asistencia — Luz de Cristo</title>
-    <link rel="icon" href="https://luxtonsp-bot.github.io/luxto-nsp/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="../assets/images/logo_luxto.png">
     <link rel="icon" type="image/png" sizes="16x16" href="../assets/images/logo_luxto.png">
     <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
@@ -19,23 +18,29 @@
     <script>
         function convertirUrlDrive(url) {
             if (!url) return "";
-            // Si ya es thumbnail o URL directa, devolverla
-            if (url.includes("drive.google.com/thumbnail") || url.includes("uc?export=view")) return url;
+            // Si ya es thumbnail, devolverla
+            if (url.includes("drive.google.com/thumbnail")) return url;
+            // Si ya es uc?export=view, convertir a thumbnail
+            if (url.includes("uc?export=view")) {
+                const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
+                if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w200";
+                return url;
+            }
             // Extraer file ID de varios formatos de URL de Drive
             const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
                    || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
                    || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
-            if (m) return "https://drive.google.com/uc?export=view&id=" + m[1];
+            if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w200";
             return url;
         }
 
         function getPhotoUrl(memberData) {
-            // Prioridad: fotoThumb (URL directa) > fotoDriveId (convertir a URL directa)
+            // Prioridad: fotoThumb (URL directa) > fotoDriveId (convertir a thumbnail)
             if (memberData.fotoThumb && memberData.fotoThumb.startsWith('http')) {
                 return memberData.fotoThumb;
             }
             if (memberData.fotoDriveId) {
-                return "https://drive.google.com/uc?export=view&id=" + memberData.fotoDriveId;
+                return "https://drive.google.com/thumbnail?id=" + memberData.fotoDriveId + "&sz=w200";
             }
             return null;
         }
