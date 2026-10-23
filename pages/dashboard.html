@@ -2523,10 +2523,7 @@
           frames++;
           if (frames < 160) requestAnimationFrame(draw);
           else ctx.clearRect(0, 0, canvas.width, canvas.height);
-          } catch (e) {
-          console.error('Dropdown init error:', e);
-        }
-      })();
+        })();
 
       /* ── Cargar y renderizar historial KAHOOT del usuario ── */
       async function cargarKahootHistorialUsuario(uid) {
@@ -2679,8 +2676,9 @@
           if (!btn || !menu || !dropdown) {
             console.warn('Dropdown elements not found');
             return;
+          }
 
-        function openMenu() {
+          function openMenu() {
           dropdown.classList.add('open');
           btn.setAttribute('aria-expanded', 'true');
           menu.setAttribute('aria-hidden', 'false');
