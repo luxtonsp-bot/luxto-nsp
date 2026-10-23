@@ -6,7 +6,8 @@
     <title>Mi dashboard — Luz de Cristo</title>
     <link
       rel="icon"
-      href="https://luxtonsp-bot.github.io/luxto-nsp/favicon.ico"
+      type="image/png"
+      href="../assets/images/logo_luxto.png"
     >
     <link
       rel="icon"
@@ -22,7 +23,7 @@
     >
     <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
     <link
-      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Lora:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     >
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -1304,9 +1305,9 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <rect x="2" y="2" width="20" height="20" rx="5" >
-            <circle cx="12" cy="12" r="4" >
-            <circle cx="17.5" cy="6.5" r=".5" fill="currentColor" >
+            <rect x="2" y="2" width="20" height="20" rx="5" />
+            <circle cx="12" cy="12" r="4" />
+            <circle cx="17.5" cy="6.5" r=".5" fill="currentColor" />
           </svg>
           @luxto_nsp
         </a>
@@ -1592,6 +1593,7 @@
       let calificacion = 0;
       let memberData = null;
       let realUidActual = null; // id real del doc members/{id} (== uid de Auth si todo está enlazado)
+      let memberIdActual = null; // memberId (UUID) para Firestore + asistencia
       let tardanzaHistorial = [];
       let tardanzaChart = null;
 
@@ -1900,7 +1902,7 @@
           }
 
           // 4. Calcular estadísticas completas (replicando Code.gs / Excel)
-          await calcularYRenderizarEstadisticas(realUid, data);
+          await calcularYRenderizarEstadisticas(realUidActual, data);
         } catch (err) {
           console.error("Error cargarDashboard:", err);
           toast("Error de conexión con el servidor.", "err");
@@ -2524,6 +2526,7 @@
           if (frames < 160) requestAnimationFrame(draw);
           else ctx.clearRect(0, 0, canvas.width, canvas.height);
         })();
+      }
 
       /* ── Cargar y renderizar historial KAHOOT del usuario ── */
       async function cargarKahootHistorialUsuario(uid) {
