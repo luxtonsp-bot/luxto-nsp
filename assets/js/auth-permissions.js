@@ -11,6 +11,8 @@ const STAFF_PAGES = [
     'planificacion.html'
 ];
 
+import { db, auth } from "./firebase-init.js";
+
 // Verificar si la página actual requiere permisos de staff
 function isStaffPage() {
     const currentPage = window.location.pathname.split('/').pop();
