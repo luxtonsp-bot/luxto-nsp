@@ -4,6 +4,7 @@
     "no-inline-style": "off",
     "no-obsolete": "off",
     "svg-focusable": "off",
-    "element-permitted-content": "error"
+    "element-permitted-content": "error",
+    "prefer-native-element": "off"
   }
 }
