@@ -1235,24 +1235,25 @@ window.loadSuggestions = async function loadSuggestions() {
     if (!container) return;
     container.innerHTML = "<p>Cargando sugerencias...</p>";
 
-    const snap = await getDocs(collection(fsdb, "sugerencias"));
+    // Consultar AMBAS colecciones: sugerencias (nueva) + suggestions (legacy)
+    const [snapNew, snapOld] = await Promise.all([
+      getDocs(collection(fsdb, "sugerencias")),
+      getDocs(collection(fsdb, "suggestions"))
+    ]);
 
-    if (snap.empty) {
-      container.innerHTML =
-        '<p style="color:var(--muted); font-style:italic;">No hay sugerencias aún.</p>';
+    // Unir y normalizar
+    const docs = [];
+    snapNew.docs.forEach(d => docs.push({ id: d.id, ...d.data(), _source: "sugerencias" }));
+    snapOld.docs.forEach(d => docs.push({ id: d.id, ...d.data(), _source: "suggestions" }));
+
+    if (docs.length === 0) {
+      container.innerHTML = '<p style="color:var(--muted); font-style:italic;">No hay sugerencias aún.</p>';
       return;
     }
 
-    const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     docs.sort((a, b) => {
-      const fa =
-        a.createdAt?.seconds ||
-        (a.created_at ? new Date(a.created_at).getTime() / 1000 : 0) ||
-        0;
-      const fb =
-        b.createdAt?.seconds ||
-        (b.created_at ? new Date(b.created_at).getTime() / 1000 : 0) ||
-        0;
+      const fa = a.createdAt?.seconds || (a.fecha ? new Date(a.fecha).getTime() / 1000 : 0) || (a.created_at ? new Date(a.created_at).getTime() / 1000 : 0) || 0;
+      const fb = b.createdAt?.seconds || (b.fecha ? new Date(b.fecha).getTime() / 1000 : 0) || (b.created_at ? new Date(b.created_at).getTime() / 1000 : 0) || 0;
       return fb - fa;
     });
 
@@ -1269,8 +1270,7 @@ window.loadSuggestions = async function loadSuggestions() {
     container.innerHTML = html;
   } catch (e) {
     console.error("Error loading suggestions:", e);
-    document.getElementById("suggestions-list").innerHTML =
-      '<p style="color:var(--err)">Error cargando sugerencias</p>';
+    document.getElementById("suggestions-list").innerHTML = '<p style="color:var(--err)">Error cargando sugerencias</p>';
   }
 };
 
