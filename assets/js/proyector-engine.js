@@ -15,7 +15,7 @@ import {
   finalizeKahootSession,
   normalizeKahootSessionState,
 } from './asamblea-engine.js';
-import { auth, onAuthStateChanged, rtdb, ref, onValue, set, onDisconnect, esc, KAHOOT_RTDB_PATHS, serverNow, fsdb } from './firebase-init.js';
+import { auth, onAuthStateChanged, rtdb, ref, onValue, set, onDisconnect, esc, KAHOOT_RTDB_PATHS, serverNow, fsdb, resolveMemberId } from './firebase-init.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let usuarioActual = null;
@@ -76,9 +76,9 @@ onAuthStateChanged(auth, async (user) => {
   usuarioActual = user;
 
   try {
-    const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     const fsdb = getFirestore();
-    const memberDoc = await getDoc(doc(fsdb, "members", user.uid));
+    const memberId = await resolveMemberId(user.uid);
+    const memberDoc = await getDoc(doc(fsdb, "members", memberId));
     if (memberDoc.exists()) {
       const data = memberDoc.data();
       nombreActual = data.nombre || "";

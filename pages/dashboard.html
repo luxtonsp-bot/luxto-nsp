@@ -1584,6 +1584,34 @@
         setTimeout(() => (t.className = ""), 3200);
       }
 
+      /* ── Render admin dropdown based on role ────────── */
+      function renderAdminDropdown(rol) {
+        const menu = document.getElementById("adminDropdownMenu");
+        if (!menu) return;
+        
+        const isCoordinador = rol === "coordinador";
+        
+        // Definir enlaces según matriz de permisos
+        const links = [
+          { href: "planificacion.html", label: "Planificación", roles: ["coordinador", "servidor", "apoyo"] },
+          { href: "tomar-asistencia.html", label: "Tomar Asistencia", roles: ["coordinador", "servidor", "apoyo"] },
+          { href: "tablas.html", label: "Tablas Dinámicas", roles: ["coordinador", "servidor", "apoyo"] },
+          { href: "historial.html", label: "Historial", roles: ["coordinador", "servidor", "apoyo"] },
+          { href: "gestion-grupo.html", label: "Gestión de Grupo (altas)", roles: ["coordinador", "servidor", "apoyo"] },
+          // Solo coordinador
+          { href: "admin.html", label: "Panel Admin (cambiar roles)", roles: ["coordinador"] },
+          { href: "gestion-grupo.html", label: "Gestión de Grupo (perseverantes, cierre año)", roles: ["coordinador"] }
+        ];
+        
+        // Filtrar enlaces permitidos para este rol
+        const allowed = links.filter(l => l.roles.includes(rol));
+        
+        // Renderizar
+        menu.innerHTML = allowed.map(l => 
+          `<a href="${l.href}" class="dropdown-item">${l.label}</a>`
+        ).join('');
+      }
+
       /* ── Convierte URL de Drive a VISTA DIRECTA (uc?export=view) ────────
          Thumbnail (drive.google.com/thumbnail) NO carga en GitHub Pages por CSP.
          Usamos uc?export=view&id=FILE_ID que sí funciona. */
@@ -1757,12 +1785,15 @@
         }
         usuarioActual = user;
         await cargarDashboard(user.uid); // Cambio: pasamos UID, no email
-        // Admin check: use role from memberData
-        if (
-          memberData &&
-          (memberData.rol === "coordinador" || memberData.rol === "lider")
-        ) {
-          document.getElementById("adminBtnWrap").style.display = "block";
+        // Admin/Staff check: show button for coordinador, servidor, apoyo
+        if (memberData) {
+          const rol = memberData.rol || memberData.role || '';
+          const isStaff = ['coordinador', 'servidor', 'apoyo'].includes(rol);
+          if (isStaff) {
+            document.getElementById("adminBtnWrap").style.display = "block";
+            // Render dropdown items based on role
+            renderAdminDropdown(rol);
+          }
         }
         setupReveal();
         cargarHistorialTardanzas();
