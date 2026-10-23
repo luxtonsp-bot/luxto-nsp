@@ -202,7 +202,7 @@
         transition: opacity 0.2s ease, transform 0.2s ease;
         pointer-events: none;
       }
-      .dropdown-menu.open {
+      .dropdown.open .dropdown-menu {
         display: block;
         opacity: 1;
         transform: translateY(0);
@@ -1594,6 +1594,7 @@
       let memberData = null;
       let realUidActual = null; // id real del doc members/{id} (== uid de Auth si todo está enlazado)
       let memberIdActual = null; // memberId (UUID) para Firestore + asistencia
+      let idsAsistencia = []; // IDs a probar al leer asistencia (UUID + authUid)
       let tardanzaHistorial = [];
       let tardanzaChart = null;
 
@@ -1609,27 +1610,26 @@
       function renderAdminDropdown(rol) {
         const menu = document.getElementById("adminDropdownMenu");
         if (!menu) return;
-        
+
         const isCoordinador = rol === "coordinador";
-        
-        // Definir enlaces según matriz de permisos
+
+        // Definir enlaces según matriz de permisos (sin duplicados)
         const links = [
           { href: "planificacion.html", label: "Planificación", roles: ["coordinador", "servidor", "apoyo"] },
           { href: "tomar-asistencia.html", label: "Tomar Asistencia", roles: ["coordinador", "servidor", "apoyo"] },
           { href: "tablas.html", label: "Tablas Dinámicas", roles: ["coordinador", "servidor", "apoyo"] },
           { href: "historial.html", label: "Historial", roles: ["coordinador", "servidor", "apoyo"] },
-          { href: "gestion-grupo.html", label: "Gestión de Grupo (altas)", roles: ["coordinador", "servidor", "apoyo"] },
+          { href: "gestion-grupo.html", label: "Gestión de Grupo", roles: ["coordinador", "servidor", "apoyo"] },
           // Solo coordinador
-          { href: "admin.html", label: "Panel Admin (cambiar roles)", roles: ["coordinador"] },
-          { href: "gestion-grupo.html", label: "Gestión de Grupo (perseverantes, cierre año)", roles: ["coordinador"] }
+          { href: "admin.html", label: "Panel Admin (cambiar roles)", roles: ["coordinador"] }
         ];
-        
+
         // Filtrar enlaces permitidos para este rol
         const allowed = links.filter(l => l.roles.includes(rol));
-        
-        // Renderizar
-        menu.innerHTML = allowed.map(l => 
-          `<a href="${l.href}" class="dropdown-item">${l.label}</a>`
+
+        // Renderizar (con role="menuitem" para accesibilidad)
+        menu.innerHTML = allowed.map(l =>
+          `<a href="${l.href}" class="dropdown-item" role="menuitem">${l.label}</a>`
         ).join('');
       }
 
@@ -1850,6 +1850,8 @@
           }
           data = memberSnap.data();
           memberData = data;
+          // IDs a probar al leer asistencia: UUID + authUid (sin memberIdAntiguo ni legacyId)
+          idsAsistencia = [...new Set([memberId, authUid].filter(Boolean))];
           // Guardar AMBOS: authUid (para RTDB Kahoot/ranking) y memberId (para Firestore + asistencia)
           realUidActual = authUid; // Auth UID para RTDB (Kahoot, ranking)
           memberIdActual = memberId; // memberId (UUID) para Firestore Y asistencia
@@ -1941,43 +1943,34 @@
       }
 
       let _asistCache = { uid: null, promise: null };
-      function leerAsistenciasMiembro(uid) {
-        if (_asistCache.uid === uid && _asistCache.promise)
-          return _asistCache.promise;
+      function leerAsistenciasMiembro(ids) {
+        const key = ids.join("|");
+        if (_asistCache.uid === key && _asistCache.promise) return _asistCache.promise;
         const promise = (async () => {
           const hoy = new Date().toISOString().slice(0, 10);
-          const asambleas = (await cargarAsambleas()).filter(
-            (a) => a.fecha <= hoy,
-          );
-          const mapa = new Map(); // fecha -> doc (solo presentes)
-          let denegados = 0;
-          await Promise.all(
-            asambleas.map(async (a) => {
-              try {
-                const snap = await getDoc(
-                  doc(db, "asistencia", a.fecha.slice(0, 4), a.fecha, uid),
-                );
-                if (snap.exists() && snap.data().presente === true)
-                  mapa.set(a.fecha, { ...snap.data(), fecha: a.fecha });
-              } catch (e) {
-                if (e && e.code === "permission-denied") denegados++;
-                else throw e;
-              }
-            }),
-          );
-          if (denegados > 0) {
-            const err = new Error(
-              "permission-denied en " + denegados + " lecturas de asistencia",
-            );
+          const asambleas = (await cargarAsambleas()).filter(a => a.fecha <= hoy);
+          const mapa = new Map();
+          let ok = 0, denegados = 0;
+          await Promise.all(asambleas.flatMap(a => ids.map(async (id) => {
+            try {
+              const snap = await getDoc(doc(db, "asistencia", a.fecha.slice(0, 4), a.fecha, id));
+              ok++;
+              if (snap.exists() && snap.data().presente === true && !mapa.has(a.fecha))
+                mapa.set(a.fecha, { ...snap.data(), fecha: a.fecha });
+            } catch (e) {
+              if (e && e.code === "permission-denied") denegados++;
+              else throw e;
+            }
+          })));
+          if (ok === 0 && denegados > 0) {
+            const err = new Error("permission-denied");
             err.code = "permission-denied";
             throw err;
           }
           return mapa;
         })();
-        _asistCache = { uid, promise };
-        promise.catch(() => {
-          _asistCache = { uid: null, promise: null };
-        });
+        _asistCache = { uid: key, promise };
+        promise.catch(() => { _asistCache = { uid: null, promise: null }; });
         return promise;
       }
 
@@ -2018,7 +2011,7 @@
           let ultimaAsistencia = null;
           let ultimaFechaAsistencia = null;
 
-          const asistenciasMap = await leerAsistenciasMiembro(memberIdActual);
+          const asistenciasMap = await leerAsistenciasMiembro(idsAsistencia);
 
           for (const a of asambleasDesdeIngreso) {
             const aData = asistenciasMap.get(a.fecha);
@@ -2139,10 +2132,9 @@
       async function cargarHistorialTardanzas() {
         try {
           if (!usuarioActual) return;
-          const memberId = memberIdActual || usuarioActual.uid;
 
           // Mismo mapa que usa el resumen (cacheado): no repite lecturas
-          const mapa = await leerAsistenciasMiembro(memberId);
+          const mapa = await leerAsistenciasMiembro(idsAsistencia);
           const docs = [...mapa.values()];
           // Ordenar en cliente por fecha DESC
           docs.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
@@ -2364,10 +2356,10 @@
             displayBase64 = await blobToBase64(displayBlob);
           }
 
-          // Batch write: members/{uid}.fotoThumb + fotos/{uid} = {data, actualizado}
+          // Batch write: members/{memberId}.fotoThumb + fotos/{authUid} = {data, actualizado}
           if (usuarioActual) {
             const batch = writeBatch(db);
-            const memberRef = doc(db, "members", usuarioActual.uid);
+            const memberRef = doc(db, "members", memberIdActual);
             const fotoRef = doc(db, "fotos", usuarioActual.uid);
             batch.update(memberRef, { fotoThumb: thumbBase64 });
             batch.set(fotoRef, {
