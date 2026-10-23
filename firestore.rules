@@ -33,9 +33,41 @@ service cloud.firestore {
       allow list: if isAuth();
       // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
       allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
-      // Nadie puede crearse a sí mismo con un rol elevado; coordinador puede crear para nuevos
-      allow create: if isCoordinator() || (isAuth() && request.auth.uid == uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro'));
+      // Coordinador, servidor y apoyo pueden crear nuevos miembros (solo rol=miembro).
+      // Usuario autenticado puede crearse a sí mismo (solo rol=miembro).
+      allow create: if isCoordinator() || isStaff() || (isAuth() && request.auth.uid == uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro'));
       allow delete: if false;
+    }
+
+    // ── NUEVA ARQUITECTURA: members/{memberId} (UUID canónico) ──
+    function getMemberIdFromUid(uid) {
+      let snap = get(/databases/$(database)/documents/uid_map/$(uid));
+      return snap.data != null ? snap.data.memberId : null;
+    }
+    function isOwnMemberId(memberId) {
+      return isAuth() && getMemberIdFromUid(request.auth.uid) == memberId;
+    }
+
+    match /members/{memberId} {
+      // Documento canónico del miembro (ID = UUID permanente)
+      allow read: if isAuth();
+      allow list: if isAuth();
+      // Actualizar propio perfil (email, fechaNacimiento, etc.) — NO rol, NO estadoAnioActual, NO fechaIngresoGrupo
+      allow update: if isOwnMemberId(memberId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido']) || isCoordinator();
+      // Registro: usuario recién autenticado completa su ficha (email, uid, fechaNacimiento)
+      // Permitir si el uid que se escribe coincide con el auth UID (registro inicial)
+      allow update: if isAuth() && request.resource.data.uid == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido']);
+      // Registro: usuario recién autenticado completa su ficha (email, uid, fechaNacimiento)
+      allow create: if isAuth() && request.auth.uid == resource.data.uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro');
+      allow delete: if false;
+    }
+
+    // ── NUEVA ARQUITECTURA: uid_map/{authUid} (enlace Auth ↔ memberId) ──
+    match /uid_map/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isStaff());
+      // Creado solo al registrar cuenta (registro.html)
+      allow create: if isAuth() && request.auth.uid == uid;
+      allow update, delete: if false;
     }
 
     match /miembros_registro/{uid} { allow read: if true; allow write: if isCoordinator(); }

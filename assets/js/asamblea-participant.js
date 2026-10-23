@@ -11,7 +11,7 @@ import {
   getRemainingTime,
   isPreguntaEnTiempo
 } from './asamblea-engine.js';
-import { auth, onAuthStateChanged, rtdb, ref, onValue, set, rtdbTS, onDisconnect, esc, serverNow } from './firebase-init.js';
+import { auth, onAuthStateChanged, rtdb, ref, onValue, set, rtdbTS, onDisconnect, esc, serverNow, resolveMemberId } from './firebase-init.js';
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let usuarioActual = null;
@@ -72,7 +72,8 @@ onAuthStateChanged(auth, async (user) => {
 
   try {
     const fsdb = getFirestore();
-    const memberDoc = await getDoc(doc(fsdb, "members", user.uid));
+    const memberId = await resolveMemberId(user.uid);
+    const memberDoc = await getDoc(doc(fsdb, "members", memberId));
     if (memberDoc.exists()) {
       const data = memberDoc.data();
       nombreActual = data.nombre || "";

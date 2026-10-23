@@ -79,7 +79,8 @@ async function syncCurrentUserAdminState() {
   if (!user) return;
 
   try {
-    const memberSnap = await getDoc(doc(fsdb, "members", user.uid));
+    const memberId = await resolveMemberId(user.uid);
+    const memberSnap = await getDoc(doc(fsdb, "members", memberId));
     const rol = memberSnap.exists()
       ? memberSnap.data().rol || "miembro"
       : "miembro";
@@ -87,13 +88,27 @@ async function syncCurrentUserAdminState() {
 
     if (staffRoles.includes(rol) || ADMINS.includes(user.email)) {
       const role = ADMINS.includes(user.email) ? "coordinador" : rol;
-      await set(ref(rtdb, RTDB_PATHS.admins(user.uid)), {
-        email: user.email || memberSnap.data()?.email || "",
-        rol: role,
-        ts: rtdbTS(),
-      });
+      const memberData = memberSnap.data() || {};
+      const authUid = user.uid;
+      const email = user.email || memberData.email || "";
+
+      const adminData = { email, rol: role, ts: rtdbTS() };
+
+      // Escribir en AMBOS paths: legacy (authUid) + nuevo (memberId)
+      const writes = [];
+      writes.push(set(ref(rtdb, RTDB_PATHS.admins(authUid)), adminData));
+      if (memberId !== authUid) {
+        writes.push(set(ref(rtdb, RTDB_PATHS.admins(memberId)), adminData));
+      }
+      await Promise.all(writes);
     } else {
-      await remove(ref(rtdb, RTDB_PATHS.admins(user.uid)));
+      // Quitar de AMBOS paths
+      const removes = [];
+      removes.push(remove(ref(rtdb, RTDB_PATHS.admins(user.uid))));
+      if (memberId !== user.uid) {
+        removes.push(remove(ref(rtdb, RTDB_PATHS.admins(memberId))));
+      }
+      await Promise.all(removes);
     }
   } catch (error) {
     console.warn("syncCurrentUserAdminState error:", error.message);
@@ -114,7 +129,8 @@ onAuthStateChanged(auth, async (user) => {
   if (!ADMINS.includes(user.email)) {
     // Permitir servidores, apoyos y coordinadores (verificar en Firestore)
     try {
-      const memberSnap = await getDoc(doc(fsdb, "members", user.uid));
+      const memberId = await resolveMemberId(user.uid);
+      const memberSnap = await getDoc(doc(fsdb, "members", memberId));
       if (!memberSnap.exists()) throw new Error("No member doc");
       const rol = memberSnap.data().rol;
       // Roles con acceso al panel admin: servidor, apoyo, coordinador
@@ -166,10 +182,8 @@ async function inicializar() {
     const user = auth.currentUser;
     if (user) {
       try {
-        const { getFirestore, doc, getDoc } =
-          await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-        const fsdb = getFirestore();
-        const memberSnap = await getDoc(doc(fsdb, "members", user.uid));
+        const memberId = await resolveMemberId(user.uid);
+        const memberSnap = await getDoc(doc(fsdb, "members", memberId));
         if (memberSnap.exists()) {
           const data = memberSnap.data();
           console.log(
@@ -644,7 +658,8 @@ window.siguientePregunta = async function () {
 /* ── Finalizar asamblea (con snapshot) — usa engine ─────────────────── */
 window.finalizarAsamblea = async function () {
   try {
-    const userSnap = await getDoc(doc(fsdb, "members", auth.currentUser.uid));
+    const memberId = await resolveMemberId(auth.currentUser.uid);
+    const userSnap = await getDoc(doc(fsdb, "members", memberId));
     if (!userSnap.exists() || userSnap.data().rol !== "coordinador") {
       toast("Solo los coordinadores pueden finalizar la asamblea", "err");
       return;
@@ -1110,7 +1125,8 @@ window.loadMemberDetails = async function (memberId) {
 
 window.updateMemberRole = async function (memberId, newRole) {
   try {
-    const userSnap = await getDoc(doc(fsdb, "members", auth.currentUser.uid));
+    const currentUserMemberId = await resolveMemberId(auth.currentUser.uid);
+    const userSnap = await getDoc(doc(fsdb, "members", currentUserMemberId));
     const userRole = userSnap.data().rol;
 
     const validRoles = ["miembro", "servidor", "apoyo", "coordinador"];
@@ -1129,22 +1145,31 @@ window.updateMemberRole = async function (memberId, newRole) {
       fechaActualizacionRol: fsServerTimestamp(),
     });
 
-    // Sincronizar /admins RTDB
+    // Sincronizar /admins RTDB — escribir en AMBOS paths (legacy authUid + nuevo memberId)
     const staffRoles = ["servidor", "apoyo", "coordinador"];
+    const memberSnap = await getDoc(doc(fsdb, "members", memberId));
+    const memberData = memberSnap.exists() ? memberSnap.data() : {};
+    const authUid = memberData.uid || "";
+    const email = memberData.email || "";
+
+    const adminData = { email, rol: newRole, ts: rtdbTS() };
+
     if (staffRoles.includes(newRole)) {
-      const memberSnap = await getDoc(doc(fsdb, "members", memberId));
-      const email = memberSnap.exists() ? memberSnap.data().email : "";
-      await set(ref(rtdb, RTDB_PATHS.admins(memberId)), {
-        email,
-        rol: newRole,
-        ts: rtdbTS(),
-      });
+      // Escribir en AMBOS paths: legacy (authUid) + nuevo (memberId)
+      const writes = [];
+      if (authUid) writes.push(set(ref(rtdb, RTDB_PATHS.admins(authUid)), adminData));
+      writes.push(set(ref(rtdb, RTDB_PATHS.admins(memberId)), adminData));
+      await Promise.all(writes);
     } else {
-      await remove(ref(rtdb, RTDB_PATHS.admins(memberId)));
+      // Quitar de AMBOS paths
+      const removes = [];
+      if (authUid) removes.push(remove(ref(rtdb, RTDB_PATHS.admins(authUid))));
+      removes.push(remove(ref(rtdb, RTDB_PATHS.admins(memberId))));
+      await Promise.all(removes);
     }
 
     // Mantener sincronizado también el acceso de este usuario actual en caso de cambios de rol
-    if (auth.currentUser?.uid === memberId) {
+    if (auth.currentUser?.uid === authUid) {
       await syncCurrentUserAdminState();
     }
 
@@ -1514,7 +1539,8 @@ window.activarKahootSession = async function () {
 window.finalizarKahootSession = async function () {
   // Solo coordinadores pueden finalizar
   try {
-    const userSnap = await getDoc(doc(fsdb, "members", auth.currentUser.uid));
+    const memberId = await resolveMemberId(auth.currentUser.uid);
+    const userSnap = await getDoc(doc(fsdb, "members", memberId));
     if (!userSnap.exists() || userSnap.data().rol !== "coordinador") {
       toast("Solo los coordinadores pueden finalizar el KAHOOT", "err");
       return;

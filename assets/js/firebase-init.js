@@ -99,6 +99,22 @@ export function fsBatch() {
   return writeBatch(fsdb);
 }
 
+/* ── Resolver memberId desde uid (usa uid_map para nueva arquitectura) ──
+   Retorna memberId si existe en uid_map, sino asume uid legacy (Auth UID) */
+export async function resolveMemberId(uid) {
+  if (!uid) return null;
+  try {
+    const snap = await getDoc(doc(fsdb, "uid_map", uid));
+    if (snap.exists() && snap.data().memberId) {
+      return snap.data().memberId;
+    }
+  } catch (e) {
+    console.warn("resolveMemberId error:", e.message);
+  }
+  // Fallback: uid legacy (Auth UID como document ID)
+  return uid;
+}
+
 // Verificar si usuario es staff (servidor/apoyo/coordinador)
 export async function isStaff(uid) {
   const rol = await getUserRole(uid);
@@ -112,7 +128,8 @@ export async function isCoordinator(uid) {
 // Obtener rol del usuario actual
 export async function getUserRole(uid) {
   try {
-    const snap = await getDoc(doc(fsdb, 'members', uid));
+    const memberId = await resolveMemberId(uid);
+    const snap = await getDoc(doc(fsdb, 'members', memberId));
     if (snap.exists() && snap.data().rol) return snap.data().rol;
   } catch {}
 

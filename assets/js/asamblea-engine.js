@@ -17,6 +17,7 @@ import {
   isStaff,
   isCoordinator,
   auth,
+  resolveMemberId,
   ref,
   onValue,
   set,
@@ -888,11 +889,12 @@ export async function finalizeKahootSession() {
     const pts = data?.pts;
     if (!pts) continue;
 
-    // Buscar member por Auth UID (doc ID = uid)
+    // Buscar member por memberId (resuelve uid_map para nueva arquitectura)
     let nombre = "Anónimo";
     let fotoUrl = "";
     try {
-      const memberSnap = await getDoc(doc(fsdb, "members", uid));
+      const memberId = await resolveMemberId(uid);
+      const memberSnap = await getDoc(doc(fsdb, "members", memberId));
       if (memberSnap.exists()) {
         const m = memberSnap.data();
         nombre = m.nombre || m.name || "Anónimo";
@@ -1120,7 +1122,8 @@ export async function responder(qid, uid, idx) {
   let fotoUrl = conectado?.fotoUrl || conectado?.fotoMostrar || "";
 
   if (!nombre) {
-    const memberSnap = await getDoc(doc(fsdb, "members", uid));
+    const memberId = await resolveMemberId(uid);
+    const memberSnap = await getDoc(doc(fsdb, "members", memberId));
     if (memberSnap.exists()) {
       const data = memberSnap.data();
       nombre = data.nombre || uid;
