@@ -717,8 +717,9 @@
             sortedMembers.forEach(({ id, data: memberData }) => {
                 const nombre = memberData.nombre || 'Sin nombre';
                 const email = memberData.email || '';
-                const presente = presentesUids.has(id);
-                const memberAttendance = snapshot.docs.find(d => d.id === id)?.data() || {};
+                const memberUid = memberData.uid || id; // fallback a UUID si no hay uid
+                const presente = presentesUids.has(memberUid);
+                const memberAttendance = snapshot.docs.find(d => d.id === memberUid)?.data() || {};
                 const tardanza = memberAttendance.tardanzaMinutos || 0;
                 const esTardanza = memberAttendance.esTardanza === true;
 
