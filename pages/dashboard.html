@@ -189,29 +189,48 @@
         right: 0;
         top: 110%;
         background: var(--paper);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 8px 24px -8px rgba(28,24,20,.2);
         border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 4px 0;
+        border-radius: 10px;
+        padding: 8px 0;
         display: none;
+        min-width: 200px;
         z-index: 999;
+        opacity: 0;
+        transform: translateY(-8px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
       }
-      .dropdown:hover .dropdown-menu {
+      .dropdown-menu.open {
         display: block;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
       }
       .dropdown-item {
-        display: block;
-        padding: 8px 12px;
-        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        font-size: 14px;
         color: var(--ink);
         text-decoration: none;
+        transition: background 0.15s ease;
       }
       .dropdown-item:hover {
-        background: rgba(245, 197, 24, 0.08);
+        background: rgba(245, 197, 24, 0.12);
+      }
+      .dropdown-item:focus {
+        outline: none;
+        background: rgba(245, 197, 24, 0.18);
       }
       .caret {
         font-size: 0.7em;
         margin-left: 4px;
+        transition: transform 0.2s ease;
+      }
+      .dropdown.open .caret {
+        transform: rotate(180deg);
       }
 
       .btn-logout {
@@ -1183,22 +1202,22 @@
         <div class="topbar-sep"></div>
         <div id="adminBtnWrap" style="display: none">
           <div class="dropdown" id="adminDropdown">
-            <button class="btn-admin" id="adminDropdownBtn" type="button">
+            <button class="btn-admin" id="adminDropdownBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Opciones de administrador">
               ⚙️ Admin<span class="caret">▼</span>
             </button>
-            <div class="dropdown-menu" id="adminDropdownMenu">
-              <a href="admin.html" class="dropdown-item">Panel Admin</a>
-              <a href="planificacion.html" class="dropdown-item"
+            <div class="dropdown-menu" id="adminDropdownMenu" role="menu" aria-hidden="true">
+              <a href="admin.html" class="dropdown-item" role="menuitem">Panel Admin</a>
+              <a href="planificacion.html" class="dropdown-item" role="menuitem"
                 >Planificación</a
               >
-              <a href="tomar-asistencia.html" class="dropdown-item"
+              <a href="tomar-asistencia.html" class="dropdown-item" role="menuitem"
                 >Tomar Asistencia</a
               >
-              <a href="gestion-grupo.html" class="dropdown-item"
+              <a href="gestion-grupo.html" class="dropdown-item" role="menuitem"
                 >Gestión de Grupo</a
               >
-              <a href="tablas.html" class="dropdown-item">Tablas Dinámicas</a>
-              <a href="historial.html" class="dropdown-item">Historial</a>
+              <a href="tablas.html" class="dropdown-item" role="menuitem">Tablas Dinámicas</a>
+              <a href="historial.html" class="dropdown-item" role="menuitem">Historial</a>
             </div>
           </div>
         </div>
@@ -2646,6 +2665,82 @@
           cargarRankingGlobal(realUidActual),
         ]);
       }
+
+      /* ── Dropdown Admin (click-based, accessible) ── */
+      (function () {
+        const btn = document.getElementById('adminDropdownBtn');
+        const menu = document.getElementById('adminDropdownMenu');
+        const dropdown = document.getElementById('adminDropdown');
+        if (!btn || !menu || !dropdown) return;
+
+        function openMenu() {
+          dropdown.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+          menu.setAttribute('aria-hidden', 'false');
+          // Focus first item for keyboard navigation
+          const firstItem = menu.querySelector('.dropdown-item');
+          if (firstItem) firstItem.focus();
+        }
+
+        function closeMenu() {
+          dropdown.classList.remove('open');
+          btn.setAttribute('aria-expanded', 'false');
+          menu.setAttribute('aria-hidden', 'true');
+        }
+
+        function toggleMenu() {
+          if (dropdown.classList.contains('open')) closeMenu();
+          else openMenu();
+        }
+
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleMenu();
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && dropdown.classList.contains('open')) {
+            closeMenu();
+            btn.focus();
+          }
+        });
+
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+          if (dropdown.classList.contains('open') && !dropdown.contains(e.target)) {
+            closeMenu();
+          }
+        });
+
+        // Keyboard navigation inside menu
+        menu.addEventListener('keydown', (e) => {
+          const items = menu.querySelectorAll('.dropdown-item');
+          const index = Array.from(items).findIndex(el => el === document.activeElement);
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = items[(index + 1) % items.length];
+            next.focus();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prev = items[(index - 1 + items.length) % items.length];
+            prev.focus();
+          } else if (e.key === 'Home') {
+            e.preventDefault();
+            items[0].focus();
+          } else if (e.key === 'End') {
+            e.preventDefault();
+            items[items.length - 1].focus();
+          }
+        });
+
+        // Initialize ARIA
+        btn.setAttribute('aria-haspopup', 'true');
+        btn.setAttribute('aria-expanded', 'false');
+        menu.setAttribute('role', 'menu');
+        menu.setAttribute('aria-hidden', 'true');
+        menu.querySelectorAll('.dropdown-item').forEach(el => el.setAttribute('role', 'menuitem'));
+      })();
     </script>
   </body>
 </html>
