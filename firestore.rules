@@ -77,12 +77,19 @@ service cloud.firestore {
     match /asamblea/{docId} { allow read: if isAuth(); allow create, update: if isStaff(); allow delete: if isCoordinator(); }
 
     // ASISTENCIA (ruta real: asistencia/{anio}/{fecha}/{uid}; cada {fecha} es una subcolección)
-    // Lee: el propio miembro o un líder. Escribe: solo líderes (los docs no tienen campo email).
+    // Lee: el propio miembro (comparando memberId vía uid_map) o un líder. Escribe: solo líderes.
     match /asistencia/{docId} {
-      allow read: if isAuth() && request.auth.uid == resource.data.uid;
+      allow read: if isAuth() && (
+        request.auth.uid == resource.data.uid ||
+        get(/databases/$(database)/documents/uid_map/$(request.auth.uid)).data.memberId == resource.data.uid
+      );
     }
-    match /asistencia/{anio}/{fecha}/{uid} {
-      allow read: if isAuth() && (request.auth.uid == uid || isStaff());
+    match /asistencia/{anio}/{fecha}/{memberId} {
+      allow read: if isAuth() && (
+        request.auth.uid == memberId ||
+        get(/databases/$(database)/documents/uid_map/$(request.auth.uid)).data.memberId == memberId ||
+        isStaff()
+      );
       allow create, update: if isStaff();
       allow delete: if false;
     }
