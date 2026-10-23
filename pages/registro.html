@@ -260,11 +260,35 @@ function mostrarValidacion(estado, msg) {
   el.innerHTML = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg;
 }
 
-// Buscar miembro exacto por nombre (insensible a tildes/mayúsculas/orden)
+// Buscar miembro por coincidencia de al menos un nombre Y un apellido
+// Insensible a tildes, mayúsculas, orden
 function findExactMember(query, candidates) {
-  const norm = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/\s+/).sort().join(" ");
-  const q = norm(query);
-  const matches = candidates.filter(c => norm(c.nombre) === q);
+  const norm = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/\s+/).filter(t => t.length > 0);
+  
+  const qTokens = norm(query);
+  if (qTokens.length < 2) return []; // Necesita al menos nombre y apellido
+  
+  // Asumimos: primer token = primer nombre, último token = primer apellido
+  // Tokens intermedios = segundos nombres/apellidos
+  const qFirstNames = qTokens.slice(0, -1); // todos menos el último
+  const qLastNames = [qTokens[qTokens.length - 1]]; // último = apellido
+  
+  const matches = [];
+  for (const c of candidates) {
+    const cTokens = norm(c.nombre);
+    if (cTokens.length < 2) continue;
+    
+    const cFirstNames = cTokens.slice(0, -1);
+    const cLastNames = [cTokens[cTokens.length - 1]];
+    
+    // Verificar: al menos un nombre coincide Y al menos un apellido coincide
+    const firstMatch = qFirstNames.some(qf => cFirstNames.some(cf => cf === qf || cf.startsWith(qf) || qf.startsWith(cf)));
+    const lastMatch = qLastNames.some(ql => cLastNames.some(cl => cl === ql || cl.startsWith(ql) || ql.startsWith(cl)));
+    
+    if (firstMatch && lastMatch) {
+      matches.push(c);
+    }
+  }
   return matches;
 }
 
