@@ -1971,10 +1971,7 @@
             throw err;
           }
           return mapa;
-          } catch (e) {
-          console.error('Dropdown init error:', e);
-        }
-      })();
+        })();
         _asistCache = { uid, promise };
         promise.catch(() => {
           _asistCache = { uid: null, promise: null };
@@ -2530,7 +2527,6 @@
           console.error('Dropdown init error:', e);
         }
       })();
-      }
 
       /* ── Cargar y renderizar historial KAHOOT del usuario ── */
       async function cargarKahootHistorialUsuario(uid) {
