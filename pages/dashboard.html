@@ -1848,16 +1848,16 @@
           }
           data = memberSnap.data();
           memberData = data;
-          // Guardar AMBOS: authUid (para asistencia) y memberId (para Firestore)
-          realUidActual = authUid; // Auth UID para leer asistencia
-          memberIdActual = memberId; // memberId (UUID) para Firestore
+          // Guardar AMBOS: authUid (para RTDB Kahoot/ranking) y memberId (para Firestore + asistencia)
+          realUidActual = authUid; // Auth UID para RTDB (Kahoot, ranking)
+          memberIdActual = memberId; // memberId (UUID) para Firestore Y asistencia
           if (memberId !== authUid)
             console.warn(
               "UID distinto: members/" +
                 memberId +
                 " vs Auth " +
                 authUid +
-                " (las reglas de asistencia comparan con el uid de Auth)",
+                " (asistencia usa memberId; reglas verifican via uid_map)",
             );
           nombreActual = data.nombre || data.name;
           document.getElementById("perfilNombre").textContent = nombreActual;
@@ -2016,7 +2016,7 @@
           let ultimaAsistencia = null;
           let ultimaFechaAsistencia = null;
 
-          const asistenciasMap = await leerAsistenciasMiembro(realUidActual);
+          const asistenciasMap = await leerAsistenciasMiembro(memberIdActual);
 
           for (const a of asambleasDesdeIngreso) {
             const aData = asistenciasMap.get(a.fecha);
@@ -2137,10 +2137,10 @@
       async function cargarHistorialTardanzas() {
         try {
           if (!usuarioActual) return;
-          const realUid = realUidActual || usuarioActual.uid;
+          const memberId = memberIdActual || usuarioActual.uid;
 
           // Mismo mapa que usa el resumen (cacheado): no repite lecturas
-          const mapa = await leerAsistenciasMiembro(realUidActual);
+          const mapa = await leerAsistenciasMiembro(memberId);
           const docs = [...mapa.values()];
           // Ordenar en cliente por fecha DESC
           docs.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
