@@ -260,36 +260,87 @@ function mostrarValidacion(estado, msg) {
   el.innerHTML = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg;
 }
 
-// Buscar miembro por coincidencia de al menos un nombre Y un apellido
-// Insensible a tildes, mayúsculas, orden
+// Buscar miembro por coincidencia tolerante de nombre + apellido
+// Inspiración: normalización + tokens + prefijos + tolerancia a typos
+const STOP = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'da', 'di', 'y']);
+
+function normalizar(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9ñ\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokens(s) {
+  return normalizar(s).split(' ').filter(t => t && !STOP.has(t));
+}
+
+// Distancia de edición simple (Levenshtein) para typos
+function dist(a, b) {
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 2) return 99;
+  const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+    const c = a[i - 1] === b[j - 1] ? 0 : 1;
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+  }
+  return d[m][n];
+}
+
+// Score de un token query contra tokens del registro
+function puntoToken(qt, tReg) {
+  if (qt === tReg) return 1;
+  if (qt.length >= 2 && tReg.startsWith(qt)) return 0.9;  // prefijo: "dom" -> "dominguez"
+  // typo tolerante: 1 error para 4-7 chars, 2 para 8+
+  const tol = qt.length >= 8 ? 2 : qt.length >= 4 ? 1 : 0;
+  if (tol && Math.abs(qt.length - tReg.length) <= tol && dist(qt, tReg) <= tol) return 0.7;
+  return 0;
+}
+
 function findExactMember(query, candidates) {
-  const norm = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/\s+/).filter(t => t.length > 0);
+  const qTokens = tokens(query);
+  if (qTokens.length < 2) return []; // Mínimo: un nombre + un apellido
   
-  const qTokens = norm(query);
-  if (qTokens.length < 2) return []; // Necesita al menos nombre y apellido
-  
-  // Asumimos: primer token = primer nombre, último token = primer apellido
-  // Tokens intermedios = segundos nombres/apellidos
-  const qFirstNames = qTokens.slice(0, -1); // todos menos el último
-  const qLastNames = [qTokens[qTokens.length - 1]]; // último = apellido
+  // Separar en "nombres" (todo menos último) y "apellidos" (último token)
+  const qNombres = qTokens.slice(0, -1);
+  const qApellidos = [qTokens[qTokens.length - 1]];
   
   const matches = [];
   for (const c of candidates) {
-    const cTokens = norm(c.nombre);
+    const cTokens = tokens(c.nombre);
     if (cTokens.length < 2) continue;
     
-    const cFirstNames = cTokens.slice(0, -1);
-    const cLastNames = [cTokens[cTokens.length - 1]];
+    const cNombres = cTokens.slice(0, -1);
+    const cApellidos = [cTokens[cTokens.length - 1]];
     
-    // Verificar: al menos un nombre coincide Y al menos un apellido coincide
-    const firstMatch = qFirstNames.some(qf => cFirstNames.some(cf => cf === qf || cf.startsWith(qf) || qf.startsWith(cf)));
-    const lastMatch = qLastNames.some(ql => cLastNames.some(cl => cl === ql || cl.startsWith(ql) || ql.startsWith(cl)));
+    // Score nombres: al menos uno coincide bien
+    let mejorNombre = 0;
+    for (const qn of qNombres) {
+      for (const cn of cNombres) {
+        mejorNombre = Math.max(mejorNombre, puntoToken(qn, cn));
+      }
+    }
     
-    if (firstMatch && lastMatch) {
-      matches.push(c);
+    // Score apellidos: al menos uno coincide bien
+    let mejorApellido = 0;
+    for (const qa of qApellidos) {
+      for (const ca of cApellidos) {
+        mejorApellido = Math.max(mejorApellido, puntoToken(qa, ca));
+      }
+    }
+    
+    // Exigir: nombre >= 0.7 Y apellido >= 0.7
+    // (exacto=1, prefijo=0.9, typo=0.7)
+    if (mejorNombre >= 0.7 && mejorApellido >= 0.7) {
+      matches.push({ ...c, score: mejorNombre + mejorApellido });
     }
   }
-  return matches;
+  
+  // Ordenar por score descendente
+  return matches.sort((a, b) => b.score - a.score || a.nombre.localeCompare(b.nombre));
 }
 
 // Seleccionar miembro y avanzar al paso 2
