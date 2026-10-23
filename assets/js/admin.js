@@ -1206,7 +1206,7 @@ function feedbackAsam(d) {
   return d.asambleaFecha || d.assembly_date || "No especificada";
 }
 function feedbackPuntos(d) {
-  const p = d.puntuacion ?? d.rating ?? 0;
+  const p = d.calificacion ?? d.puntuacion ?? d.rating ?? 0;
   const n = Math.max(0, Math.min(5, Math.round(Number(p) || 0)));
   return n;
 }
