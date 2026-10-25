@@ -74,7 +74,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    match /miembros_registro/{uid} { allow read: if true; allow write: if isCoordinator(); }
+    match /miembros_registro/{uid} { allow read: if true; allow create, update: if isAuth() && request.auth.uid == uid; allow delete: if isCoordinator(); }
 
     match /asambleas/{fecha} { allow read: if true; allow create, update, delete: if isStaff(); }
 

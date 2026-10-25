@@ -452,7 +452,7 @@ async function crearCuenta() {
       email: email,
       createdAt: new Date().toISOString()
     });
-    const registroRef = doc(db, "miembros_registro", miembroSeleccionado.memberId);
+    const registroRef = doc(db, "miembros_registro", miembroSeleccionado.docId);
     batch.update(registroRef, {
       email: email,
       tieneCuenta: true
