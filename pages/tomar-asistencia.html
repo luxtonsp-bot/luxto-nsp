@@ -730,6 +730,14 @@
             const assemblyDoc = await db.collection('asambleas').doc(fecha).get();
             const assemblyData = assemblyDoc.exists ? assemblyDoc.data() : {};
 
+            // Variables para resumen (evitar template literals anidados)
+            const temaHtml = assemblyData.tema?.titulo
+                ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${assemblyData.tema.titulo}</div></div>`
+                : '';
+            const horaHtml = assemblyData.horaInicio
+                ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${assemblyData.horaInicio}</div></div>`
+                : '';
+
             // Cargar TODOS los miembros activos (para calcular ausentes)
             const membersSnapshot = await db.collection('members')
                 .where('estadoAnioActual', '==', 'activo')
@@ -1048,6 +1056,14 @@
             // Obtener datos de asamblea para esa fecha (tema, hora)
             const assemblyDoc = await db.collection('asambleas').doc(fecha).get();
             const assemblyData = assemblyDoc.exists ? assemblyDoc.data() : {};
+
+            // Variables para resumen (evitar template literals anidados)
+            const temaHtml = assemblyData.tema?.titulo
+                ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${assemblyData.tema.titulo}</div></div>`
+                : '';
+            const horaHtml = assemblyData.horaInicio
+                ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${assemblyData.horaInicio}</div></div>`
+                : '';
 
             // Cargar TODOS los miembros activos
             const membersSnapshot = await db.collection('members')
