@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="../assets/images/logo_luxto.png">
     <link rel="icon" type="image/png" sizes="16x16" href="../assets/images/logo_luxto.png">
     <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/portal.css">
     <!-- Firebase imports -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -18,15 +18,12 @@
     <script>
         function convertirUrlDrive(url) {
             if (!url) return "";
-            // Si ya es URL directa uc?export=view, devolverla
             if (url.includes("uc?export=view")) return url;
-            // Si es thumbnail, convertir a vista directa
             if (url.includes("drive.google.com/thumbnail")) {
                 const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
                 if (m) return "https://drive.google.com/uc?export=view&id=" + m[1];
                 return url;
             }
-            // Extraer file ID y construir URL directa (uc?export=view funciona en Firebase Hosting)
             const m =
                 url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) ||
                 url.match(/\/d\/([a-zA-Z0-9_-]{20,})/) ||
@@ -37,7 +34,6 @@
         }
 
         function getPhotoUrl(memberData) {
-            // Prioridad: fotoThumb (base64 data URL) > fotoDriveId (convertir a uc?export=view)
             if (memberData.fotoThumb && memberData.fotoThumb.startsWith('data:')) {
                 return memberData.fotoThumb;
             }
@@ -242,9 +238,8 @@
     }
 
     function formatDate(dateString) {
-        // dateString = "YYYY-MM-DD" en zona Lima. Parsear manualmente para evitar TZ shift.
         const [y, m, d] = dateString.split('-').map(Number);
-        const date = new Date(y, m - 1, d); // month es 0-indexed
+        const date = new Date(y, m - 1, d);
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         return date.toLocaleDateString('es-ES', options);
     }
@@ -260,9 +255,21 @@
         return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:'));
     }
 
+    // ── HTML Escape helper ──
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&')
+            .replace(/</g, '<')
+            .replace(/>/g, '>')
+            .replace(/"/g, '"')
+            .replace(/'/g, '&apos;');
+    }
+
     let currentMember = null;
     let currentAssemblyDate = null;
     let allMembersCache = [];
+    let membersNameMap = {};
 
     // DOM Elements
     const memberSearchInput = document.getElementById('member-search');
@@ -315,7 +322,7 @@
     document.querySelectorAll('#mainTabs .tab-button').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('#mainTabs .tab-button').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('#tab-tomar, #tab-ver').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
         });
@@ -325,7 +332,6 @@
     document.querySelectorAll('#subTabs .tab-button').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('#subTabs .tab-button').forEach(b => b.classList.remove('active'));
-            // Solo afectar .tab-content dentro de #tab-ver (sub-tabs), no los main tabs
             document.querySelectorAll('#tab-ver .tab-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('subtab-' + btn.dataset.subtab).classList.add('active');
@@ -335,12 +341,12 @@
     // Initialize
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Usar módulo compartido de permisos
             await AuthPermissions.initStaffPermissionCheck();
             await loadCurrentAssembly();
             await loadMembers();
             initAnioSelector();
             initFechaSelector();
+            initEditFechaSelector();
         } else {
             window.location.href = 'login.html';
         }
@@ -362,8 +368,8 @@
                         <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
                             <div class="item-title" style="color:#7fe8aa;">🟢 Asamblea activa</div>
                             <div class="item-meta">
-                                ${data.tema?.titulo ? `Tema: <strong>${data.tema.titulo}</strong> · ` : ''}
-                                ${data.horaInicio ? `Hora: <strong>${data.horaInicio}</strong>` : ''}
+                                ${data.tema?.titulo ? `Tema: <strong>${escapeHtml(data.tema.titulo)}</strong> · ` : ''}
+                                ${data.horaInicio ? `Hora: <strong>${escapeHtml(data.horaInicio)}</strong>` : ''}
                                 ${(!data.tema?.titulo && !data.horaInicio) ? 'Sin detalles adicionales' : ''}
                             </div>
                         </div>
@@ -402,8 +408,8 @@
                         <div class="item" style="background:rgba(245,197,24,.08); border-color:rgba(245,197,24,.25);">
                             <div class="item-title" style="color:#f5c518;">📆 Asamblea programada para el ${nextDateFormatted}</div>
                             <div class="item-meta">
-                                ${nextAssemblyInfo.data.tema?.titulo ? `Tema: <strong>${nextAssemblyInfo.data.tema.titulo}</strong> · ` : ''}
-                                ${nextAssemblyInfo.data.horaInicio ? `Hora: <strong>${nextAssemblyInfo.data.horaInicio}</strong>` : ''}
+                                ${nextAssemblyInfo.data.tema?.titulo ? `Tema: <strong>${escapeHtml(nextAssemblyInfo.data.tema.titulo)}</strong> · ` : ''}
+                                ${nextAssemblyInfo.data.horaInicio ? `Hora: <strong>${escapeHtml(nextAssemblyInfo.data.horaInicio)}</strong>` : ''}
                             </div>
                             <div class="item-meta" style="margin-top:8px; font-size:13px; color:var(--muted);">
                                 La asistencia se habilitará automáticamente ese día.
@@ -428,10 +434,7 @@
         try {
             let query;
             if (searchTerm) {
-                // Búsqueda flexible: normalizar y buscar por prefijo en nombre
                 const normalizedTerm = searchTerm.trim().toLowerCase();
-                // Usar orderBy + startAt/endAt para búsqueda por prefijo (case-sensitive en Firestore)
-                // Para búsqueda más flexible, cargamos todos y filtramos en cliente
                 query = db.collection('members')
                     .where('estadoAnioActual', '==', 'activo')
                     .orderBy('nombre');
@@ -442,8 +445,7 @@
             }
 
             const snapshot = await query.get();
-            
-            // Filtrar en cliente si hay término de búsqueda (para soportar acentos y búsqueda parcial)
+
             if (searchTerm) {
                 const normalizedTerm = searchTerm.trim().toLowerCase();
                 const filteredDocs = [];
@@ -454,7 +456,6 @@
                         filteredDocs.push(doc);
                     }
                 });
-                // Crear un snapshot-like object con los docs filtrados
                 displayMembers({ docs: filteredDocs, empty: filteredDocs.length === 0, forEach: (fn) => filteredDocs.forEach(fn) });
             } else {
                 displayMembers(snapshot);
@@ -480,8 +481,11 @@
             const initial = nombre.charAt(0).toUpperCase();
             const photoUrl = getPhotoUrl(data);
             const hasValidPhoto = isValidImageUrl(photoUrl);
+
+            membersNameMap[doc.id] = nombre;
+
             const avatarHtml = hasValidPhoto
-                ? `<img src="${photoUrl}" alt="${nombre}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                ? `<img src="${photoUrl}" alt="${escapeHtml(nombre)}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
                 : '';
             const initialHtml = hasValidPhoto
                 ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:none; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
@@ -493,13 +497,13 @@
                         ${avatarHtml}
                         ${initialHtml}
                         <div>
-                            <div class="item-title">${nombre}</div>
-                            ${email ? `<div class="item-meta">${email}</div>` : ''}
+                            <div class="item-title">${escapeHtml(nombre)}</div>
+                            ${email ? `<div class="item-meta">${escapeHtml(email)}</div>` : ''}
                         </div>
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn btn-ok" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', '${nombre}', true)" type="button">✓</button>
-                        <button class="btn btn-danger" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', '${nombre}', false)" type="button">✗</button>
+                        <button class="btn btn-ok" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', true)" type="button">✓</button>
+                        <button class="btn btn-danger" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', false)" type="button">✗</button>
                     </div>
                 </div>
             `;
@@ -552,8 +556,8 @@
         }, { merge: true });
     }
 
-    // Mark attendance (TOMAR ASISTENCIA)
-    window.markAttendance = async function(memberId, memberName, present) {
+    // Mark attendance (TOMAR ASISTENCIA) - now only receives memberId and present
+    window.markAttendance = async function(memberId, present) {
         try {
             if (!currentAssemblyDate) {
                 toast('No hay asamblea activa hoy', 'err');
@@ -569,10 +573,8 @@
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
-            // Si es presente, calcular tardanza Y actualizar contador en member
             if (present) {
                 await calcularTardanza(attendanceRef, currentAssemblyDate);
-                // Incrementar contador de asistencias totales en el miembro (transacción)
                 const memberRef = db.collection('members').doc(memberId);
                 await db.runTransaction(async (transaction) => {
                     const memberDoc = await transaction.get(memberRef);
@@ -586,16 +588,16 @@
                 });
             }
 
+            const memberName = membersNameMap[memberId] || 'Miembro';
             toast(`${memberName}: ${present ? '✓ Presente' : '✗ Ausente'}`, present ? 'ok' : '');
 
-            // Quitar el miembro de la lista visible (DOM)
-            const memberElement = document.querySelector(`#members-list button[onclick*="markAttendance('${memberId}')"]`);
+            // Quitar el miembro de la lista visible (DOM) - selector fixed
+            const memberElement = document.querySelector(`#members-list button[onclick*="markAttendance('${memberId}'"]`);
             if (memberElement) {
                 const itemElement = memberElement.closest('.item');
                 if (itemElement) itemElement.remove();
             }
 
-            // Si la lista queda vacía, mostrar mensaje
             if (membersListDiv.children.length === 0) {
                 membersListDiv.innerHTML = '<div class="empty-state">Todos los miembros han sido registrados</div>';
             }
@@ -618,7 +620,7 @@
         }
     });
 
-    // Finalize attendance
+    // Finalize attendance - optimized
     finalizeAttendanceBtn.addEventListener('click', async () => {
         if (!confirm('¿Finalizar la asistencia? Los miembros no marcados quedarán como ausentes.')) {
             return;
@@ -630,9 +632,13 @@
                 return;
             }
 
-            const membersSnapshot = await db.collection('members').get();
-            const allMemberIds = [];
-            membersSnapshot.forEach(doc => allMemberIds.push(doc.id));
+            // Get active members only (single query)
+            const membersSnapshot = await db.collection('members')
+                .where('estadoAnioActual', '==', 'activo')
+                .get();
+
+            const allActiveMemberIds = [];
+            membersSnapshot.forEach(doc => allActiveMemberIds.push(doc.id));
 
             const attendanceSnapshot = await db.collection('asistencia')
                 .doc(currentAssemblyDate.slice(0, 4))
@@ -643,29 +649,36 @@
 
             const batch = db.batch();
             let absentCount = 0;
-            for (const memberId of allMemberIds) {
+            let batchCount = 0;
+
+            for (const memberId of allActiveMemberIds) {
                 if (!markedIds.has(memberId)) {
-                    const memberDoc = await db.collection('members').doc(memberId).get();
-                    const memberData = memberDoc.data();
-                    if (memberData && memberData.estadoAnioActual === 'activo') {
-                        const docRef = db.collection('asistencia')
-                            .doc(currentAssemblyDate.slice(0, 4))
-                            .collection(currentAssemblyDate)
-                            .doc(memberId);
-                        batch.set(docRef, {
-                            uid: memberId,
-                            presente: false,
-                            fecha: currentAssemblyDate,
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                            tardanzaMinutos: null,
-                            esTardanza: false
-                        }, { merge: true });
-                        absentCount++;
+                    const docRef = db.collection('asistencia')
+                        .doc(currentAssemblyDate.slice(0, 4))
+                        .collection(currentAssemblyDate)
+                        .doc(memberId);
+                    batch.set(docRef, {
+                        uid: memberId,
+                        presente: false,
+                        fecha: currentAssemblyDate,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        tardanzaMinutos: null,
+                        esTardanza: false
+                    }, { merge: true });
+                    absentCount++;
+                    batchCount++;
+
+                    if (batchCount >= 400) {
+                        await batch.commit();
+                        batchCount = 0;
                     }
                 }
             }
 
-            await batch.commit();
+            if (batchCount > 0) {
+                await batch.commit();
+            }
+
             toast(`Asistencia finalizada. ${absentCount} miembros registrados como ausentes.`, 'ok');
 
             currentMember = null;
@@ -696,14 +709,10 @@
         fechaSelector.value = today;
     }
 
-    // Helper: convierte valor de <input type="date"> (TZ local) a fecha en zona Lima (YYYY-MM-DD)
-    function fechaSelectorToLima(fechaStr) {
-        if (!fechaStr) return getLimaDateStr();
-        // fechaStr viene como "YYYY-MM-DD" en TZ local del navegador
-        // Lo interpretamos como medianoche en TZ local y convertimos a zona Lima
-        const localDate = new Date(fechaStr + 'T00:00:00');
-        const limaDate = new Date(localDate.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
-        return limaDate.toISOString().split('T')[0];
+    function initEditFechaSelector() {
+        const today = getLimaDateStr();
+        editFechaSelector.max = today;
+        editFechaSelector.value = today;
     }
 
     // ── SUB-TAB: DÍA ESPECÍFICO ──
@@ -713,9 +722,8 @@
             toast('Selecciona una fecha', 'err');
             return;
         }
-        const fechaLima = fechaSelectorToLima(fechaLocal);
-        await cargarAsistenciaDia(fechaLima);
-    });
+        await cargarAsistenciaDia(fechaLocal);
+    }
 
     async function cargarAsistenciaDia(fecha) {
         fechaDisplay.textContent = formatDate(fecha);
@@ -726,19 +734,16 @@
             const anio = fecha.slice(0, 4);
             const snapshot = await db.collection('asistencia').doc(anio).collection(fecha).get();
 
-            // Obtener datos de asamblea para esa fecha (tema, hora)
             const assemblyDoc = await db.collection('asambleas').doc(fecha).get();
             const assemblyData = assemblyDoc.exists ? assemblyDoc.data() : {};
 
-            // Variables para resumen (evitar template literals anidados)
             const temaHtml = assemblyData.tema?.titulo
-                ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${assemblyData.tema.titulo}</div></div>`
+                ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${escapeHtml(assemblyData.tema.titulo)}</div></div>`
                 : '';
             const horaHtml = assemblyData.horaInicio
-                ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${assemblyData.horaInicio}</div></div>`
+                ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${escapeHtml(assemblyData.horaInicio)}</div></div>`
                 : '';
 
-            // Cargar TODOS los miembros activos (para calcular ausentes)
             const membersSnapshot = await db.collection('members')
                 .where('estadoAnioActual', '==', 'activo')
                 .get();
@@ -754,7 +759,6 @@
                 return;
             }
 
-            // Set de UIDs que marcaron presente
             const presentesUids = new Set();
             let tardanzas = 0;
             let presentes = 0;
@@ -772,7 +776,6 @@
 
             let html = '';
 
-            // Recorrer TODOS los miembros activos para mostrar todos (presentes + ausentes)
             const sortedMembers = [];
             membersSnapshot.forEach(doc => {
                 sortedMembers.push({ id: doc.id, data: doc.data() });
@@ -782,7 +785,6 @@
             sortedMembers.forEach(({ id, data: memberData }) => {
                 const nombre = memberData.nombre || 'Sin nombre';
                 const email = memberData.email || '';
-                // El ID del documento de asistencia es el member document ID (id), NO el auth UID
                 const memberDocId = id;
                 const presente = presentesUids.has(memberDocId);
                 const memberAttendance = snapshot.docs.find(d => d.id === memberDocId)?.data() || {};
@@ -801,14 +803,14 @@
                     <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px;">
                         <div style="display:flex; align-items:center; gap:12px; flex:1;">
                             ${hasValidPhoto
-                                ? `<img src="${photoUrl}" alt="${nombre}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                                ? `<img src="${photoUrl}" alt="${escapeHtml(nombre)}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
                                 : ''}
                             ${!hasValidPhoto || hasValidPhoto
                                 ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:${hasValidPhoto ? 'none' : 'flex'}; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
                                 : ''}
                             <div>
-                                <div class="item-title">${nombre}</div>
-                                ${email ? `<div class="item-meta">${email}</div>` : ''}
+                                <div class="item-title">${escapeHtml(nombre)}</div>
+                                ${email ? `<div class="item-meta">${escapeHtml(email)}</div>` : ''}
                             </div>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
@@ -819,7 +821,6 @@
                 `;
             });
 
-            // Resumen arriba
             const resumenHtml = `
                 <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
                     <div style="background:rgba(45,186,111,.1); border:1px solid rgba(45,186,111,.2); padding:8px 16px; border-radius:8px;">
@@ -863,7 +864,6 @@
         listaResumenAnual.innerHTML = '<div class="empty-state">Cargando...</div>';
 
         try {
-            // 1. Obtener todas las asambleas del año (paralelo con members)
             const [asambleasSnapshot, membersSnapshot] = await Promise.all([
                 db.collection('asambleas')
                     .where('fecha', '>=', `${anio}-01-01`)
@@ -878,17 +878,16 @@
                 if (data.hayAsamblea) fechasAsambleas.push(doc.id);
             });
 
-            // 2. Construir mapa Auth UID -> member UUID y lista de miembros
             const authUidToMemberUuid = {};
             const miembros = [];
             membersSnapshot.forEach(doc => {
                 const data = doc.data();
                 const memberUuid = doc.id;
-                const authUid = data.uid; // Auth UID guardado en el campo uid
+                const authUid = data.uid;
                 if (authUid) authUidToMemberUuid[authUid] = memberUuid;
                 miembros.push({
-                    uid: memberUuid,           // UUID canónico (doc ID de members)
-                    authUid: authUid,          // Auth UID para match con asistencia vieja
+                    uid: memberUuid,
+                    authUid: authUid,
                     nombre: data.nombre || 'Sin nombre',
                     email: data.email || '',
                     fotoThumb: data.fotoThumb,
@@ -898,28 +897,23 @@
             });
             miembros.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-            // 3. Filtrar fechas pasadas (excluir futuras y hoy si no ha ocurrido)
             const hoyLima = getLimaDateStr();
             const fechasPasadas = fechasAsambleas.filter(f => f < hoyLima);
 
-            // 4. Cargar TODA la asistencia en PARALELO (una query por fecha, pero paralelas)
             const asistenciaPromises = fechasPasadas.map(fecha =>
                 db.collection('asistencia').doc(anio).collection(fecha).get()
             );
             const asistenciaSnapshots = await Promise.all(asistenciaPromises);
 
-            // 5. Construir set de member UUIDs presentes por fecha (usando authUidToMemberUuid para docs viejos)
             let totalAsistencias = 0;
             const asistenciaPorFecha = {};
 
             asistenciaSnapshots.forEach((snap, idx) => {
                 const fecha = fechasPasadas[idx];
-                const presentesDelDia = new Set(); // Set para O(1) lookup
+                const presentesDelDia = new Set();
                 snap.forEach(doc => {
                     const data = doc.data();
                     if (data.presente === true) {
-                        // El doc puede tener ID = Auth UID (viejo) o UUID (nuevo)
-                        // Usar data.uid (Auth UID) y mapear a member UUID
                         const authUid = data.uid || doc.id;
                         const memberUuid = authUidToMemberUuid[authUid] || authUid;
                         if (memberUuid) {
@@ -931,7 +925,6 @@
                 asistenciaPorFecha[fecha] = presentesDelDia;
             });
 
-            // 6. Calcular estadísticas por miembro
             const resumenMiembros = miembros.map(m => {
                 let asistio = 0;
                 for (const fecha of fechasPasadas) {
@@ -945,10 +938,8 @@
                 };
             });
 
-            // Ordenar: % desc, luego total desc
             resumenMiembros.sort((a, b) => b.porcentaje - a.porcentaje || b.asistio - a.asistio);
 
-            // 7. Render stats
             const promedioAsistencia = fechasPasadas.length > 0
                 ? Math.round(totalAsistencias / fechasPasadas.length)
                 : 0;
@@ -957,7 +948,6 @@
             statPromedioAsistencia.textContent = promedioAsistencia;
             statTotalMiembros.textContent = miembros.length;
 
-            // 8. Render lista
             let html = '';
             resumenMiembros.forEach((m, i) => {
                 const initial = m.nombre.charAt(0).toUpperCase();
@@ -970,14 +960,14 @@
                     <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px;">
                         <div style="display:flex; align-items:center; gap:12px; flex:1;">
                             ${hasValidPhoto
-                                ? `<img src="${photoUrl}" alt="${m.nombre}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                                ? `<img src="${photoUrl}" alt="${escapeHtml(m.nombre)}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
                                 : ''}
                             ${!hasValidPhoto || hasValidPhoto
                                 ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:${hasValidPhoto ? 'none' : 'flex'}; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
                                 : ''}
                             <div>
-                                <div class="item-title">${m.nombre}</div>
-                                ${m.email ? `<div class="item-meta">${m.email}</div>` : ''}
+                                <div class="item-title">${escapeHtml(m.nombre)}</div>
+                                ${m.email ? `<div class="item-meta">${escapeHtml(m.email)}</div>` : ''}
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
@@ -1007,9 +997,8 @@
     }
 
     // ── SUB-TAB: EDITAR ASISTENCIA ──
-    let editAttendanceCache = {}; // { memberId: { presente: bool, tardanzaMinutos: number, esTardanza: bool } }
+    let editAttendanceCache = {};
 
-    // Initialize edit fecha selector
     function initEditFechaSelector() {
         const today = getLimaDateStr();
         editFechaSelector.max = today;
@@ -1017,24 +1006,14 @@
     }
     initEditFechaSelector();
 
-    // Helper: convierte valor de <input type="date"> (TZ local) a fecha en zona Lima (YYYY-MM-DD)
-    function editFechaSelectorToLima(fechaStr) {
-        if (!fechaStr) return getLimaDateStr();
-        const localDate = new Date(fechaStr + 'T00:00:00');
-        const limaDate = new Date(localDate.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
-        return limaDate.toISOString().split('T')[0];
-    }
-
-    // Load attendance for editing
     cargarEditFechaBtn.addEventListener('click', async () => {
         const fechaLocal = editFechaSelector.value;
         if (!fechaLocal) {
             toast('Selecciona una fecha', 'err');
             return;
         }
-        const fechaLima = editFechaSelectorToLima(fechaLocal);
-        await cargarEditAsistenciaDia(fechaLima);
-    });
+        await cargarEditAsistenciaDia(fechaLocal);
+    }
 
     async function cargarEditAsistenciaDia(fecha) {
         editFechaDisplay.textContent = formatDate(fecha);
@@ -1046,19 +1025,16 @@
             const anio = fecha.slice(0, 4);
             const snapshot = await db.collection('asistencia').doc(anio).collection(fecha).get();
 
-            // Obtener datos de asamblea para esa fecha (tema, hora)
             const assemblyDoc = await db.collection('asambleas').doc(fecha).get();
             const assemblyData = assemblyDoc.exists ? assemblyDoc.data() : {};
 
-            // Variables para resumen (evitar template literals anidados)
             const temaHtml = assemblyData.tema?.titulo
-                ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${assemblyData.tema.titulo}</div></div>`
+                ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${escapeHtml(assemblyData.tema.titulo)}</div></div>`
                 : '';
             const horaHtml = assemblyData.horaInicio
-                ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${assemblyData.horaInicio}</div></div>`
+                ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${escapeHtml(assemblyData.horaInicio)}</div></div>`
                 : '';
 
-            // Cargar TODOS los miembros activos
             const membersSnapshot = await db.collection('members')
                 .where('estadoAnioActual', '==', 'activo')
                 .get();
@@ -1074,7 +1050,6 @@
                 return;
             }
 
-            // Set de UIDs que marcaron presente
             const presentesUids = new Set();
             let tardanzas = 0;
             let presentes = 0;
@@ -1090,7 +1065,6 @@
 
             const ausentes = totalActivos - presentes;
 
-            // Recorrer TODOS los miembros activos para mostrar todos (presentes + ausentes)
             const sortedMembers = [];
             membersSnapshot.forEach(doc => {
                 sortedMembers.push({ id: doc.id, data: doc.data() });
@@ -1108,7 +1082,6 @@
                 const tardanza = memberAttendance.tardanzaMinutos || 0;
                 const esTardanza = memberAttendance.esTardanza === true;
 
-                // Guardar en cache para edición
                 editAttendanceCache[memberDocId] = {
                     presente,
                     tardanzaMinutos: tardanza,
@@ -1123,18 +1096,18 @@
                     <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px; border-bottom:1px solid var(--border);">
                         <div style="display:flex; align-items:center; gap:12px; flex:1;">
                             ${hasValidPhoto
-                                ? `<img src="${photoUrl}" alt="${nombre}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                                ? `<img src="${photoUrl}" alt="${escapeHtml(nombre)}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
                                 : ''}
                             ${!hasValidPhoto || hasValidPhoto
                                 ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:${hasValidPhoto ? 'none' : 'flex'}; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
                                 : ''}
                             <div>
-                                <div class="item-title">${nombre}</div>
-                                ${email ? `<div class="item-meta">${email}</div>` : ''}
+                                <div class="item-title">${escapeHtml(nombre)}</div>
+                                ${email ? `<div class="item-meta">${escapeHtml(email)}</div>` : ''}
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                            <label for="edit-presente-${memberDocId}" style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                                 <input type="checkbox" id="edit-presente-${memberDocId}" ${presente ? 'checked' : ''} onchange="updateEditCache('${memberDocId}')" style="width:18px; height:18px; accent-color:var(--ok);">
                                 <span style="font-weight:600; color:${presente ? 'var(--ok)' : 'var(--err)'};">${presente ? 'Presente' : 'Ausente'}</span>
                             </label>
@@ -1147,8 +1120,8 @@
                 `;
             });
 
-            // Resumen arriba
-            const resumenHtml = `                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
+            const resumenHtml = `
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
                     <div style="background:rgba(45,186,111,.1); border:1px solid rgba(45,186,111,.2); padding:8px 16px; border-radius:8px;">
                         <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Presentes</div>
                         <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--ok);">${presentes}</div>
@@ -1174,11 +1147,10 @@
         }
     }
 
-    // Update cache when user changes checkbox or tardanza input
     window.updateEditCache = function(memberDocId) {
         const presente = document.getElementById(`edit-presente-${memberDocId}`).checked;
         const tardanza = parseInt(document.getElementById(`edit-tardanza-${memberDocId}`).value) || 0;
-        const esTardanza = tardanza > 10; // TOLERANCIA_TARDANZA_MIN = 10
+        const esTardanza = tardanza > 10;
 
         editAttendanceCache[memberDocId] = {
             presente,
@@ -1186,7 +1158,6 @@
             esTardanza
         };
 
-        // Update visual feedback
         const label = document.querySelector(`label[for="edit-presente-${memberDocId}"] span`);
         if (label) {
             label.textContent = presente ? 'Presente' : 'Ausente';
@@ -1194,14 +1165,13 @@
         }
     };
 
-    // Save edited attendance
     guardarEditAsistenciaBtn.addEventListener('click', async () => {
         const fechaLocal = editFechaSelector.value;
         if (!fechaLocal) {
             toast('Selecciona una fecha', 'err');
             return;
         }
-        const fechaLima = editFechaSelectorToLima(fechaLocal);
+        const fechaLima = fechaLocal;
         const anio = fechaLima.slice(0, 4);
 
         if (Object.keys(editAttendanceCache).length === 0) {
@@ -1239,7 +1209,7 @@
             guardarEditAsistenciaBtn.disabled = false;
             guardarEditAsistenciaBtn.textContent = '💾 Guardar Cambios';
         }
-    };
+    });
 
 </script>
 </body>
