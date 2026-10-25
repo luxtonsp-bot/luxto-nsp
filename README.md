@@ -98,9 +98,10 @@ luxto-nsp/
 - Modo Asamblea banner (si `asamblea/activa=true` en RTDB)
 
 ### 5. `tomar-asistencia.html` — **Staff** (servidor/coordinador/apoyo)
-**3 Sub-vistas (tabs):**
+**4 Sub-vistas (tabs):**
 - 📝 **Tomar Asistencia**: Buscar miembro → ✓ Presente / ✗ Ausente → **el miembro desaparece de la lista al marcar** + tardanza automática (Lima UTC-5, tolerancia 10 min)
 - 📅 **Día Específico**: Selector fecha → lista completa (presentes ✓ con tardanza / ausentes ✗) + resumen stats
+- ✏️ **Editar Asistencia**: Selector fecha → lista completa con checkboxes y inputs de tardanza → **Guardar Cambios** (batch write atómico a `asistencia/{año}/{fecha}/{memberId}`)
 - 📈 **Resumen Anual**: Selector año → **TODOS los miembros** (sin filtro `estadoAnioActual`) con % asistencia contra fechas reales con datos, total histórico recalculado, fotos base64 + fallback iniciales
 
 ### 6. `gestion-grupo.html` — **Staff**
@@ -327,14 +328,14 @@ feedback/{id}
 
 ---
 
-## ✅ ESTADO DEL PROYECTO (actualizado 2026-10-23)
+## ✅ ESTADO DEL PROYECTO (actualizado 2026-10-25)
 
 | Componente | Estado | Detalles |
 |------------|--------|----------|
 | **Migración datos** | ✅ Completada | 1,198 docs asistencia migrados a UUID; 63 members UUID; 45 uid_map válidos; 4 Auth sin uid_map (fix script listo) |
 | **Firestore rules** | ✅ Desplegadas | Reglas por rol + `getMemberId()` vía `uid_map` + `sugerencias`/`suggestions`/`feedback`/`preguntas` |
 | **RTDB rules** | ✅ Desplegadas | Kahoot: admins escriben, público lee |
-| **GitHub Actions** | ✅ Configurados | Deploy preview/production + cumpleaños automático |
+| **GitHub Actions** | ✅ Configurados | Deploy preview/production + cumpleaños automático + backfill MMdd |
 | **Tardanzas** | ✅ Implementadas | `calcularTardanza()` serverTimestamp, Lima UTC-5, tolerancia 10 min |
 | **Finalizar asamblea** | ✅ Solo coordinador | Validación server-side + UI oculta para no-coordinadores |
 | **Finalizar asistencia** | ✅ Solo activos | Filtra `estadoAnioActual === 'activo'` |
@@ -346,6 +347,9 @@ feedback/{id}
 | **Registro fuzzy matching** | ✅ | Tolerante a tildes, typos, orden; exige nombre+apellido; deduplica por nombre normalizado |
 | **Feedback selector asamblea** | ✅ | Dropdown con fecha formateada + hora; envía `fechaAsamblea` seleccionada |
 | **Sugerencias legacy + nuevas** | ✅ | Admin lee `sugerencias` + `suggestions` fusionadas |
+| **Editar Asistencia (nuevo)** | ✅ | Sub-tab con batch write atómico; checkboxes + inputs tardanza por miembro |
+| **SyntaxError fixes** | ✅ | `tomar-asistencia.html`: cierres `});`, `escapeHtml` entities, duplicados eliminados |
+| **Limpieza repo** | ✅ | 92 archivos test/temp/backup eliminados (archive, migration, legacy, tools, scripts legacy) |
 
 ---
 
