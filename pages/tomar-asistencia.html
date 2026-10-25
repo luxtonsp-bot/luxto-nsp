@@ -820,13 +820,6 @@
             });
 
             // Resumen arriba
-            const temaHtml = assemblyData.tema?.titulo
-                ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${assemblyData.tema.titulo}</div></div>`
-                : '';
-            const horaHtml = assemblyData.horaInicio
-                ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${assemblyData.horaInicio}</div></div>`
-                : '';
-
             const resumenHtml = `
                 <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
                     <div style="background:rgba(45,186,111,.1); border:1px solid rgba(45,186,111,.2); padding:8px 16px; border-radius:8px;">
@@ -1155,15 +1148,7 @@
             });
 
             // Resumen arriba
-            const temaHtml = assemblyData.tema?.titulo
-                ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${assemblyData.tema.titulo}</div></div>`
-                : '';
-            const horaHtml = assemblyData.horaInicio
-                ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${assemblyData.horaInicio}</div></div>`
-                : '';
-
-            const resumenHtml = `
-                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
+            const resumenHtml = `                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
                     <div style="background:rgba(45,186,111,.1); border:1px solid rgba(45,186,111,.2); padding:8px 16px; border-radius:8px;">
                         <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Presentes</div>
                         <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--ok);">${presentes}</div>
