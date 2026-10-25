@@ -359,8 +359,10 @@ function seleccionarMiembro(miembro) {
 async function cargarMiembrosRegistro() {
   try {
     const snap = await getDocs(collection(db, "miembros_registro"));
-    allMiembros = snap.docs.map(d => ({ memberId: d.id, ...d.data() }));
-    console.log("[Registro] Cargados", allMiembros.length, "miembros para fuzzy matching");
+    allMiembros = snap.docs
+      .map(d => ({ memberId: d.data().memberId, docId: d.id, ...d.data() }))
+      .filter(m => m.memberId); // Solo los que tienen memberId (UUID) pueden registrarse
+    console.log("[Registro] Cargados", allMiembros.length, "miembros con memberId válido para registro");
   } catch (e) {
     console.error("[Registro] Error cargando miembros_registro:", e);
     toast("Error cargando registro. Recarga la página.", "err");
