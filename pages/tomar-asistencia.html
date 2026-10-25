@@ -120,6 +120,7 @@
         <div class="tab-container" style="margin-bottom:16px;">
             <div class="tabs" id="subTabs">
                 <button class="tab-button active" data-subtab="dia" type="button">📅 Día Específico</button>
+                <button class="tab-button" data-subtab="editar" type="button">✏️ Editar Asistencia</button>
                 <button class="tab-button" data-subtab="anual" type="button">📈 Resumen Anual</button>
             </div>
         </div>
@@ -141,6 +142,31 @@
                 <div class="card-title">📋 Asistencia del día <span id="fecha-display"></span></div>
                 <div id="lista-asistencia-dia" class="item-list">
                     <div class="empty-state">Selecciona una fecha y pulsa Cargar</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-TAB: Editar Asistencia -->
+        <div class="tab-content" id="subtab-editar">
+            <div class="card">
+                <div class="card-title">✏️ Editar Asistencia de un Día</div>
+                <p class="section-desc" style="margin-bottom:14px;">Selecciona una fecha para ver y editar la asistencia y tardanzas de todos los miembros.</p>
+                <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:16px;">
+                    <div style="flex:1; min-width:200px;">
+                        <label style="display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Fecha</label>
+                        <input type="date" id="edit-fecha-selector" class="np-input" style="width:100%;">
+                    </div>
+                    <button id="cargar-edit-fecha-btn" class="btn btn-primary" style="height:44px;" type="button">Cargar para Editar</button>
+                </div>
+            </div>
+
+            <div class="card" id="edit-fecha-info-card" style="display:none;">
+                <div class="card-title">📋 Editar Asistencia del día <span id="edit-fecha-display"></span></div>
+                <div id="edit-lista-asistencia" class="item-list">
+                    <div class="empty-state">Selecciona una fecha y pulsa Cargar para Editar</div>
+                </div>
+                <div style="margin-top:16px; text-align:right;">
+                    <button id="guardar-edit-asistencia-btn" class="btn btn-ok" type="button">💾 Guardar Cambios</button>
                 </div>
             </div>
         </div>
@@ -260,6 +286,14 @@
     const resumenAnualCard = document.getElementById('resumen-anual-card');
     const anioDisplay = document.getElementById('anio-display');
     const listaResumenAnual = document.getElementById('lista-resumen-anual');
+
+    // Edit attendance sub-tab elements
+    const editFechaSelector = document.getElementById('edit-fecha-selector');
+    const cargarEditFechaBtn = document.getElementById('cargar-edit-fecha-btn');
+    const editFechaInfoCard = document.getElementById('edit-fecha-info-card');
+    const editFechaDisplay = document.getElementById('edit-fecha-display');
+    const editListaAsistencia = document.getElementById('edit-lista-asistencia');
+    const guardarEditAsistenciaBtn = document.getElementById('guardar-edit-asistencia-btn');
 
     const statTotalAsambleas = document.getElementById('stat-total-asambleas');
     const statPromedioAsistencia = document.getElementById('stat-promedio-asistencia');
@@ -963,6 +997,234 @@
             listaResumenAnual.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando datos</div>';
         }
     }
+
+    // ── SUB-TAB: EDITAR ASISTENCIA ──
+    let editAttendanceCache = {}; // { memberId: { presente: bool, tardanzaMinutos: number, esTardanza: bool } }
+
+    // Initialize edit fecha selector
+    function initEditFechaSelector() {
+        const today = getLimaDateStr();
+        editFechaSelector.max = today;
+        editFechaSelector.value = today;
+    }
+    initEditFechaSelector();
+
+    // Helper: convierte valor de <input type="date"> (TZ local) a fecha en zona Lima (YYYY-MM-DD)
+    function editFechaSelectorToLima(fechaStr) {
+        if (!fechaStr) return getLimaDateStr();
+        const localDate = new Date(fechaStr + 'T00:00:00');
+        const limaDate = new Date(localDate.getTime() + LIMA_OFFSET_MIN * 60 * 1000);
+        return limaDate.toISOString().split('T')[0];
+    }
+
+    // Load attendance for editing
+    cargarEditFechaBtn.addEventListener('click', async () => {
+        const fechaLocal = editFechaSelector.value;
+        if (!fechaLocal) {
+            toast('Selecciona una fecha', 'err');
+            return;
+        }
+        const fechaLima = editFechaSelectorToLima(fechaLocal);
+        await cargarEditAsistenciaDia(fechaLima);
+    });
+
+    async function cargarEditAsistenciaDia(fecha) {
+        editFechaDisplay.textContent = formatDate(fecha);
+        editFechaInfoCard.style.display = 'block';
+        editListaAsistencia.innerHTML = '<div class="empty-state">Cargando...</div>';
+        editAttendanceCache = {};
+
+        try {
+            const anio = fecha.slice(0, 4);
+            const snapshot = await db.collection('asistencia').doc(anio).collection(fecha).get();
+
+            // Obtener datos de asamblea para esa fecha (tema, hora)
+            const assemblyDoc = await db.collection('asambleas').doc(fecha).get();
+            const assemblyData = assemblyDoc.exists ? assemblyDoc.data() : {};
+
+            // Cargar TODOS los miembros activos
+            const membersSnapshot = await db.collection('members')
+                .where('estadoAnioActual', '==', 'activo')
+                .get();
+            const membersMap = {};
+            let totalActivos = 0;
+            membersSnapshot.forEach(doc => {
+                membersMap[doc.id] = doc.data();
+                totalActivos++;
+            });
+
+            if (snapshot.empty && totalActivos === 0) {
+                editListaAsistencia.innerHTML = '<div class="empty-state">No hay miembros activos ni registros de asistencia para esta fecha</div>';
+                return;
+            }
+
+            // Set de UIDs que marcaron presente
+            const presentesUids = new Set();
+            let tardanzas = 0;
+            let presentes = 0;
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.presente === true) {
+                    presentesUids.add(doc.id);
+                    presentes++;
+                    if (data.esTardanza === true) tardanzas++;
+                }
+            });
+
+            const ausentes = totalActivos - presentes;
+
+            // Recorrer TODOS los miembros activos para mostrar todos (presentes + ausentes)
+            const sortedMembers = [];
+            membersSnapshot.forEach(doc => {
+                sortedMembers.push({ id: doc.id, data: doc.data() });
+            });
+            sortedMembers.sort((a, b) => (a.data.nombre || '').localeCompare(b.data.nombre || ''));
+
+            let html = '';
+
+            sortedMembers.forEach(({ id, data: memberData }) => {
+                const nombre = memberData.nombre || 'Sin nombre';
+                const email = memberData.email || '';
+                const memberDocId = id;
+                const presente = presentesUids.has(memberDocId);
+                const memberAttendance = snapshot.docs.find(d => d.id === memberDocId)?.data() || {};
+                const tardanza = memberAttendance.tardanzaMinutos || 0;
+                const esTardanza = memberAttendance.esTardanza === true;
+
+                // Guardar en cache para edición
+                editAttendanceCache[memberDocId] = {
+                    presente,
+                    tardanzaMinutos: tardanza,
+                    esTardanza
+                };
+
+                const initial = nombre.charAt(0).toUpperCase();
+                const photoUrl = getPhotoUrl(memberData);
+                const hasValidPhoto = isValidImageUrl(photoUrl);
+
+                html += `
+                    <div class="item" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px; border-bottom:1px solid var(--border);">
+                        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                            ${hasValidPhoto
+                                ? `<img src="${photoUrl}" alt="${nombre}" crossorigin="anonymous" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                                : ''}
+                            ${!hasValidPhoto || hasValidPhoto
+                                ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--bg3); display:${hasValidPhoto ? 'none' : 'flex'}; align-items:center; justify-content:center; color:var(--y); font-weight:700; flex-shrink:0;">${initial}</div>`
+                                : ''}
+                            <div>
+                                <div class="item-title">${nombre}</div>
+                                ${email ? `<div class="item-meta">${email}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                <input type="checkbox" id="edit-presente-${memberDocId}" ${presente ? 'checked' : ''} onchange="updateEditCache('${memberDocId}')" style="width:18px; height:18px; accent-color:var(--ok);">
+                                <span style="font-weight:600; color:${presente ? 'var(--ok)' : 'var(--err)'};">${presente ? 'Presente' : 'Ausente'}</span>
+                            </label>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <label style="font-size:12px; color:var(--muted);">Tardanza (min):</label>
+                                <input type="number" id="edit-tardanza-${memberDocId}" value="${tardanza}" min="0" max="180" style="width:60px; padding:6px 8px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; background:var(--bg3); color:var(--ink);" onchange="updateEditCache('${memberDocId}')">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Resumen arriba
+            const resumenHtml = `
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; padding:12px; background:rgba(255,255,255,.03); border-radius:12px;">
+                    <div style="background:rgba(45,186,111,.1); border:1px solid rgba(45,186,111,.2); padding:8px 16px; border-radius:8px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Presentes</div>
+                        <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--ok);">${presentes}</div>
+                    </div>
+                    <div style="background:rgba(224,60,60,.1); border:1px solid rgba(224,60,60,.2); padding:8px 16px; border-radius:8px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Ausentes</div>
+                        <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--err);">${ausentes}</div>
+                    </div>
+                    <div style="background:rgba(212,136,26,.1); border:1px solid rgba(212,136,26,.2); padding:8px 16px; border-radius:8px;">
+                        <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tardanzas</div>
+                        <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--warn);">${tardanzas}</div>
+                    </div>
+                    ${assemblyData.tema?.titulo ? `<div style="flex:1; padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Tema</div><div style="font-weight:600;">${assemblyData.tema.titulo}</div></div>` : ''}
+                    ${assemblyData.horaInicio ? `<div style="padding:8px 16px;"><div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Hora inicio</div><div style="font-weight:600;">${assemblyData.horaInicio}</div></div>` : ''}
+                </div>
+            `;
+
+            editListaAsistencia.innerHTML = resumenHtml + html;
+
+        } catch (error) {
+            console.error("Error cargando asistencia para editar:", error);
+            editListaAsistencia.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando datos</div>';
+        }
+    }
+
+    // Update cache when user changes checkbox or tardanza input
+    window.updateEditCache = function(memberDocId) {
+        const presente = document.getElementById(`edit-presente-${memberDocId}`).checked;
+        const tardanza = parseInt(document.getElementById(`edit-tardanza-${memberDocId}`).value) || 0;
+        const esTardanza = tardanza > 10; // TOLERANCIA_TARDANZA_MIN = 10
+
+        editAttendanceCache[memberDocId] = {
+            presente,
+            tardanzaMinutos: tardanza,
+            esTardanza
+        };
+
+        // Update visual feedback
+        const label = document.querySelector(`label[for="edit-presente-${memberDocId}"] span`);
+        if (label) {
+            label.textContent = presente ? 'Presente' : 'Ausente';
+            label.style.color = presente ? 'var(--ok)' : 'var(--err)';
+        }
+    };
+
+    // Save edited attendance
+    guardarEditAsistenciaBtn.addEventListener('click', async () => {
+        const fechaLocal = editFechaSelector.value;
+        if (!fechaLocal) {
+            toast('Selecciona una fecha', 'err');
+            return;
+        }
+        const fechaLima = editFechaSelectorToLima(fechaLocal);
+        const anio = fechaLima.slice(0, 4);
+
+        if (Object.keys(editAttendanceCache).length === 0) {
+            toast('No hay datos para guardar', 'err');
+            return;
+        }
+
+        guardarEditAsistenciaBtn.disabled = true;
+        guardarEditAsistenciaBtn.textContent = 'Guardando...';
+
+        try {
+            const batch = db.batch();
+            let savedCount = 0;
+
+            for (const [memberDocId, data] of Object.entries(editAttendanceCache)) {
+                const docRef = db.collection('asistencia').doc(anio).collection(fechaLima).doc(memberDocId);
+                batch.set(docRef, {
+                    uid: memberDocId,
+                    presente: data.presente,
+                    fecha: fechaLima,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    tardanzaMinutos: data.tardanzaMinutos,
+                    esTardanza: data.esTardanza
+                }, { merge: true });
+                savedCount++;
+            }
+
+            await batch.commit();
+            toast(`✅ ${savedCount} registros guardados para ${formatDate(fechaLima)}`, 'ok');
+
+        } catch (error) {
+            console.error("Error guardando asistencia editada:", error);
+            toast('Error al guardar cambios', 'err');
+        } finally {
+            guardarEditAsistenciaBtn.disabled = false;
+            guardarEditAsistenciaBtn.textContent = '💾 Guardar Cambios';
+        }
+    };
 
 </script>
 </body>
