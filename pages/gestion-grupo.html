@@ -308,31 +308,31 @@
 
         let html = '';
         members.forEach(member => {
-            const birthdate = member.fechaNacimiento || '';
+            const birthdate = member.fechaNacimiento ? (member.fechaNacimiento.toDate ? member.fechaNacimiento.toDate().toISOString().split('T')[0] : member.fechaNacimiento) : '';
             const ingreso = member.fechaIngresoGrupo ? (member.fechaIngresoGrupo.toDate ? member.fechaIngresoGrupo.toDate().toISOString().split('T')[0] : member.fechaIngresoGrupo) : '';
-            const primera = member.fechaPrimeraAsamblea || '';
+            const primera = member.fechaPrimeraAsamblea ? (member.fechaPrimeraAsamblea.toDate ? member.fechaPrimeraAsamblea.toDate().toISOString().split('T')[0] : member.fechaPrimeraAsamblea) : '';
             const hasBirth = birthdate ? '✓' : '✗';
             const hasIngreso = ingreso ? '✓' : '✗';
             const hasPrimera = primera ? '✓' : '✗';
 
             html += `
-                <div class="item" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; background:rgba(255,255,255,.03);">
+                <div class="item" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; background:var(--bg2);">
                     <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                        <strong style="font-size:15px; color:var(--cream);">${member.nombre || 'Sin nombre'}</strong>
+                        <strong style="font-size:15px; color:var(--ink);">${member.nombre || 'Sin nombre'}</strong>
                         ${member.email ? `<span style="font-size:12px; color:var(--muted);">(${member.email})</span>` : ''}
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ${hasBirth}</label>
-                            <input type="date" id="edit-birth-${member.id}" value="${birthdate}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:white; color:var(--ink);">
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ${hasBirth}</label>
+                            <input type="date" id="edit-birth-${member.id}" value="${birthdate}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ${hasIngreso}</label>
-                            <input type="date" id="edit-ingreso-${member.id}" value="${ingreso}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:white; color:var(--ink);">
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ${hasIngreso}</label>
+                            <input type="date" id="edit-ingreso-${member.id}" value="${ingreso}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ${hasPrimera}</label>
-                            <input type="date" id="edit-primera-${member.id}" value="${primera}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:white; color:var(--ink);">
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ${hasPrimera}</label>
+                            <input type="date" id="edit-primera-${member.id}" value="${primera}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
                         </div>
                     </div>
                     <div style="margin-top:12px; text-align:right;">
@@ -372,11 +372,11 @@
         try {
             const updateData = {};
             if (birthdate) {
-                updateData.fechaNacimiento = birthdate;
+                updateData.fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate));
                 updateData.fechaNacimientoMMdd = birthdate.substring(5, 10);
             }
-            if (ingreso) updateData.fechaIngresoGrupo = ingreso;
-            if (primera) updateData.fechaPrimeraAsamblea = primera;
+            if (ingreso) updateData.fechaIngresoGrupo = firebase.firestore.Timestamp.fromDate(new Date(ingreso));
+            if (primera) updateData.fechaPrimeraAsamblea = firebase.firestore.Timestamp.fromDate(new Date(primera));
             updateData.fechaActualizacion = firebase.firestore.FieldValue.serverTimestamp();
 
             await db.collection('members').doc(memberId).update(updateData);
@@ -386,11 +386,11 @@
             const idx = allMembersForEdit.findIndex(m => m.id === memberId);
             if (idx !== -1) {
                 if (birthdate) {
-                    allMembersForEdit[idx].fechaNacimiento = birthdate;
+                    allMembersForEdit[idx].fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate));
                     allMembersForEdit[idx].fechaNacimientoMMdd = birthdate.substring(5, 10);
                 }
-                if (ingreso) allMembersForEdit[idx].fechaIngresoGrupo = ingreso;
-                if (primera) allMembersForEdit[idx].fechaPrimeraAsamblea = primera;
+                if (ingreso) allMembersForEdit[idx].fechaIngresoGrupo = firebase.firestore.Timestamp.fromDate(new Date(ingreso));
+                if (primera) allMembersForEdit[idx].fechaPrimeraAsamblea = firebase.firestore.Timestamp.fromDate(new Date(primera));
             }
         } catch (error) {
             console.error("Error saving member data:", error);
