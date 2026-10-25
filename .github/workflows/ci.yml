@@ -87,7 +87,7 @@ jobs:
       - name: Validate HTML files
         run: |
           # Validar HTML principal y páginas publicadas
-          html-validate index.html pages/*.html --config html-validate.json
+          html-validate index.html pages/*.html
 
   check-imports:
     name: Check ES Module Imports
