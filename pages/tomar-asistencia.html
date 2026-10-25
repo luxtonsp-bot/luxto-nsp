@@ -589,7 +589,7 @@
             toast(`${memberName}: ${present ? '✓ Presente' : '✗ Ausente'}`, present ? 'ok' : '');
 
             // Quitar el miembro de la lista visible (DOM)
-            const memberElement = document.querySelector(`#members-list button[onclick*="markAttendance('${memberId}'"]`);
+            const memberElement = document.querySelector(`#members-list button[onclick*="markAttendance('${memberId}')"]`);
             if (memberElement) {
                 const itemElement = memberElement.closest('.item');
                 if (itemElement) itemElement.remove();
