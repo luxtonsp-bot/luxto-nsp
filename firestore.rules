@@ -7,14 +7,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAuth() { return request.auth != null; }
-      function getMemberId(uid) {
-        let m = get(/databases/$(database)/documents/uid_map/$(uid));
-        return m.data != null ? m.data.memberId : uid;
-      }
-      function getUserRole(uid) {
-        let d = get(/databases/$(database)/documents/members/$(getMemberId(uid)));
-        return d.data != null ? d.data.rol : null;
-      }
+
     function isAdminEmail() {
       return isAuth() && (
         request.auth.token.email == "henry.alfaro1@unmsm.edu.pe" ||
@@ -24,64 +17,65 @@ service cloud.firestore {
         request.auth.token.email == "alvarorodrigosalazar.2001@gmail.com"
       );
     }
-    function isCoordinator() { return isAuth() && (getUserRole(request.auth.uid) == "coordinador" || isAdminEmail()); }
+
+    function getMemberIdFromUid(uid) {
+      let snap = get(/databases/$(database)/documents/uid_map/$(uid));
+      return snap.data != null ? snap.data.memberId : null;
+    }
+
+    function isOwnMemberId(memberId) {
+      return isAuth() && getMemberIdFromUid(request.auth.uid) == memberId;
+    }
+
+    function getUserRole(uid) {
+      let memberId = getMemberIdFromUid(uid);
+      return memberId == null ? null : get(/databases/$(database)/documents/members/$(memberId)).data.rol;
+    }
+
+    function isCoordinator() {
+      return isAuth() && (getUserRole(request.auth.uid) == "coordinador" || isAdminEmail());
+    }
+
     function isStaff() {
       let role = getUserRole(request.auth.uid);
       return isAuth() && (role == "servidor" || role == "apoyo" || role == "coordinador" || isAdminEmail());
     }
 
-    match /members/{uid} {
-      // En esta app interna, los miembros y líderes se autentican con Firebase Auth y necesitan
-      // leer/listar la colección para cargar el panel de administración y cambiar roles.
-      allow read: if isAuth();
-      allow list: if isAuth();
-      // fechaIngresoGrupo / ingresoInferido definen el denominador de las estadísticas: solo el coordinador los toca
-      allow update: if (isAuth() && request.auth.uid == uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
-      // Coordinador, servidor y apoyo pueden crear nuevos miembros (solo rol=miembro).
-      // Usuario autenticado puede crearse a sí mismo (solo rol=miembro).
-      allow create: if isCoordinator() || isStaff() || (isAuth() && request.auth.uid == uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro'));
-      allow delete: if false;
-    }
-
-    // ── NUEVA ARQUITECTURA: members/{memberId} (UUID canónico) ──
-    function getMemberIdFromUid(uid) {
-      let snap = get(/databases/$(database)/documents/uid_map/$(uid));
-      return snap.data != null ? snap.data.memberId : null;
-    }
-    function isOwnMemberId(memberId) {
-      return isAuth() && getMemberIdFromUid(request.auth.uid) == memberId;
-    }
-
+    // ── ARQUITECTURA CANÓNICA: members/{memberId} (UUID permanente) ──
     match /members/{memberId} {
-      // Documento canónico del miembro (ID = UUID permanente)
       allow read: if isAuth();
       allow list: if isAuth();
-      // Actualizar propio perfil (email, fechaNacimiento, etc.) — NO rol, NO estadoAnioActual, NO fechaIngresoGrupo
-      allow update: if isOwnMemberId(memberId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido']) || isCoordinator();
-      // Registro: usuario recién autenticado completa su ficha (email, uid, fechaNacimiento)
-      // Permitir si el uid que se escribe coincide con el auth UID (registro inicial)
+      allow update: if (isOwnMemberId(memberId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
       allow update: if isAuth() && request.resource.data.uid == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido']);
-      // Registro: usuario recién autenticado completa su ficha (email, uid, fechaNacimiento)
       allow create: if isAuth() && request.auth.uid == resource.data.uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro');
       allow delete: if false;
     }
 
-    // ── NUEVA ARQUITECTURA: uid_map/{authUid} (enlace Auth ↔ memberId) ──
+    // ── uid_map/{authUid} (enlace Auth ↔ memberId) ──
     match /uid_map/{uid} {
       allow read: if isAuth() && (request.auth.uid == uid || isStaff());
-      // Creado solo al registrar cuenta (registro.html)
       allow create: if isAuth() && request.auth.uid == uid;
       allow update, delete: if false;
     }
 
-    match /miembros_registro/{uid} { allow read: if true; allow create, update: if isAuth() && request.auth.uid == uid; allow delete: if isCoordinator(); }
+    match /miembros_registro/{uid} {
+      allow read: if true;
+      allow create, update: if isAuth() && request.auth.uid == uid;
+      allow delete: if isCoordinator();
+    }
 
-    match /asambleas/{fecha} { allow read: if true; allow create, update, delete: if isStaff(); }
+    match /asambleas/{fecha} {
+      allow read: if true;
+      allow create, update, delete: if isStaff();
+    }
 
-    match /asamblea/{docId} { allow read: if isAuth(); allow create, update: if isStaff(); allow delete: if isCoordinator(); }
+    match /asamblea/{docId} {
+      allow read: if isAuth();
+      allow create, update: if isStaff();
+      allow delete: if isCoordinator();
+    }
 
-    // ASISTENCIA (ruta real: asistencia/{anio}/{fecha}/{uid}; cada {fecha} es una subcolección)
-    // Lee: el propio miembro (comparando memberId vía uid_map) o un líder. Escribe: solo líderes.
+    // ASISTENCIA
     match /asistencia/{docId} {
       allow read: if isAuth() && (
         request.auth.uid == resource.data.uid ||
@@ -98,34 +92,71 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /tablas_definiciones/{tablaId} { allow read: if isAuth(); allow create, update, delete: if isStaff(); }
+    match /tablas_definiciones/{tablaId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isStaff();
+    }
+
     match /tablas_dinamicas/{anio}/{tablaId}/{rowId} {
       function tablaRestringida() { return tablaId == 'lista-asistentes-ejutor-2026'; }
       allow read: if isAuth() && (!tablaRestringida() || isCoordinator());
       allow create, update: if (isStaff() && !tablaRestringida()) || isCoordinator();
       allow delete: if isCoordinator();
     }
-    match /asambleas_kahoot/{fecha} { allow read: if isAuth(); allow create, update: if isStaff(); allow delete: if false; }
-    match /historico/{anio}/{collection}/{docId} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
-    // Docs de año (historico/2026) y doc raíz: necesarios para collectionGroup('historico') y listados de años
-    match /historico/{anio} { allow read: if isAuth(); allow create, update: if isCoordinator(); allow delete: if false; }
-    match /sugerencias/{id} { allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberId(request.auth.uid))).data.rol in ["servidor", "apoyo", "coordinador"]); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
-    match /suggestions/{id} { allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberId(request.auth.uid))).data.rol in ["servidor", "apoyo", "coordinador"]); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
-    match /feedback/{id} { allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberId(request.auth.uid))).data.rol in ["servidor", "apoyo", "coordinador"]); allow create: if isAuth(); allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator()); }
-    match /attendance_log/{docId} { allow read: if isAuth() && resource.data.uid == request.auth.uid; allow write: if false; }
-    // Banco de preguntas (contiene "correcta" — solo staff read/write)
-    match /preguntas/{id} {
-      allow read: if isAuth();  // assertStaff() validado en cliente (engine)
-      allow create, update: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberId(request.auth.uid))).data.rol in ["servidor", "apoyo", "coordinador"]);
-      allow delete: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberId(request.auth.uid))).data.rol == "coordinador");
+
+    match /asambleas_kahoot/{fecha} {
+      allow read: if isAuth();
+      allow create, update: if isStaff();
+      allow delete: if false;
     }
-    // Sesiones KAHOOT preparadas/activas/finalizadas (histórico completo)
+
+    match /historico/{anio}/{collection}/{docId} {
+      allow read: if isAuth();
+      allow create, update: if isCoordinator();
+      allow delete: if false;
+    }
+
+    match /historico/{anio} {
+      allow read: if isAuth();
+      allow create, update: if isCoordinator();
+      allow delete: if false;
+    }
+
+    match /sugerencias/{id} {
+      allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberIdFromUid(request.auth.uid))).data.rol in ["servidor", "apoyo", "coordinador"]);
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator());
+    }
+
+    match /suggestions/{id} {
+      allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberIdFromUid(request.auth.uid))).data.rol in ["servidor", "apoyo", "coordinador"]);
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator());
+    }
+
+    match /feedback/{id} {
+      allow read: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberIdFromUid(request.auth.uid))).data.rol in ["servidor", "apoyo", "coordinador"]);
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (request.auth.uid == resource.data.uid || isCoordinator());
+    }
+
+    match /attendance_log/{docId} {
+      allow read: if isAuth() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /preguntas/{id} {
+      allow read: if isAuth();
+      allow create, update: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberIdFromUid(request.auth.uid))).data.rol in ["servidor", "apoyo", "coordinador"]);
+      allow delete: if isAuth() && (get(/databases/$(database)/documents/members/$(getMemberIdFromUid(request.auth.uid))).data.rol == "coordinador");
+    }
+
     match /kahoot_sessions/{sessionId} {
-      allow read: if isAuth();  // assertStaff() validado en cliente (engine)
+      allow read: if isAuth();
       allow create, update: if isStaff();
       allow delete: if isCoordinator();
     }
-    // Histórico anual de sesiones KAHOOT completadas
+
     match /historico/{anio}/kahoot_sessions/{sessionId} {
       allow read: if isAuth();
       allow create, update: if isCoordinator();
