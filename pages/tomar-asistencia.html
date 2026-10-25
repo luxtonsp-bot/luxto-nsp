@@ -821,11 +821,14 @@
         listaResumenAnual.innerHTML = '<div class="empty-state">Cargando...</div>';
 
         try {
-            // 1. Obtener todas las asambleas del año
-            const asambleasSnapshot = await db.collection('asambleas')
-                .where('fecha', '>=', `${anio}-01-01`)
-                .where('fecha', '<=', `${anio}-12-31`)
-                .get();
+            // 1. Obtener todas las asambleas del año (paralelo con members)
+            const [asambleasSnapshot, membersSnapshot] = await Promise.all([
+                db.collection('asambleas')
+                    .where('fecha', '>=', `${anio}-01-01`)
+                    .where('fecha', '<=', `${anio}-12-31`)
+                    .get(),
+                db.collection('members').get()
+            ]);
 
             const fechasAsambleas = [];
             asambleasSnapshot.forEach(doc => {
@@ -833,14 +836,17 @@
                 if (data.hayAsamblea) fechasAsambleas.push(doc.id);
             });
 
-            // 2. Obtener TODOS los miembros (sin filtro de estado)
-            const membersSnapshot = await db.collection('members').get();
-
+            // 2. Construir mapa Auth UID -> member UUID y lista de miembros
+            const authUidToMemberUuid = {};
             const miembros = [];
             membersSnapshot.forEach(doc => {
                 const data = doc.data();
+                const memberUuid = doc.id;
+                const authUid = data.uid; // Auth UID guardado en el campo uid
+                if (authUid) authUidToMemberUuid[authUid] = memberUuid;
                 miembros.push({
-                    uid: doc.id,
+                    uid: memberUuid,           // UUID canónico (doc ID de members)
+                    authUid: authUid,          // Auth UID para match con asistencia vieja
                     nombre: data.nombre || 'Sin nombre',
                     email: data.email || '',
                     fotoThumb: data.fotoThumb,
@@ -848,65 +854,68 @@
                     asistenciasTotales: data.asistenciasTotales || 0
                 });
             });
-            // Ordenar por nombre en cliente
             miembros.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-            // 3. Filtrar fechas que TENGAN DATOS en asistencia (no solo habilitadas en config)
-            // EXCLUIR fechas futuras (>= hoy en Lima) porque la asamblea no ha ocurrido aún
+            // 3. Filtrar fechas pasadas (excluir futuras y hoy si no ha ocurrido)
             const hoyLima = getLimaDateStr();
-            const fechasConDatos = [];
-            for (const fecha of fechasAsambleas) {
-                // Solo incluir fechas pasadas (menores a hoy en Lima)
-                if (fecha >= hoyLima) continue;
-                const snap = await db.collection('asistencia').doc(anio).collection(fecha).limit(1).get();
-                if (!snap.empty) fechasConDatos.push(fecha);
-            }
+            const fechasPasadas = fechasAsambleas.filter(f => f < hoyLima);
 
-            // 4. Cargar asistencia solo para fechas con datos
+            // 4. Cargar TODA la asistencia en PARALELO (una query por fecha, pero paralelas)
+            const asistenciaPromises = fechasPasadas.map(fecha =>
+                db.collection('asistencia').doc(anio).collection(fecha).get()
+            );
+            const asistenciaSnapshots = await Promise.all(asistenciaPromises);
+
+            // 5. Construir set de member UUIDs presentes por fecha (usando authUidToMemberUuid para docs viejos)
             let totalAsistencias = 0;
             const asistenciaPorFecha = {};
 
-            for (const fecha of fechasConDatos) {
-                const snap = await db.collection('asistencia').doc(anio).collection(fecha).get();
-                const presentesDelDia = [];
+            asistenciaSnapshots.forEach((snap, idx) => {
+                const fecha = fechasPasadas[idx];
+                const presentesDelDia = new Set(); // Set para O(1) lookup
                 snap.forEach(doc => {
                     const data = doc.data();
                     if (data.presente === true) {
-                        presentesDelDia.push(doc.id);
-                        totalAsistencias++;
+                        // El doc puede tener ID = Auth UID (viejo) o UUID (nuevo)
+                        // Usar data.uid (Auth UID) y mapear a member UUID
+                        const authUid = data.uid || doc.id;
+                        const memberUuid = authUidToMemberUuid[authUid] || authUid;
+                        if (memberUuid) {
+                            presentesDelDia.add(memberUuid);
+                            totalAsistencias++;
+                        }
                     }
                 });
                 asistenciaPorFecha[fecha] = presentesDelDia;
-            }
+            });
 
-            // 5. Calcular estadísticas por miembro
+            // 6. Calcular estadísticas por miembro
             const resumenMiembros = miembros.map(m => {
                 let asistio = 0;
-                for (const fecha of fechasConDatos) {
-                    // m.uid es el member document ID (doc.id), que coincide con el ID del documento de asistencia
-                    if (asistenciaPorFecha[fecha]?.includes(m.uid)) asistio++;
+                for (const fecha of fechasPasadas) {
+                    if (asistenciaPorFecha[fecha]?.has(m.uid)) asistio++;
                 }
                 return {
                     ...m,
                     asistio,
-                    totalAsambleas: fechasConDatos.length,
-                    porcentaje: fechasConDatos.length > 0 ? Math.round((asistio / fechasConDatos.length) * 100) : 0
+                    totalAsambleas: fechasPasadas.length,
+                    porcentaje: fechasPasadas.length > 0 ? Math.round((asistio / fechasPasadas.length) * 100) : 0
                 };
             });
 
             // Ordenar: % desc, luego total desc
             resumenMiembros.sort((a, b) => b.porcentaje - a.porcentaje || b.asistio - a.asistio);
 
-            // 6. Render stats
-            const promedioAsistencia = fechasConDatos.length > 0
-                ? Math.round(totalAsistencias / fechasConDatos.length)
+            // 7. Render stats
+            const promedioAsistencia = fechasPasadas.length > 0
+                ? Math.round(totalAsistencias / fechasPasadas.length)
                 : 0;
 
-            statTotalAsambleas.textContent = fechasConDatos.length;
+            statTotalAsambleas.textContent = fechasPasadas.length;
             statPromedioAsistencia.textContent = promedioAsistencia;
             statTotalMiembros.textContent = miembros.length;
 
-            // 7. Render lista
+            // 8. Render lista
             let html = '';
             resumenMiembros.forEach((m, i) => {
                 const initial = m.nombre.charAt(0).toUpperCase();
