@@ -18,29 +18,31 @@
     <script>
         function convertirUrlDrive(url) {
             if (!url) return "";
-            // Si ya es thumbnail, devolverla
-            if (url.includes("drive.google.com/thumbnail")) return url;
-            // Si ya es uc?export=view, convertir a thumbnail
-            if (url.includes("uc?export=view")) {
+            // Si ya es URL directa uc?export=view, devolverla
+            if (url.includes("uc?export=view")) return url;
+            // Si es thumbnail, convertir a vista directa
+            if (url.includes("drive.google.com/thumbnail")) {
                 const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
-                if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w200";
+                if (m) return "https://drive.google.com/uc?export=view&id=" + m[1];
                 return url;
             }
-            // Extraer file ID de varios formatos de URL de Drive
-            const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
-                   || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
-                   || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
-            if (m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w200";
+            // Extraer file ID y construir URL directa (uc?export=view funciona en Firebase Hosting)
+            const m =
+                url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) ||
+                url.match(/\/d\/([a-zA-Z0-9_-]{20,})/) ||
+                url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+            if (m)
+                return "https://drive.google.com/uc?export=view&id=" + m[1];
             return url;
         }
 
         function getPhotoUrl(memberData) {
-            // Prioridad: fotoThumb (URL directa) > fotoDriveId (convertir a thumbnail)
-            if (memberData.fotoThumb && memberData.fotoThumb.startsWith('http')) {
+            // Prioridad: fotoThumb (base64 data URL) > fotoDriveId (convertir a uc?export=view)
+            if (memberData.fotoThumb && memberData.fotoThumb.startsWith('data:')) {
                 return memberData.fotoThumb;
             }
             if (memberData.fotoDriveId) {
-                return "https://drive.google.com/thumbnail?id=" + memberData.fotoDriveId + "&sz=w200";
+                return "https://drive.google.com/uc?export=view&id=" + memberData.fotoDriveId;
             }
             return null;
         }
@@ -99,7 +101,7 @@
         <div class="card">
             <div class="card-title">👥 Miembros</div>
             <div id="members-list" class="item-list">
-                <div class="empty-state">Busca un miembro para comenzar</div>
+                <div class="empty-state">Cargando miembros...</div>
             </div>
         </div>
 
@@ -392,16 +394,37 @@
         try {
             let query;
             if (searchTerm) {
+                // Búsqueda flexible: normalizar y buscar por prefijo en nombre
+                const normalizedTerm = searchTerm.trim().toLowerCase();
+                // Usar orderBy + startAt/endAt para búsqueda por prefijo (case-sensitive en Firestore)
+                // Para búsqueda más flexible, cargamos todos y filtramos en cliente
                 query = db.collection('members')
-                    .orderBy('nombre')
-                    .startAt(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1))
-                    .endAt(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1) + '');
+                    .where('estadoAnioActual', '==', 'activo')
+                    .orderBy('nombre');
             } else {
-                query = db.collection('members').orderBy('nombre');
+                query = db.collection('members')
+                    .where('estadoAnioActual', '==', 'activo')
+                    .orderBy('nombre');
             }
 
-            const snapshot = await query.limit(50).get();
-            displayMembers(snapshot);
+            const snapshot = await query.get();
+            
+            // Filtrar en cliente si hay término de búsqueda (para soportar acentos y búsqueda parcial)
+            if (searchTerm) {
+                const normalizedTerm = searchTerm.trim().toLowerCase();
+                const filteredDocs = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const nombre = (data.nombre || '').toLowerCase();
+                    if (nombre.includes(normalizedTerm)) {
+                        filteredDocs.push(doc);
+                    }
+                });
+                // Crear un snapshot-like object con los docs filtrados
+                displayMembers({ docs: filteredDocs, empty: filteredDocs.length === 0, forEach: (fn) => filteredDocs.forEach(fn) });
+            } else {
+                displayMembers(snapshot);
+            }
         } catch (error) {
             console.error("Error loading members:", error);
             membersListDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>';
@@ -717,9 +740,10 @@
             sortedMembers.forEach(({ id, data: memberData }) => {
                 const nombre = memberData.nombre || 'Sin nombre';
                 const email = memberData.email || '';
-                const memberUid = memberData.uid || id; // fallback a UUID si no hay uid
-                const presente = presentesUids.has(memberUid);
-                const memberAttendance = snapshot.docs.find(d => d.id === memberUid)?.data() || {};
+                // El ID del documento de asistencia es el member document ID (id), NO el auth UID
+                const memberDocId = id;
+                const presente = presentesUids.has(memberDocId);
+                const memberAttendance = snapshot.docs.find(d => d.id === memberDocId)?.data() || {};
                 const tardanza = memberAttendance.tardanzaMinutos || 0;
                 const esTardanza = memberAttendance.esTardanza === true;
 
@@ -859,6 +883,7 @@
             const resumenMiembros = miembros.map(m => {
                 let asistio = 0;
                 for (const fecha of fechasConDatos) {
+                    // m.uid es el member document ID (doc.id), que coincide con el ID del documento de asistencia
                     if (asistenciaPorFecha[fecha]?.includes(m.uid)) asistio++;
                 }
                 return {
