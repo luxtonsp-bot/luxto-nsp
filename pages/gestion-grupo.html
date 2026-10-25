@@ -38,6 +38,7 @@
 
     <div class="tabs">
         <button class="tab-button active" onclick="openTab(event, 'perseverantes')" type="button">Perseverantes y Nuevos</button>
+        <button class="tab-button" onclick="openTab(event, 'editar-datos')" type="button">✏️ Editar Datos</button>
         <button class="tab-button" onclick="openTab(event, 'cierre-anio')" type="button">Cierre de Año</button>
     </div>
 
@@ -74,6 +75,20 @@
             <div id="new-member-result" style="margin-top:14px;"></div>
         </div>
 
+    </div>
+
+    <div id="editar-datos" class="tab-content">
+        <div class="card">
+            <div class="card-title">✏️ Editar Datos de Miembros</div>
+            <p class="section-desc" style="margin-bottom:14px;">Complete o corrija la fecha de nacimiento, fecha de ingreso y primera asamblea de los miembros.</p>
+            <div style="max-width:600px; margin-bottom:16px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Buscar miembro</label>
+                <input type="text" id="edit-search" placeholder="Escribe nombre para filtrar..." style="width:100%; padding:12px 16px; border:1.5px solid var(--border); border-radius:10px; font-size:15px;">
+            </div>
+            <div id="edit-members-list" class="item-list">
+                <div class="empty-state">Cargando miembros...</div>
+            </div>
+        </div>
     </div>
 
     <div id="cierre-anio" class="tab-content">
@@ -130,6 +145,8 @@
     const closeYearButton = document.getElementById('close-year-button');
     const closeYearResult = document.getElementById('close-year-result');
     const yearToCloseInput = document.getElementById('year-to-close');
+    const editSearchInput = document.getElementById('edit-search');
+    const editMembersListDiv = document.getElementById('edit-members-list');
 
     // ── Toast ──
     function toast(msg, tipo = "") {
@@ -175,6 +192,11 @@
         // Show selected tab content and activate button
         document.getElementById(tabName).classList.add('active');
         evt.currentTarget.classList.add('active');
+
+        // Initialize edit tab when opened
+        if (tabName === 'editar-datos') {
+            initEditTab();
+        }
     }
 
     // Load current year active members
@@ -246,6 +268,139 @@
         // Add form submit handler
         const perseverantesForm = document.getElementById('perseverantes-form');
         perseverantesForm.addEventListener('submit', savePerseverantes);
+    }
+
+    // ── EDITAR DATOS TAB ──
+    let allMembersForEdit = [];
+
+    async function loadMembersForEdit() {
+        try {
+            editMembersListDiv.innerHTML = '<div class="empty-state">Cargando miembros...</div>';
+
+            const membersSnapshot = await db.collection('members')
+                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
+                .get();
+
+            allMembersForEdit = [];
+            membersSnapshot.forEach(doc => {
+                const data = doc.data();
+                allMembersForEdit.push({
+                    id: doc.id,
+                    ...data
+                });
+            });
+
+            // Sort by name
+            allMembersForEdit.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+            displayEditMembers(allMembersForEdit);
+        } catch (error) {
+            console.error("Error loading members for edit:", error);
+            editMembersListDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>';
+        }
+    }
+
+    function displayEditMembers(members) {
+        if (members.length === 0) {
+            editMembersListDiv.innerHTML = '<div class="empty-state">No se encontraron miembros</div>';
+            return;
+        }
+
+        let html = '';
+        members.forEach(member => {
+            const birthdate = member.fechaNacimiento || '';
+            const ingreso = member.fechaIngresoGrupo ? (member.fechaIngresoGrupo.toDate ? member.fechaIngresoGrupo.toDate().toISOString().split('T')[0] : member.fechaIngresoGrupo) : '';
+            const primera = member.fechaPrimeraAsamblea || '';
+            const hasBirth = birthdate ? '✓' : '✗';
+            const hasIngreso = ingreso ? '✓' : '✗';
+            const hasPrimera = primera ? '✓' : '✗';
+
+            html += `
+                <div class="item" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; background:rgba(255,255,255,.03);">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <strong style="font-size:15px; color:var(--cream);">${member.nombre || 'Sin nombre'}</strong>
+                        ${member.email ? `<span style="font-size:12px; color:var(--muted);">(${member.email})</span>` : ''}
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ${hasBirth}</label>
+                            <input type="date" id="edit-birth-${member.id}" value="${birthdate}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:white; color:var(--ink);">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ${hasIngreso}</label>
+                            <input type="date" id="edit-ingreso-${member.id}" value="${ingreso}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:white; color:var(--ink);">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ${hasPrimera}</label>
+                            <input type="date" id="edit-primera-${member.id}" value="${primera}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:white; color:var(--ink);">
+                        </div>
+                    </div>
+                    <div style="margin-top:12px; text-align:right;">
+                        <button type="button" class="btn btn-primary" onclick="saveMemberData('${member.id}')" style="padding:10px 20px; font-size:13px;">💾 Guardar</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        editMembersListDiv.innerHTML = html;
+    }
+
+    // Search filter for edit tab
+    editSearchInput.addEventListener('input', (e) => {
+        const term = e.target.value.trim().toLowerCase();
+        if (!term) {
+            displayEditMembers(allMembersForEdit);
+        } else {
+            const filtered = allMembersForEdit.filter(m => 
+                (m.nombre || '').toLowerCase().includes(term)
+            );
+            displayEditMembers(filtered);
+        }
+    });
+
+    // Save member data
+    window.saveMemberData = async function(memberId) {
+        const birthdate = document.getElementById(`edit-birth-${memberId}`).value;
+        const ingreso = document.getElementById(`edit-ingreso-${memberId}`).value;
+        const primera = document.getElementById(`edit-primera-${memberId}`).value;
+
+        if (!birthdate && !ingreso && !primera) {
+            toast('Complete al menos un campo', 'err');
+            return;
+        }
+
+        try {
+            const updateData = {};
+            if (birthdate) {
+                updateData.fechaNacimiento = birthdate;
+                updateData.fechaNacimientoMMdd = birthdate.substring(5, 10);
+            }
+            if (ingreso) updateData.fechaIngresoGrupo = ingreso;
+            if (primera) updateData.fechaPrimeraAsamblea = primera;
+            updateData.fechaActualizacion = firebase.firestore.FieldValue.serverTimestamp();
+
+            await db.collection('members').doc(memberId).update(updateData);
+            toast('Datos guardados correctamente', 'ok');
+
+            // Refresh the member in our cache
+            const idx = allMembersForEdit.findIndex(m => m.id === memberId);
+            if (idx !== -1) {
+                if (birthdate) {
+                    allMembersForEdit[idx].fechaNacimiento = birthdate;
+                    allMembersForEdit[idx].fechaNacimientoMMdd = birthdate.substring(5, 10);
+                }
+                if (ingreso) allMembersForEdit[idx].fechaIngresoGrupo = ingreso;
+                if (primera) allMembersForEdit[idx].fechaPrimeraAsamblea = primera;
+            }
+        } catch (error) {
+            console.error("Error saving member data:", error);
+            toast('Error al guardar datos', 'err');
+        }
+    };
+
+    // Initialize edit tab when loaded
+    async function initEditTab() {
+        await loadMembersForEdit();
     }
 
     // Save perseverance status
