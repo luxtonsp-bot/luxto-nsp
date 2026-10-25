@@ -723,7 +723,7 @@
             return;
         }
         await cargarAsistenciaDia(fechaLocal);
-    }
+    });
 
     async function cargarAsistenciaDia(fecha) {
         fechaDisplay.textContent = formatDate(fecha);
@@ -999,13 +999,6 @@
     // ── SUB-TAB: EDITAR ASISTENCIA ──
     let editAttendanceCache = {};
 
-    function initEditFechaSelector() {
-        const today = getLimaDateStr();
-        editFechaSelector.max = today;
-        editFechaSelector.value = today;
-    }
-    initEditFechaSelector();
-
     cargarEditFechaBtn.addEventListener('click', async () => {
         const fechaLocal = editFechaSelector.value;
         if (!fechaLocal) {
@@ -1013,7 +1006,7 @@
             return;
         }
         await cargarEditAsistenciaDia(fechaLocal);
-    }
+    });
 
     async function cargarEditAsistenciaDia(fecha) {
         editFechaDisplay.textContent = formatDate(fecha);
