@@ -194,19 +194,23 @@
 
     // Initialize
     var authReady = false;
+    console.log('[GESTION-GRUPO] Script cargado, authReady=', authReady, 'currentUser=', auth.currentUser);
     auth.onAuthStateChanged(async function(user) {
+        console.log('[GESTION-GRUPO] onAuthStateChanged fired:', user ? 'USER: ' + user.uid : 'NULL', 'authReady=', authReady);
         if (user) {
             if (!authReady) {
                 authReady = true;
+                console.log('[GESTION-GRUPO] Primera vez con user real, inicializando...');
                 try { await AuthPermissions.initStaffPermissionCheck(); }
-                catch (e) { console.warn('AuthPermissions check failed, continuando:', e); }
+                catch (e) { console.warn('AuthPermissions check failed:', e); }
                 await loadAllMembersForTab1();
             }
         } else if (authReady) {
-            // Usuario se deslogueó explícitamente
+            console.log('[GESTION-GRUPO] Usuario se deslogueó explícitamente -> redirect login');
             window.location.href = 'login.html';
+        } else {
+            console.log('[GESTION-GRUPO] Null inicial ignorado (esperando restauración de sesión)');
         }
-        // Si user===null y !authReady -> ignorar (es el null inicial mientras restaura sesión)
     });
 
     // ═══ TAB 1: INTEGRANTES ═══
