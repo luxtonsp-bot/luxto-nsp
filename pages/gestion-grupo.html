@@ -286,12 +286,12 @@
                             resolve();
                         }
                     }, 50);
-                    setTimeout(function() { 
-                        clearInterval(checkInterval); 
-                        console.error('[GESTION-GRUPO] TIMEOUT esperando AuthPermissions'); 
-                        resolve(); 
+                    setTimeout(function() {
+                        clearInterval(checkInterval);
+                        console.error('[GESTION-GRUPO] TIMEOUT esperando AuthPermissions');
+                        resolve();
                     }, 5000);
-                });
+                }
             });
         }
 
