@@ -252,6 +252,25 @@
                     console.log('[GESTION-GRUPO] >>> NULL inicial ignorado (esperando restauración sesión)');
                 }
             });
+
+            // CHECK: Usuario ya logueado al venir de dashboard (auth.currentUser disponible ANTES del listener)
+            var currentUser = auth.currentUser;
+            if (currentUser && !authReady && !initAttempted) {
+                console.log('[GESTION-GRUPO] >>> Usuario YA logueado (currentUser):', currentUser.uid, '- inicializando SIN esperar onAuthStateChanged');
+                authReady = true;
+                initAttempted = true;
+                try { 
+                    console.log('[GESTION-GRUPO] >>> Llamando AuthPermissions.initStaffPermissionCheck()...');
+                    await AuthPermissions.initStaffPermissionCheck(); 
+                    console.log('[GESTION-GRUPO] >>> AuthPermissions OK');
+                }
+                catch (e) { 
+                    console.error('[GESTION-GRUPO] >>> ERROR en AuthPermissions:', e); 
+                }
+                console.log('[GESTION-GRUPO] >>> Cargando miembros...');
+                await loadAllMembersForTab1();
+                console.log('[GESTION-GRUPO] >>> Inicialización COMPLETA');
+            }
         });
 
     // ═══ TAB 1: INTEGRANTES ═══
