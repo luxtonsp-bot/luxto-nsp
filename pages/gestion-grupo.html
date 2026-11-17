@@ -191,6 +191,7 @@
         evt.currentTarget.classList.add('active');
         if (tabName === 'editar-datos') initEditTab();
     }
+    window.openTab = openTab; // Exponer globalmente para onclick
 
     // Initialize
         var authReady = false;
@@ -216,7 +217,7 @@
             });
         }
 
-        waitForAuthPermissions().then(function() {
+        waitForAuthPermissions().then(async function() {
             console.log('[GESTION-GRUPO] ===== INICIANDO LISTENER AUTH =====');
             auth.onAuthStateChanged(async function(user) {
                 console.log('[GESTION-GRUPO] ===== onAuthStateChanged =====', { 
@@ -260,7 +261,7 @@
                 authReady = true;
                 initAttempted = true;
                 try { 
-                    console.log('[GESTION-GRUPO] >>> Llamando AuthPermissions.initStaffPermissionCheck()...');
+                    console.log('[GESTION-GRUPO] >>> Llamando AuthPermissions.initStaffPermissionCheck()....');
                     await AuthPermissions.initStaffPermissionCheck(); 
                     console.log('[GESTION-GRUPO] >>> AuthPermissions OK');
                 }
