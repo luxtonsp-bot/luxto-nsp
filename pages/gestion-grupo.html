@@ -15,6 +15,285 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <!-- Shared permissions module -->
     <script type="module" src="../assets/js/auth-permissions.js"></script>
+    <script>
+        // Utilidades de fotos (igual que tomar-asistencia.html)
+        function convertirUrlDrive(url) {
+            if (!url) return "";
+            if (url.includes("uc?export=view")) return url;
+            if (url.includes("drive.google.com/thumbnail")) {
+                const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/);
+                if (m) return "https://drive.google.com/uc?export=view&id=" + m[1];
+                return url;
+            }
+            const m =
+                url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) ||
+                url.match(/\/d\/([a-zA-Z0-9_-]{20,})/) ||
+                url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+            if (m)
+                return "https://drive.google.com/uc?export=view&id=" + m[1];
+            return url;
+        }
+
+        function getPhotoUrl(memberData) {
+            if (memberData.fotoThumb && memberData.fotoThumb.startsWith('data:')) {
+                return memberData.fotoThumb;
+            }
+            if (memberData.fotoDriveId) {
+                return "https://drive.google.com/uc?export=view&id=" + memberData.fotoDriveId;
+            }
+            return null;
+        }
+
+        function isValidImageUrl(url) {
+            return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:'));
+        }
+
+        function avatarFallback(nombre) {
+            const inicial = (nombre || "?").charAt(0).toUpperCase();
+            const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>" + inicial + "</text></svg>";
+            return "data:image/svg+xml;base64," + btoa(svg);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&')
+                .replace(/</g, '<')
+                .replace(/>/g, '>')
+                .replace(/"/g, '"')
+                .replace(/'/g, ''');
+        }
+
+        function getRoleBadge(rol) {
+            const badges = {
+                'coordinador': { label: '👑 Coordinador', class: 'badge-coordinador' },
+                'servidor': { label: '⚔️ Servidor', class: 'badge-servidor' },
+                'apoyo': { label: '🤝 Apoyo', class: 'badge-apoyo' },
+                'miembro': { label: '👤 Miembro', class: 'badge-miembro' }
+            };
+            const b = badges[rol] || badges.miembro;
+            return '<span class="role-badge ' + b.class + '">' + b.label + '</span>';
+        }
+
+        function getStatusBadge(estado) {
+            const badges = {
+                'activo': { label: '🟢 Activo', class: 'status-activo' },
+                'perseverante': { label: '🟡 Perseverante', class: 'status-perseverante' },
+                'dado_de_baja': { label: '🔴 Baja', class: 'status-baja' }
+            };
+            const b = badges[estado] || { label: estado, class: '' };
+            return '<span class="status-badge ' + b.class + '">' + b.label + '</span>';
+        }
+    </script>
+    <style>
+        .member-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            margin-bottom: 10px;
+            transition: all var(--t);
+        }
+        .member-card:hover {
+            background: var(--bg3);
+            border-color: var(--border2);
+            transform: translateX(4px);
+        }
+        .member-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border);
+            flex-shrink: 0;
+            background: var(--bg3);
+        }
+        .member-avatar-placeholder {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--y);
+            background: var(--bg3);
+            border: 2px solid var(--border);
+            flex-shrink: 0;
+        }
+        .member-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .member-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--cream);
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .member-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .member-email {
+            opacity: 0.7;
+        }
+        .member-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--y);
+            cursor: pointer;
+        }
+        .checkbox-wrapper span {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+        }
+        .checkbox-wrapper input[type="checkbox"]:checked + span {
+            color: var(--y);
+        }
+
+        .role-badge, .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .badge-coordinador { background: rgba(245,197,24,.15); color: var(--y); border: 1px solid rgba(245,197,24,.3); }
+        .badge-servidor { background: rgba(74,143,168,.15); color: var(--b); border: 1px solid rgba(74,143,168,.3); }
+        .badge-apoyo { background: rgba(196,134,154,.15); color: var(--r); border: 1px solid rgba(196,134,154,.3); }
+        .badge-miembro { background: rgba(255,255,255,.06); color: var(--muted); border: 1px solid var(--border); }
+        .status-activo { background: rgba(45,186,111,.15); color: #7fe8aa; border: 1px solid rgba(45,186,111,.3); }
+        .status-perseverante { background: rgba(245,197,24,.15); color: var(--y); border: 1px solid rgba(245,197,24,.3); }
+        .status-baja { background: rgba(224,60,60,.15); color: #f08080; border: 1px solid rgba(224,60,60,.3); }
+
+        .search-box {
+            position: relative;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            background: rgba(255,255,255,.06);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            font-family: 'Outfit',sans-serif;
+            font-size: 15px;
+            color: var(--cream);
+            outline: none;
+            transition: border-color var(--t), background var(--t);
+        }
+        .search-box input:focus {
+            border-color: rgba(245,197,24,.4);
+            background: rgba(255,255,255,.08);
+        }
+        .search-box svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            stroke: var(--muted);
+            pointer-events: none;
+        }
+        .search-box input:focus + svg {
+            stroke: var(--y);
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: rgba(255,255,255,.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .stat-box {
+            flex: 1;
+            min-width: 140px;
+            text-align: center;
+            padding: 8px 12px;
+        }
+        .stat-number {
+            font-family: 'Bebas Neue',sans-serif;
+            font-size: 28px;
+            line-height: 1;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+        .stat-activo .stat-number { color: #7fe8aa; }
+        .stat-perseverante .stat-number { color: var(--y); }
+        .stat-total .stat-number { color: var(--cream); }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--muted);
+        }
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .member-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .member-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .member-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            .search-box {
+                max-width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -34,25 +313,86 @@
 
     <div class="section-eyebrow">Coordinación</div>
     <h1>Gestión de Grupo</h1>
-    <p class="section-desc">Marca a los perseverantes del próximo año, agrega nuevos integrantes y realiza el cierre académico del año.</p>
+    <p class="section-desc">Visualiza todos los integrantes, marca perseverantes para el próximo año, edita datos y gestiona el cierre académico.</p>
 
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'perseverantes')" type="button">Perseverantes y Nuevos</button>
-        <button class="tab-button" onclick="openTab(event, 'editar-datos')" type="button">✏️ Editar Datos</button>
-        <button class="tab-button" onclick="openTab(event, 'cierre-anio')" type="button">Cierre de Año</button>
+    <div class="tab-container">
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab(event, 'perseverantes')" type="button">👥 Integrantes</button>
+            <button class="tab-button" onclick="openTab(event, 'editar-datos')" type="button">✏️ Editar Datos</button>
+            <button class="tab-button" onclick="openTab(event, 'nuevo-integrante')" type="button">➕ Nuevo Integrante</button>
+            <button class="tab-button" onclick="openTab(event, 'cierre-anio')" type="button">🏁 Cierre de Año</button>
+        </div>
     </div>
 
+    <!-- TAB 1: INTEGRANTES (Todos) -->
     <div id="perseverantes" class="tab-content active">
-
         <div class="card">
-            <div class="card-title">🏅 Marcar Perseverantes <span class="card-sub">Continuarán el próximo año</span></div>
-            <div id="current-year-members">
+            <div class="card-title">👥 Listado completo de integrantes</div>
+
+            <!-- Buscador -->
+            <div class="search-box" id="searchBoxIntegrantes">
+                <input type="text" id="searchIntegrantes" placeholder="Buscar por nombre, email o rol..." autocomplete="off">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row" id="statsIntegrantes">
+                <div class="stat-box stat-total">
+                    <div class="stat-number" id="statTotal">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-box stat-activo">
+                    <div class="stat-number" id="statActivos">0</div>
+                    <div class="stat-label">Activos</div>
+                </div>
+                <div class="stat-box stat-perseverante">
+                    <div class="stat-number" id="statPerseverantes">0</div>
+                    <div class="stat-label">Perseverantes</div>
+                </div>
+            </div>
+
+            <!-- Lista -->
+            <div id="listaIntegrantes" class="item-list">
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <div>Cargando integrantes...</div>
+                </div>
+            </div>
+
+            <!-- Formulario para guardar cambios de perseverancia -->
+            <form id="perseverantes-form" style="margin-top:20px; display:none;">
+                <div style="text-align:right;">
+                    <button type="submit" class="btn btn-primary">💾 Guardar cambios de perseverancia</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TAB 2: EDITAR DATOS -->
+    <div id="editar-datos" class="tab-content">
+        <div class="card">
+            <div class="card-title">✏️ Editar datos de miembros</div>
+            <p class="section-desc" style="margin-bottom:14px;">Completa o corrige la fecha de nacimiento, fecha de ingreso y primera asamblea.</p>
+
+            <div style="max-width:500px; margin-bottom:20px;">
+                <div class="search-box" style="margin-bottom:0;">
+                    <input type="text" id="edit-search" placeholder="Filtrar por nombre..." autocomplete="off">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+            </div>
+
+            <div id="edit-members-list" class="item-list">
                 <div class="empty-state">Cargando miembros...</div>
             </div>
         </div>
+    </div>
 
+    <!-- TAB 3: NUEVO INTEGRANTE -->
+    <div id="nuevo-integrante" class="tab-content">
         <div class="card">
-            <div class="card-title">➕ Agregar Nuevo Integrante</div>
+            <div class="card-title">➕ Agregar nuevo integrante</div>
+            <p class="section-desc" style="margin-bottom:20px;">Registra a un nuevo miembro en el grupo. Luego podrá crear su cuenta en la página de registro.</p>
+
             <form id="new-member-form">
                 <div class="form-grid">
                     <div>
@@ -64,55 +404,40 @@
                         <input type="date" id="new-member-birthdate" required>
                     </div>
                 </div>
-                <div style="margin-top:14px; max-width:280px;">
-                    <label for="new-member-first-assembly">Fecha primera asamblea:</label>
+                <div style="margin-top:14px; max-width:320px;">
+                    <label for="new-member-first-assembly">Fecha de primera asamblea:</label>
                     <input type="date" id="new-member-first-assembly" required>
                 </div>
-                <div style="margin-top:18px;">
-                    <button type="submit" class="btn btn-primary">✓ Agregar Nuevo Integrante</button>
+                <div style="margin-top:20px;">
+                    <button type="submit" class="btn btn-primary">✓ Agregar integrante</button>
                 </div>
             </form>
-            <div id="new-member-result" style="margin-top:14px;"></div>
-        </div>
-
-    </div>
-
-    <div id="editar-datos" class="tab-content">
-        <div class="card">
-            <div class="card-title">✏️ Editar Datos de Miembros</div>
-            <p class="section-desc" style="margin-bottom:14px;">Complete o corrija la fecha de nacimiento, fecha de ingreso y primera asamblea de los miembros.</p>
-            <div style="max-width:600px; margin-bottom:16px;">
-                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Buscar miembro</label>
-                <input type="text" id="edit-search" placeholder="Escribe nombre para filtrar..." style="width:100%; padding:12px 16px; border:1.5px solid var(--border); border-radius:10px; font-size:15px;">
-            </div>
-            <div id="edit-members-list" class="item-list">
-                <div class="empty-state">Cargando miembros...</div>
-            </div>
+            <div id="new-member-result" style="margin-top:16px;"></div>
         </div>
     </div>
 
+    <!-- TAB 4: CIERRE DE AÑO -->
     <div id="cierre-anio" class="tab-content">
-
         <div class="card" style="border-color:rgba(224,60,60,.3);">
             <div class="card-title">🏁 Cierre de Año Académico</div>
-            <p class="section-desc" style="margin-bottom:14px;">Esta operación calculará las métricas finales de todos los miembros activos y las guardará en el histórico.</p>
-            <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25); margin-bottom:20px;">
+            <p class="section-desc" style="margin-bottom:14px;">Calcula las métricas finales de todos los miembros y guarda todo en el histórico.</p>
+
+            <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25); margin-bottom:24px;">
                 <div class="item-title" style="color:#f08080;">⚠️ Importante</div>
                 <div class="item-meta">Esta operación no se puede deshacer. Asegúrese de haber revisado todos los datos antes de proceder.</div>
             </div>
 
-            <div style="max-width:240px;">
+            <div style="max-width:280px; margin-bottom:20px;">
                 <label for="year-to-close">Año a cerrar:</label>
                 <input type="number" id="year-to-close" min="2020" max="2030" value="2026">
             </div>
-            <div style="margin-top:18px;">
+            <div style="margin-top:8px;">
                 <button id="close-year-button" class="btn btn-ok" style="padding:14px 28px; font-size:15px;" type="button">
                     🏁 Cerrar Año Académico
                 </button>
             </div>
-            <div id="close-year-result" style="margin-top:14px;"></div>
+            <div id="close-year-result" style="margin-top:16px;"></div>
         </div>
-
     </div>
 
 </main>
@@ -120,9 +445,9 @@
 <div id="toast"></div>
 
 <script>
-    // Initialize Firebase
+    // Firebase Init
     const firebaseConfig = {
-        apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
+        apiKey: "«reda...…»",
         authDomain: "luxto-nsp.firebaseapp.com",
         projectId: "luxto-nsp",
         storageBucket: "luxto-nsp.firebasestorage.app",
@@ -136,19 +461,29 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    let currentYear = new Date().getFullYear();
-
     // DOM Elements
-    const newMemberForm = document.getElementById('new-member-form');
-    const newMemberResult = document.getElementById('new-member-result');
-    const currentYearMembersDiv = document.getElementById('current-year-members');
-    const closeYearButton = document.getElementById('close-year-button');
-    const closeYearResult = document.getElementById('close-year-result');
-    const yearToCloseInput = document.getElementById('year-to-close');
+    const listaIntegrantesDiv = document.getElementById('listaIntegrantes');
+    const searchIntegrantesInput = document.getElementById('searchIntegrantes');
+    const statTotal = document.getElementById('statTotal');
+    const statActivos = document.getElementId('statActivos');
+    const statPerseverantes = document.getElementById('statPerseverantes');
+    const perseverantesForm = document.getElementById('perseverantes-form');
+
     const editSearchInput = document.getElementById('edit-search');
     const editMembersListDiv = document.getElementById('edit-members-list');
 
-    // ── Toast ──
+    const newMemberForm = document.getElementById('new-member-form');
+    const newMemberResult = document.getElementById('new-member-result');
+
+    const closeYearButton = document.getElementById('close-year-button');
+    const closeYearResult = document.getElementById('close-year-result');
+    const yearToCloseInput = document.getElementById('year-to-close');
+
+    // State
+    let allMembersCache = [];
+    let allMembersForEdit = [];
+
+    // Toast
     function toast(msg, tipo = "") {
         const t = document.getElementById("toast");
         t.textContent = msg;
@@ -160,144 +495,240 @@
         firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
     }
 
-    // Initialize
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
-            try {
-                await AuthPermissions.initStaffPermissionCheck();
-            } catch (e) {
-                console.warn('AuthPermissions check failed, continuando:', e);
-            }
-            loadCurrentYearMembers();
-        } else {
-            window.location.href = 'login.html';
-        }
-    });
-
-    // Tab functionality
+    // Tab switching
     function openTab(evt, tabName) {
-        // Hide all tab content
-        const tabContents = document.getElementsByClassName('tab-content');
-        for (let i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove('active');
-        }
-
-        // Deactivate all tab buttons
-        const tabButtons = document.getElementsByClassName('tab-button');
-        for (let i = 0; i < tabButtons.length; i++) {
-            tabButtons[i].classList.remove('active');
-        }
-
-        // Show selected tab content and activate button
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
         document.getElementById(tabName).classList.add('active');
         evt.currentTarget.classList.add('active');
 
-        // Initialize edit tab when opened
         if (tabName === 'editar-datos') {
             initEditTab();
         }
     }
 
-    // Load current year active members
-    async function loadCurrentYearMembers() {
-        try {
-            currentYearMembersDiv.innerHTML = '<div class="empty-state">Cargando miembros...</div>';
+    // Initialize
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            try {
+                await AuthPermissions.initStaffPermissionCheck();
+            } catch (e) {
+                console.warn('AuthPermissions check failed, continuando:', e);
+            }
+            await loadAllMembersForTab1();
+        } else {
+            window.location.href = 'login.html';
+        }
+    });
 
-            const membersSnapshot = await db.collection('members')
-                .where('estadoAnioActual', '==', 'activo')
+    // TAB 1: TODOS LOS INTEGRANTES (activo + perseverante)
+    async function loadAllMembersForTab1() {
+        try {
+            listaIntegrantesDiv.innerHTML = '<div class="empty-state">Cargando integrantes...</div>';
+
+            const snapshot = await db.collection('members')
+                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
                 .get();
 
-            const members = [];
-            membersSnapshot.forEach(doc => {
-                const data = doc.data();
-                members.push({
-                    id: doc.id,
-                    ...data
-                });
+            allMembersCache = [];
+            snapshot.forEach(doc => {
+                allMembersCache.push({ id: doc.id, ...doc.data() });
             });
 
-            // Sort by name
-            members.sort((a, b) => a.nombre.localeCompare(b.nombre));
+            allMembersCache.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 
-            displayCurrentYearMembers(members);
+            renderIntegrantesList(allMembersCache);
+            updateStats(allMembersCache);
+            setupSearchIntegrantes();
+
         } catch (error) {
-            console.error("Error loading current year members:", error);
-            currentYearMembersDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>';
+            console.error("Error loading members for tab 1:", error);
+            listaIntegrantesDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando integrantes</div>';
         }
     }
 
-    // Display current year members with perseverance checkboxes
-    function displayCurrentYearMembers(members) {
+    function updateStats(members) {
+        const total = members.length;
+        const activos = members.filter(m => m.estadoAnioActual === 'activo').length;
+        const perseverantes = members.filter(m => m.estadoAnioActual === 'perseverante').length;
+
+        statTotal.textContent = total;
+        statActivos.textContent = activos;
+        statPerseverantes.textContent = perseverantes;
+    }
+
+    function setupSearchIntegrantes() {
+        searchIntegrantesInput.addEventListener('input', (e) => {
+            const term = e.target.value.trim().toLowerCase();
+            if (!term) {
+                renderIntegrantesList(allMembersCache);
+            } else {
+                const filtered = allMembersCache.filter(m =>
+                    (m.nombre || '').toLowerCase().includes(term) ||
+                    (m.email || '').toLowerCase().includes(term) ||
+                    (m.rol || '').toLowerCase().includes(term) ||
+                    (m.estadoAnioActual || '').toLowerCase().includes(term)
+                );
+                renderIntegrantesList(filtered);
+            }
+        });
+    }
+
+    function renderIntegrantesList(members) {
         if (members.length === 0) {
-            currentYearMembersDiv.innerHTML = '<div class="empty-state">No hay miembros activos para este año</div>';
+            listaIntegrantesDiv.innerHTML = `
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <div>No se encontraron integrantes</div>
+                </div>
+            `;
+            perseverantesForm.style.display = 'none';
             return;
         }
 
-        let html = `
-            <p style="font-size:14px; color:var(--muted); margin-bottom:14px;">Marque los miembros que continuarán como perseverantes el próximo año:</p>
-            <form id="perseverantes-form">
-                <div class="item-list">
-        `;
+        perseverantesForm.style.display = 'block';
 
+        let html = '';
         members.forEach(member => {
-            const perseverante = member.estadoAnioActual === 'perseverante' || member.perseverante === true;
+            const nombre = member.nombre || 'Sin nombre';
+            const email = member.email || '';
+            const rol = member.rol || 'miembro';
+            const estado = member.estadoAnioActual || 'activo';
+            const isPerseverante = estado === 'perseverante';
+
+            const photoUrl = getPhotoUrl(member);
+            const hasPhoto = isValidImageUrl(photoUrl);
+            const initial = nombre.charAt(0).toUpperCase();
+
+            const avatarHtml = hasPhoto
+                ? '<img class="member-avatar" src="' + photoUrl + '" alt="' + escapeHtml(nombre) + '" crossorigin="anonymous" onerror="this.onerror=null; this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">'
+                : '';
+            const placeholderHtml = hasPhoto
+                ? '<div class="member-avatar-placeholder" style="display:none;">' + initial + '</div>'
+                : '<div class="member-avatar-placeholder">' + initial + '</div>';
+
             html += `
-                    <div class="item member-perseverante" style="display:flex; align-items:center; gap:12px;">
-                        <input type="checkbox" id="perseverante-${member.id}" ${perseverante ? 'checked' : ''} style="width:18px; height:18px; flex-shrink:0; accent-color:var(--y); cursor:pointer;">
-                        <label for="perseverante-${member.id}" style="font-size:14px; font-weight:600; color:var(--cream); letter-spacing:0; text-transform:none; margin:0; cursor:pointer; display:block;">
-                            <strong>${member.nombre || 'Sin nombre'}</strong>
-                            ${member.email ? ` — ${member.email}` : ''}
+                <div class="member-card" data-id="` + member.id + `">
+                    ` + avatarHtml + `
+                    ` + placeholderHtml + `
+                    <div class="member-info">
+                        <div class="member-name">` + escapeHtml(nombre) + `</div>
+                        <div class="member-meta">
+                            ` + (email ? '<span class="member-email">' + escapeHtml(email) + '</span>' : '') + `
+                            ` + getRoleBadge(rol) + `
+                            ` + getStatusBadge(estado) + `
+                        </div>
+                    </div>
+                    <div class="member-actions">
+                        <label class="checkbox-wrapper">
+                            <input type="checkbox"
+                                id="perseverante-` + member.id + `"
+                                name="perseverante"
+                                value="` + member.id + `"
+                                ` + (isPerseverante ? 'checked' : '') + `
+                                onchange="togglePerseverante('` + member.id + `', this.checked)">
+                            <span>` + (isPerseverante ? 'Perseverante' : 'Activo') + `</span>
                         </label>
                     </div>
+                </div>
             `;
         });
 
-        html += `
-                </div>
-            </form>
-            <div style="margin-top:16px;">
-                <button type="submit" form="perseverantes-form" class="btn btn-secondary" style="border-color:rgba(245,197,24,.4); color:var(--y);">
-                    💾 Guardar Estado de Perseverantes
-                </button>
-            </div>
-        `;
-
-        currentYearMembersDiv.innerHTML = html;
-
-        // Add form submit handler
-        const perseverantesForm = document.getElementById('perseverantes-form');
-        perseverantesForm.addEventListener('submit', savePerseverantes);
+        listaIntegrantesDiv.innerHTML = html;
     }
 
-    // ── EDITAR DATOS TAB ──
-    let allMembersForEdit = [];
+    // Toggle perseverante (actualiza UI inmediatamente, se guarda al submit)
+    window.togglePerseverante = function(memberId, checked) {
+        const card = document.querySelector('.member-card[data-id="' + memberId + '"]');
+        if (!card) return;
+
+        const span = card.querySelector('.checkbox-wrapper span');
+        const badge = card.querySelector('.status-badge');
+
+        if (checked) {
+            span.textContent = 'Perseverante';
+            badge.textContent = '🟡 Perseverante';
+            badge.className = 'status-badge status-perseverante';
+        } else {
+            span.textContent = 'Activo';
+            badge.textContent = '🟢 Activo';
+            badge.className = 'status-badge status-activo';
+        }
+    };
+
+    // Save perseverancia (submit form)
+    perseverantesForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const checkboxes = document.querySelectorAll('#perseverantes-form input[name="perseverante"]');
+        const updates = [];
+
+        checkboxes.forEach(checkbox => {
+            const memberId = checkbox.value;
+            const isPerseverante = checkbox.checked;
+            updates.push(updateMemberStatus(memberId, isPerseverante ? 'perseverante' : 'activo'));
+        });
+
+        try {
+            await Promise.all(updates);
+            toast('Estado de perseverancia guardado exitosamente', 'ok');
+            await loadAllMembersForTab1();
+        } catch (error) {
+            console.error("Error saving perseverance:", error);
+            toast('Error al guardar estado de perseverancia', 'err');
+        }
+    });
+
+    async function updateMemberStatus(memberId, status) {
+        const memberRef = db.collection('members').doc(memberId);
+        return memberRef.update({
+            estadoAnioActual: status,
+            fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+
+    // TAB 2: EDITAR DATOS
+    async function initEditTab() {
+        await loadMembersForEdit();
+    }
 
     async function loadMembersForEdit() {
         try {
             editMembersListDiv.innerHTML = '<div class="empty-state">Cargando miembros...</div>';
 
-            const membersSnapshot = await db.collection('members')
+            const snapshot = await db.collection('members')
                 .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
                 .get();
 
             allMembersForEdit = [];
-            membersSnapshot.forEach(doc => {
-                const data = doc.data();
-                allMembersForEdit.push({
-                    id: doc.id,
-                    ...data
-                });
+            snapshot.forEach(doc => {
+                allMembersForEdit.push({ id: doc.id, ...doc.data() });
             });
 
-            // Sort by name
-            allMembersForEdit.sort((a, b) => a.nombre.localeCompare(b.nombre));
-
+            allMembersForEdit.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
             displayEditMembers(allMembersForEdit);
+            setupEditSearch();
+
         } catch (error) {
             console.error("Error loading members for edit:", error);
             editMembersListDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>';
         }
+    }
+
+    function setupEditSearch() {
+        editSearchInput.addEventListener('input', (e) => {
+            const term = e.target.value.trim().toLowerCase();
+            if (!term) {
+                displayEditMembers(allMembersForEdit);
+            } else {
+                const filtered = allMembersForEdit.filter(m =>
+                    (m.nombre || '').toLowerCase().includes(term)
+                );
+                displayEditMembers(filtered);
+            }
+        });
     }
 
     function displayEditMembers(members) {
@@ -308,35 +739,37 @@
 
         let html = '';
         members.forEach(member => {
-            const birthdate = member.fechaNacimiento ? (member.fechaNacimiento.toDate ? member.fechaNacimiento.toDate().toISOString().split('T')[0] : member.fechaNacimiento) : '';
-            const ingreso = member.fechaIngresoGrupo ? (member.fechaIngresoGrupo.toDate ? member.fechaIngresoGrupo.toDate().toISOString().split('T')[0] : member.fechaIngresoGrupo) : '';
-            const primera = member.fechaPrimeraAsamblea ? (member.fechaPrimeraAsamblea.toDate ? member.fechaPrimeraAsamblea.toDate().toISOString().split('T')[0] : member.fechaPrimeraAsamblea) : '';
+            const birthdate = formatDateInput(member.fechaNacimiento);
+            const ingreso = formatDateInput(member.fechaIngresoGrupo);
+            const primera = formatDateInput(member.fechaPrimeraAsamblea);
             const hasBirth = birthdate ? '✓' : '✗';
             const hasIngreso = ingreso ? '✓' : '✗';
             const hasPrimera = primera ? '✓' : '✗';
 
             html += `
-                <div class="item" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; background:var(--bg2);">
-                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                        <strong style="font-size:15px; color:var(--ink);">${member.nombre || 'Sin nombre'}</strong>
-                        ${member.email ? `<span style="font-size:12px; color:var(--muted);">(${member.email})</span>` : ''}
+                <div class="item" style="border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:12px; background:var(--bg2);">
+                    <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap;">
+                        <strong style="font-size:16px; color:var(--ink);">` + (member.nombre || 'Sin nombre') + `</strong>
+                        ` + (member.email ? '<span style="font-size:12px; color:var(--muted);">(' + member.email + ')</span>' : '') + `
+                        ` + getRoleBadge(member.rol || 'miembro') + `
+                        ` + getStatusBadge(member.estadoAnioActual || 'activo') + `
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ${hasBirth}</label>
-                            <input type="date" id="edit-birth-${member.id}" value="${birthdate}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ` + hasBirth + `</label>
+                            <input type="date" id="edit-birth-` + member.id + `" value="` + birthdate + `" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ${hasIngreso}</label>
-                            <input type="date" id="edit-ingreso-${member.id}" value="${ingreso}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ` + hasIngreso + `</label>
+                            <input type="date" id="edit-ingreso-` + member.id + `" value="` + ingreso + `" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ${hasPrimera}</label>
-                            <input type="date" id="edit-primera-${member.id}" value="${primera}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ` + hasPrimera + `</label>
+                            <input type="date" id="edit-primera-` + member.id + `" value="` + primera + `" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);">
                         </div>
                     </div>
-                    <div style="margin-top:12px; text-align:right;">
-                        <button type="button" class="btn btn-primary" onclick="saveMemberData('${member.id}')" style="padding:10px 20px; font-size:13px;">💾 Guardar</button>
+                    <div style="margin-top:16px; text-align:right;">
+                        <button type="button" class="btn btn-primary" onclick="saveMemberData('` + member.id + `')" style="padding:12px 24px; font-size:14px;">💾 Guardar</button>
                     </div>
                 </div>
             `;
@@ -345,24 +778,17 @@
         editMembersListDiv.innerHTML = html;
     }
 
-    // Search filter for edit tab
-    editSearchInput.addEventListener('input', (e) => {
-        const term = e.target.value.trim().toLowerCase();
-        if (!term) {
-            displayEditMembers(allMembersForEdit);
-        } else {
-            const filtered = allMembersForEdit.filter(m => 
-                (m.nombre || '').toLowerCase().includes(term)
-            );
-            displayEditMembers(filtered);
-        }
-    });
+    function formatDateInput(ts) {
+        if (!ts) return '';
+        const date = ts.toDate ? ts.toDate() : new Date(ts);
+        if (isNaN(date.getTime())) return '';
+        return date.toISOString().split('T')[0];
+    }
 
-    // Save member data
     window.saveMemberData = async function(memberId) {
-        const birthdate = document.getElementById(`edit-birth-${memberId}`).value;
-        const ingreso = document.getElementById(`edit-ingreso-${memberId}`).value;
-        const primera = document.getElementById(`edit-primera-${memberId}`).value;
+        const birthdate = document.getElementById('edit-birth-' + memberId).value;
+        const ingreso = document.getElementById('edit-ingreso-' + memberId).value;
+        const primera = document.getElementById('edit-primera-' + memberId).value;
 
         if (!birthdate && !ingreso && !primera) {
             toast('Complete al menos un campo', 'err');
@@ -382,7 +808,6 @@
             await db.collection('members').doc(memberId).update(updateData);
             toast('Datos guardados correctamente', 'ok');
 
-            // Refresh the member in our cache
             const idx = allMembersForEdit.findIndex(m => m.id === memberId);
             if (idx !== -1) {
                 if (birthdate) {
@@ -398,44 +823,7 @@
         }
     };
 
-    // Initialize edit tab when loaded
-    async function initEditTab() {
-        await loadMembersForEdit();
-    }
-
-    // Save perseverance status
-    async function savePerseverantes(e) {
-        e.preventDefault();
-
-        try {
-            const checkboxes = document.querySelectorAll('input[id^="perseverante-"]');
-            const updates = [];
-
-            checkboxes.forEach(checkbox => {
-                const memberId = checkbox.id.replace('perseverante-', '');
-                const isPerseverante = checkbox.checked;
-                updates.push(updateMemberStatus(memberId, isPerseverante ? 'perseverante' : 'activo'));
-            });
-
-            await Promise.all(updates);
-            toast('Estado de perseverantes guardado exitosamente', 'ok');
-            loadCurrentYearMembers(); // Refresh display
-        } catch (error) {
-            console.error("Error saving perseverance status:", error);
-            toast('Error al guardar estado de perseverantes', 'err');
-        }
-    }
-
-    // Update member status (activo/perseverante/dado_de_baja)
-    async function updateMemberStatus(memberId, status) {
-        const memberRef = db.collection('members').doc(memberId);
-        return memberRef.update({
-            estadoAnioActual: status,
-            fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    }
-
-    // Add new member
+    // TAB 3: NUEVO INTEGRANTE
     newMemberForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -449,17 +837,15 @@
                 return;
             }
 
-            // Check if name already exists in miembros_registro (public lookup)
+            // Check if name already exists in miembros_registro
             const nameQuery = await db.collection('miembros_registro').where('nombre', '==', name).limit(1).get();
             if (!nameQuery.empty) {
                 toast('Ya existe un miembro con este nombre en el registro', 'err');
                 return;
             }
 
-            // Calcular MM-DD para consultas de cumpleaños
-            const birthMMdd = birthdate.substring(5, 10); // YYYY-MM-DD -> MM-DD
+            const birthMMdd = birthdate.substring(5, 10);
 
-            // Create new member document with auto-generated ID (temporal UID)
             const newMemberRef = await db.collection('members').add({
                 nombre: name,
                 fechaNacimiento: birthdate,
@@ -474,34 +860,31 @@
             // Also create public lookup in miembros_registro (for registro.html validation)
             await db.collection('miembros_registro').doc(newMemberRef.id).set({
                 nombre: name,
-                memberId: newMemberRef.id  // ✅ Requerido para que registro.html lo detecte
+                memberId: newMemberRef.id
             });
 
             newMemberResult.innerHTML = `
                 <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
-                    <div class="item-title" style="color:#7fe8aa;">✓ Nuevo miembro agregado exitosamente</div>
-                    <div class="item-meta">ID temporal: ${newMemberRef.id} (el asambleista generará su UID real al registrarse)</div>
+                    <div class="item-title" style="color:#7fe8aa;">✓ Nuevo integrante agregado exitosamente</div>
+                    <div class="item-meta">ID: ` + newMemberRef.id + ` — Ya puede registrarse en la página de registro</div>
                 </div>
             `;
 
-            // Reset form
             newMemberForm.reset();
-
-            // Refresh members list
-            loadCurrentYearMembers();
+            await loadAllMembersForTab1(); // Refresh tab 1
 
         } catch (error) {
             console.error("Error adding new member:", error);
             newMemberResult.innerHTML = `
                 <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);">
-                    <div class="item-title" style="color:#f08080;">✗ Error al agregar nuevo miembro</div>
-                    <div class="item-meta">${error.message}</div>
+                    <div class="item-title" style="color:#f08080;">✗ Error al agregar integrante</div>
+                    <div class="item-meta">` + error.message + `</div>
                 </div>
             `;
         }
     });
 
-    // Close year functionality
+    // TAB 4: CIERRE DE AÑO
     closeYearButton.addEventListener('click', async () => {
         const yearToClose = parseInt(yearToCloseInput.value);
 
@@ -510,7 +893,7 @@
             return;
         }
 
-        if (!confirm(`¿Está seguro de que desea cerrar el año ${yearToClose}?\\n\\nEsta operación:\\n1. Calculará las métricas finales de todos los miembros activos\\n2. Guardará los datos en el histórico/${yearToClose}/\\n3. Preparará el sistema para el año ${yearToClose + 1}\\n\\nEsta acción no se puede deshacer.`)) {
+        if (!confirm('¿Está seguro de que desea cerrar el año ' + yearToClose + '?\n\nEsta operación:\n1. Calculará las métricas finales de todos los miembros activos\n2. Guardará los datos en el histórico/' + yearToClose + '/\n3. Preparará el sistema para el año ' + (yearToClose + 1) + '\n\nEsta acción no se puede deshacer.')) {
             return;
         }
 
@@ -519,26 +902,20 @@
             closeYearButton.textContent = 'Cerrando año...';
             closeYearResult.innerHTML = '<div class="empty-state">Iniciando proceso de cierre de año...</div>';
 
-            // Step 1: Get all active members for the year
             const membersSnapshot = await db.collection('members')
                 .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
                 .get();
 
             const members = [];
-            membersSnapshot.forEach(doc => {
-                members.push({ id: doc.id, ...doc.data() });
-            });
+            membersSnapshot.forEach(doc => members.push({ id: doc.id, ...doc.data() }));
 
-            closeYearResult.innerHTML = `<div class="empty-state">Procesando ${members.length} miembros...</div>`;
+            closeYearResult.innerHTML = '<div class="empty-state">Procesando ' + members.length + ' miembros...</div>';
 
-            // Step 2: For each member, calculate final metrics and save to historical
             const batch = db.batch();
             const historicalMembersRef = db.collection('historico').doc(yearToClose.toString()).collection('members');
 
             for (const member of members) {
-                // Calculate metrics (simplified - in reality would be more complex)
                 const metrics = await calculateMemberMetrics(member.id, yearToClose);
-
                 const historicalMemberRef = historicalMembersRef.doc(member.id);
                 batch.set(historicalMemberRef, {
                     ...member,
@@ -548,17 +925,14 @@
                 });
             }
 
-            // Step 3: Copy other collections to historical
             await copyCollectionToHistorical('asistencia', yearToClose, batch);
             await copyCollectionToHistorical('tablas_dinamicas', yearToClose, batch);
             await copyCollectionToHistorical('asambleas_kahoot', yearToClose, batch);
             await copyCollectionToHistorical('sugerencias', yearToClose, batch);
             await copyCollectionToHistorical('feedback', yearToClose, batch);
 
-            // Step 4: Commit the batch
             await batch.commit();
 
-            // Step 5: Update members who are not perseverantes to 'dado_de_baja'
             const nonPerseverantes = members.filter(m => m.estadoAnioActual !== 'perseverante');
             const updateBatch = db.batch();
             for (const member of nonPerseverantes) {
@@ -572,12 +946,12 @@
 
             closeYearResult.innerHTML = `
                 <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
-                    <div class="item-title" style="color:#7fe8aa;">🎉 ¡Año ${yearToClose} cerrado exitosamente!</div>
+                    <div class="item-title" style="color:#7fe8aa;">🎉 ¡Año ` + yearToClose + ` cerrado exitosamente!</div>
                     <div class="item-meta">
-                        • ${members.length} miembros procesados y guardados en histórico<br>
-                        • ${nonPerseverantes.length} miembros marcados como dados de baja<br>
+                        • ` + members.length + ` miembros procesados y guardados en histórico<br>
+                        • ` + nonPerseverantes.length + ` miembros marcados como dados de baja<br>
                         • Datos copiados a colecciones históricas<br>
-                        • Sistema preparado para año ${yearToClose + 1}
+                        • Sistema preparado para año ` + (yearToClose + 1) + `
                     </div>
                 </div>
             `;
@@ -587,7 +961,7 @@
             closeYearResult.innerHTML = `
                 <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);">
                     <div class="item-title" style="color:#f08080;">✗ Error al cerrar el año</div>
-                    <div class="item-meta">${error.message}</div>
+                    <div class="item-meta">` + error.message + `</div>
                 </div>
             `;
         } finally {
@@ -596,24 +970,15 @@
         }
     });
 
-    // Calculate member metrics for historical record
     async function calculateMemberMetrics(memberId, year) {
-        // This is a simplified version - in reality would calculate:
-        // - % de asistencia
-        // - Nota de rendimiento
-        // - Tardanzas
-        // - Estado final
-        // etc.
-
         return {
-            porcentajeAsistencia: 0, // Would calculate from asistencia records
-            notaRendimiento: 0,     // Would calculate from asistencia and puntualidad
-            tardanzasTotales: 0,    // Would count from asistencia records
-            estadoFinal: 'activo'   // Would determine based on rules
+            porcentajeAsistencia: 0,
+            notaRendimiento: 0,
+            tardanzasTotales: 0,
+            estadoFinal: 'activo'
         };
     }
 
-    // Copy collection to historical
     async function copyCollectionToHistorical(collectionName, year, batch) {
         try {
             const collections = {
@@ -639,8 +1004,7 @@
                 });
             });
         } catch (error) {
-            console.error(`Error copying ${collectionName} to historical:`, error);
-            // Don't throw - continue with other collections
+            console.error('Error copying ' + collectionName + ' to historical:', error);
         }
     }
 </script>
