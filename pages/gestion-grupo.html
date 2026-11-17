@@ -193,12 +193,20 @@
     }
 
     // Initialize
+    var authReady = false;
     auth.onAuthStateChanged(async function(user) {
         if (user) {
-            try { await AuthPermissions.initStaffPermissionCheck(); }
-            catch (e) { console.warn('AuthPermissions check failed, continuando:', e); }
-            await loadAllMembersForTab1();
-        } else { window.location.href = 'login.html'; }
+            if (!authReady) {
+                authReady = true;
+                try { await AuthPermissions.initStaffPermissionCheck(); }
+                catch (e) { console.warn('AuthPermissions check failed, continuando:', e); }
+                await loadAllMembersForTab1();
+            }
+        } else if (authReady) {
+            // Usuario se deslogueó explícitamente
+            window.location.href = 'login.html';
+        }
+        // Si user===null y !authReady -> ignorar (es el null inicial mientras restaura sesión)
     });
 
     // ═══ TAB 1: INTEGRANTES ═══
