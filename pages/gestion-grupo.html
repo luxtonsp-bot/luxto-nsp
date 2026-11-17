@@ -193,43 +193,66 @@
     }
 
     // Initialize
-    var authReady = false;
-    var initAttempted = false;
-    console.log('[GESTION-GRUPO] ===== SCRIPT INICIADO =====', { authReady, initAttempted, currentUser: auth.currentUser?.uid });
-    auth.onAuthStateChanged(async function(user) {
-        console.log('[GESTION-GRUPO] ===== onAuthStateChanged =====', { 
-            user: user ? user.uid : 'NULL', 
-            authReady, 
-            initAttempted,
-            timestamp: Date.now()
-        });
-        if (user) {
-            if (!authReady && !initAttempted) {
-                authReady = true;
-                initAttempted = true;
-                console.log('[GESTION-GRUPO] >>> Primera vez con user REAL, inicializando...', user.uid);
-                try { 
-                    console.log('[GESTION-GRUPO] >>> Llamando AuthPermissions.initStaffPermissionCheck()...');
-                    await AuthPermissions.initStaffPermissionCheck(); 
-                    console.log('[GESTION-GRUPO] >>> AuthPermissions OK');
+        var authReady = false;
+        var initAttempted = false;
+        console.log('[GESTION-GRUPO] ===== SCRIPT INICIADO =====', { authReady, initAttempted, currentUser: auth.currentUser?.uid, AuthPermissions: typeof window.AuthPermissions });
+
+        function waitForAuthPermissions() {
+            return new Promise(function(resolve) {
+                if (window.AuthPermissions && typeof window.AuthPermissions.initStaffPermissionCheck === 'function') {
+                    console.log('[GESTION-GRUPO] AuthPermissions YA disponible');
+                    resolve();
+                } else {
+                    console.log('[GESTION-GRUPO] Esperando AuthPermissions...');
+                    var checkInterval = setInterval(function() {
+                        if (window.AuthPermissions && typeof window.AuthPermissions.initStaffPermissionCheck === 'function') {
+                            clearInterval(checkInterval);
+                            console.log('[GESTION-GRUPO] AuthPermissions CARGADO');
+                            resolve();
+                        }
+                    }, 50);
+                    setTimeout(function() { clearInterval(checkInterval); console.error('[GESTION-GRUPO] TIMEOUT esperando AuthPermissions'); resolve(); }, 5000);
                 }
-                catch (e) { 
-                    console.error('[GESTION-GRUPO] >>> ERROR en AuthPermissions:', e); 
-                }
-                console.log('[GESTION-GRUPO] >>> Cargando miembros...');
-                await loadAllMembersForTab1();
-                console.log('[GESTION-GRUPO] >>> Inicialización COMPLETA');
-            } else {
-                console.log('[GESTION-GRUPO] >>> User real pero ya inicializado (authReady=', authReady, 'initAttempted=', initAttempted, ')');
-            }
-        } else if (authReady) {
-            console.log('[GESTION-GRUPO] >>> USER SE DESLOGUEÓ (authReady=true) -> REDIRECT LOGIN');
-            console.trace('[GESTION-GRUPO] Stack trace del redirect:');
-            window.location.href = 'login.html';
-        } else {
-            console.log('[GESTION-GRUPO] >>> NULL inicial ignorado (esperando restauración sesión)');
+            });
         }
-    });
+
+        waitForAuthPermissions().then(function() {
+            console.log('[GESTION-GRUPO] ===== INICIANDO LISTENER AUTH =====');
+            auth.onAuthStateChanged(async function(user) {
+                console.log('[GESTION-GRUPO] ===== onAuthStateChanged =====', { 
+                    user: user ? user.uid : 'NULL', 
+                    authReady, 
+                    initAttempted,
+                    timestamp: Date.now()
+                });
+                if (user) {
+                    if (!authReady && !initAttempted) {
+                        authReady = true;
+                        initAttempted = true;
+                        console.log('[GESTION-GRUPO] >>> Primera vez con user REAL, inicializando...', user.uid);
+                        try { 
+                            console.log('[GESTION-GRUPO] >>> Llamando AuthPermissions.initStaffPermissionCheck()...');
+                            await AuthPermissions.initStaffPermissionCheck(); 
+                            console.log('[GESTION-GRUPO] >>> AuthPermissions OK');
+                        }
+                        catch (e) { 
+                            console.error('[GESTION-GRUPO] >>> ERROR en AuthPermissions:', e); 
+                        }
+                        console.log('[GESTION-GRUPO] >>> Cargando miembros...');
+                        await loadAllMembersForTab1();
+                        console.log('[GESTION-GRUPO] >>> Inicialización COMPLETA');
+                    } else {
+                        console.log('[GESTION-GRUPO] >>> User real pero ya inicializado (authReady=', authReady, 'initAttempted=', initAttempted, ')');
+                    }
+                } else if (authReady) {
+                    console.log('[GESTION-GRUPO] >>> USER SE DESLOGUEÓ (authReady=true) -> REDIRECT LOGIN');
+                    console.trace('[GESTION-GRUPO] Stack trace del redirect:');
+                    window.location.href = 'login.html';
+                } else {
+                    console.log('[GESTION-GRUPO] >>> NULL inicial ignorado (esperando restauración sesión)');
+                }
+            });
+        });
 
     // ═══ TAB 1: INTEGRANTES ═══
     async function loadAllMembersForTab1() {
