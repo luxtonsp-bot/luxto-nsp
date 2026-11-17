@@ -47,7 +47,11 @@ service cloud.firestore {
       allow list: if isAuth();
       allow update: if (isOwnMemberId(memberId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
       allow update: if isAuth() && request.resource.data.uid == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido']);
-      allow create: if isAuth() && request.auth.uid == resource.data.uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro');
+      // Permitir a staff crear placeholders (sin uid) y a usuarios crear su propio doc con su uid
+      allow create: if isAuth() && (
+        (isStaff() && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro') && !('uid' in request.resource.data))
+        || (request.auth.uid == request.resource.data.uid && (!('rol' in request.resource.data) || request.resource.data.rol == 'miembro'))
+      );
       allow delete: if false;
     }
 
