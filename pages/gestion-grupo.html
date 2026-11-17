@@ -194,22 +194,40 @@
 
     // Initialize
     var authReady = false;
-    console.log('[GESTION-GRUPO] Script cargado, authReady=', authReady, 'currentUser=', auth.currentUser);
+    var initAttempted = false;
+    console.log('[GESTION-GRUPO] ===== SCRIPT INICIADO =====', { authReady, initAttempted, currentUser: auth.currentUser?.uid });
     auth.onAuthStateChanged(async function(user) {
-        console.log('[GESTION-GRUPO] onAuthStateChanged fired:', user ? 'USER: ' + user.uid : 'NULL', 'authReady=', authReady);
+        console.log('[GESTION-GRUPO] ===== onAuthStateChanged =====', { 
+            user: user ? user.uid : 'NULL', 
+            authReady, 
+            initAttempted,
+            timestamp: Date.now()
+        });
         if (user) {
-            if (!authReady) {
+            if (!authReady && !initAttempted) {
                 authReady = true;
-                console.log('[GESTION-GRUPO] Primera vez con user real, inicializando...');
-                try { await AuthPermissions.initStaffPermissionCheck(); }
-                catch (e) { console.warn('AuthPermissions check failed:', e); }
+                initAttempted = true;
+                console.log('[GESTION-GRUPO] >>> Primera vez con user REAL, inicializando...', user.uid);
+                try { 
+                    console.log('[GESTION-GRUPO] >>> Llamando AuthPermissions.initStaffPermissionCheck()...');
+                    await AuthPermissions.initStaffPermissionCheck(); 
+                    console.log('[GESTION-GRUPO] >>> AuthPermissions OK');
+                }
+                catch (e) { 
+                    console.error('[GESTION-GRUPO] >>> ERROR en AuthPermissions:', e); 
+                }
+                console.log('[GESTION-GRUPO] >>> Cargando miembros...');
                 await loadAllMembersForTab1();
+                console.log('[GESTION-GRUPO] >>> Inicialización COMPLETA');
+            } else {
+                console.log('[GESTION-GRUPO] >>> User real pero ya inicializado (authReady=', authReady, 'initAttempted=', initAttempted, ')');
             }
         } else if (authReady) {
-            console.log('[GESTION-GRUPO] Usuario se deslogueó explícitamente -> redirect login');
+            console.log('[GESTION-GRUPO] >>> USER SE DESLOGUEÓ (authReady=true) -> REDIRECT LOGIN');
+            console.trace('[GESTION-GRUPO] Stack trace del redirect:');
             window.location.href = 'login.html';
         } else {
-            console.log('[GESTION-GRUPO] Null inicial ignorado (esperando restauración de sesión)');
+            console.log('[GESTION-GRUPO] >>> NULL inicial ignorado (esperando restauración sesión)');
         }
     });
 
