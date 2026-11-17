@@ -9,14 +9,11 @@
     <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/portal.css">
-    <!-- Firebase imports (same as other pages) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <!-- Shared permissions module -->
     <script type="module" src="../assets/js/auth-permissions.js"></script>
     <script>
-        // Utilidades de fotos (igual que tomar-asistencia.html)
         function convertirUrlDrive(url) {
             if (!url) return "";
             if (url.includes("uc?export=view")) return url;
@@ -25,167 +22,51 @@
                 if (m) return "https://drive.google.com/uc?export=view&id=" + m[1];
                 return url;
             }
-            const m =
-                url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) ||
-                url.match(/\/d\/([a-zA-Z0-9_-]{20,})/) ||
-                url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
-            if (m)
-                return "https://drive.google.com/uc?export=view&id=" + m[1];
+            const m = url.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) || url.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || url.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/);
+            if (m) return "https://drive.google.com/uc?export=view&id=" + m[1];
             return url;
         }
-
         function getPhotoUrl(memberData) {
-            if (memberData.fotoThumb && memberData.fotoThumb.startsWith('data:')) {
-                return memberData.fotoThumb;
-            }
-            if (memberData.fotoDriveId) {
-                return "https://drive.google.com/uc?export=view&id=" + memberData.fotoDriveId;
-            }
+            if (memberData.fotoThumb && memberData.fotoThumb.startsWith('data:')) return memberData.fotoThumb;
+            if (memberData.fotoDriveId) return "https://drive.google.com/uc?export=view&id=" + memberData.fotoDriveId;
             return null;
         }
-
-        function isValidImageUrl(url) {
-            return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:'));
-        }
-
+        function isValidImageUrl(url) { return typeof url === 'string' && url.length > 0 && (url.startsWith('http') || url.startsWith('data:')); }
         function avatarFallback(nombre) {
             const inicial = (nombre || "?").charAt(0).toUpperCase();
             const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><circle cx='40' cy='40' r='40' fill='%232a2218'/><text x='40' y='52' text-anchor='middle' font-family='Outfit,sans-serif' font-size='32' font-weight='700' fill='%23F5C518'>" + inicial + "</text></svg>";
             return "data:image/svg+xml;base64," + btoa(svg);
         }
-
         function escapeHtml(str) {
             if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&')
-                .replace(/</g, '<')
-                .replace(/>/g, '>')
-                .replace(/"/g, '"')
-                .replace(/'/g, ''');
+            return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, ''');
         }
-
         function getRoleBadge(rol) {
-            const badges = {
-                'coordinador': { label: '👑 Coordinador', class: 'badge-coordinador' },
-                'servidor': { label: '⚔️ Servidor', class: 'badge-servidor' },
-                'apoyo': { label: '🤝 Apoyo', class: 'badge-apoyo' },
-                'miembro': { label: '👤 Miembro', class: 'badge-miembro' }
-            };
+            const badges = { 'coordinador': { label: '👑 Coordinador', class: 'badge-coordinador' }, 'servidor': { label: '⚔️ Servidor', class: 'badge-servidor' }, 'apoyo': { label: '🤝 Apoyo', class: 'badge-apoyo' }, 'miembro': { label: '👤 Miembro', class: 'badge-miembro' } };
             const b = badges[rol] || badges.miembro;
             return '<span class="role-badge ' + b.class + '">' + b.label + '</span>';
         }
-
         function getStatusBadge(estado) {
-            const badges = {
-                'activo': { label: '🟢 Activo', class: 'status-activo' },
-                'perseverante': { label: '🟡 Perseverante', class: 'status-perseverante' },
-                'dado_de_baja': { label: '🔴 Baja', class: 'status-baja' }
-            };
+            const badges = { 'activo': { label: '🟢 Activo', class: 'status-activo' }, 'perseverante': { label: '🟡 Perseverante', class: 'status-perseverante' }, 'dado_de_baja': { label: '🔴 Baja', class: 'status-baja' } };
             const b = badges[estado] || { label: estado, class: '' };
             return '<span class="status-badge ' + b.class + '">' + b.label + '</span>';
         }
     </script>
     <style>
-        .member-card {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px;
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            margin-bottom: 10px;
-            transition: all var(--t);
-        }
-        .member-card:hover {
-            background: var(--bg3);
-            border-color: var(--border2);
-            transform: translateX(4px);
-        }
-        .member-avatar {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--border);
-            flex-shrink: 0;
-            background: var(--bg3);
-        }
-        .member-avatar-placeholder {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--y);
-            background: var(--bg3);
-            border: 2px solid var(--border);
-            flex-shrink: 0;
-        }
-        .member-info {
-            flex: 1;
-            min-width: 0;
-        }
-        .member-name {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--cream);
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .member-meta {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            font-size: 12px;
-            color: var(--muted);
-        }
-        .member-email {
-            opacity: 0.7;
-        }
-        .member-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-        .checkbox-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        .checkbox-wrapper input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--y);
-            cursor: pointer;
-        }
-        .checkbox-wrapper span {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--muted);
-        }
-        .checkbox-wrapper input[type="checkbox"]:checked + span {
-            color: var(--y);
-        }
-
-        .role-badge, .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 10px;
-            border-radius: 100px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
+        .member-card { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; transition: all var(--t); }
+        .member-card:hover { background: var(--bg3); border-color: var(--border2); transform: translateX(4px); }
+        .member-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; background: var(--bg3); }
+        .member-avatar-placeholder { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: var(--y); background: var(--bg3); border: 2px solid var(--border); flex-shrink: 0; }
+        .member-info { flex: 1; min-width: 0; }
+        .member-name { font-size: 15px; font-weight: 600; color: var(--cream); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .member-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+        .member-email { opacity: 0.7; }
+        .member-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .checkbox-wrapper { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .checkbox-wrapper input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--y); cursor: pointer; }
+        .checkbox-wrapper span { font-size: 13px; font-weight: 600; color: var(--muted); }
+        .checkbox-wrapper input[type="checkbox"]:checked + span { color: var(--y); }
+        .role-badge, .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
         .badge-coordinador { background: rgba(245,197,24,.15); color: var(--y); border: 1px solid rgba(245,197,24,.3); }
         .badge-servidor { background: rgba(74,143,168,.15); color: var(--b); border: 1px solid rgba(74,143,168,.3); }
         .badge-apoyo { background: rgba(196,134,154,.15); color: var(--r); border: 1px solid rgba(196,134,154,.3); }
@@ -193,819 +74,310 @@
         .status-activo { background: rgba(45,186,111,.15); color: #7fe8aa; border: 1px solid rgba(45,186,111,.3); }
         .status-perseverante { background: rgba(245,197,24,.15); color: var(--y); border: 1px solid rgba(245,197,24,.3); }
         .status-baja { background: rgba(224,60,60,.15); color: #f08080; border: 1px solid rgba(224,60,60,.3); }
-
-        .search-box {
-            position: relative;
-            max-width: 400px;
-            margin-bottom: 20px;
-        }
-        .search-box input {
-            width: 100%;
-            padding: 12px 16px 12px 44px;
-            background: rgba(255,255,255,.06);
-            border: 1.5px solid var(--border);
-            border-radius: 12px;
-            font-family: 'Outfit',sans-serif;
-            font-size: 15px;
-            color: var(--cream);
-            outline: none;
-            transition: border-color var(--t), background var(--t);
-        }
-        .search-box input:focus {
-            border-color: rgba(245,197,24,.4);
-            background: rgba(255,255,255,.08);
-        }
-        .search-box svg {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            stroke: var(--muted);
-            pointer-events: none;
-        }
-        .search-box input:focus + svg {
-            stroke: var(--y);
-        }
-
-        .stats-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-            padding: 16px;
-            background: rgba(255,255,255,.03);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-        }
-        .stat-box {
-            flex: 1;
-            min-width: 140px;
-            text-align: center;
-            padding: 8px 12px;
-        }
-        .stat-number {
-            font-family: 'Bebas Neue',sans-serif;
-            font-size: 28px;
-            line-height: 1;
-        }
-        .stat-label {
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin-top: 4px;
-        }
-        .stat-activo .stat-number { color: #7fe8aa; }
-        .stat-perseverante .stat-number { color: var(--y); }
-        .stat-total .stat-number { color: var(--cream); }
-
-        .empty-state {
-            text-align: center;
-            padding: 48px 24px;
-            color: var(--muted);
-        }
-        .empty-state svg {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-
-        @media (max-width: 768px) {
-            .member-card {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-            }
-            .member-actions {
-                width: 100%;
-                justify-content: space-between;
-            }
-            .member-meta {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-            }
-            .search-box {
-                max-width: 100%;
-            }
-        }
+        .search-box { position: relative; max-width: 400px; margin-bottom: 20px; }
+        .search-box input { width: 100%; padding: 12px 16px 12px 44px; background: rgba(255,255,255,.06); border: 1.5px solid var(--border); border-radius: 12px; font-family: 'Outfit',sans-serif; font-size: 15px; color: var(--cream); outline: none; transition: border-color var(--t), background var(--t); }
+        .search-box input:focus { border-color: rgba(245,197,24,.4); background: rgba(255,255,255,.08); }
+        .search-box svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; stroke: var(--muted); pointer-events: none; }
+        .search-box input:focus + svg { stroke: var(--y); }
+        .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; padding: 16px; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 12px; }
+        .stat-box { flex: 1; min-width: 140px; text-align: center; padding: 8px 12px; }
+        .stat-number { font-family: 'Bebas Neue',sans-serif; font-size: 28px; line-height: 1; }
+        .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+        .stat-activo .stat-number { color: #7fe8aa; } .stat-perseverante .stat-number { color: var(--y); } .stat-total .stat-number { color: var(--cream); }
+        .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+        .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.5; }
+        @media (max-width: 768px) { .member-card { flex-direction: column; align-items: flex-start; gap: 12px; } .member-actions { width: 100%; justify-content: space-between; } .member-meta { flex-direction: column; align-items: flex-start; gap: 6px; } .search-box { max-width: 100%; } }
     </style>
 </head>
 <body>
-
 <header id="topbar">
   <div class="topbar-inner">
-    <a href="dashboard.html" class="topbar-logo">
-      <img src="../assets/images/logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'">
-      <span class="topbar-logo-name">Luz de Cristo</span>
-    </a>
-    <span class="topbar-badge">👥 Gestión</span>
-    <div class="topbar-sep"></div>
+    <a href="dashboard.html" class="topbar-logo"><img src="../assets/images/logo_luxto.png" alt="Logo" onerror="this.onerror=null;this.style.display='none'"><span class="topbar-logo-name">Luz de Cristo</span></a>
+    <span class="topbar-badge">👥 Gestión</span><div class="topbar-sep"></div>
     <button class="btn-logout" onclick="cerrarSesion()" type="button">⎋ Salir</button>
   </div>
 </header>
-
 <main class="container">
-
     <div class="section-eyebrow">Coordinación</div>
     <h1>Gestión de Grupo</h1>
     <p class="section-desc">Visualiza todos los integrantes, marca perseverantes para el próximo año, edita datos y gestiona el cierre académico.</p>
+    <div class="tab-container"><div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'perseverantes')" type="button">👥 Integrantes</button>
+        <button class="tab-button" onclick="openTab(event, 'editar-datos')" type="button">✏️ Editar Datos</button>
+        <button class="tab-button" onclick="openTab(event, 'nuevo-integrante')" type="button">➕ Nuevo Integrante</button>
+        <button class="tab-button" onclick="openTab(event, 'cierre-anio')" type="button">🏁 Cierre de Año</button>
+    </div></div>
 
-    <div class="tab-container">
-        <div class="tabs">
-            <button class="tab-button active" onclick="openTab(event, 'perseverantes')" type="button">👥 Integrantes</button>
-            <button class="tab-button" onclick="openTab(event, 'editar-datos')" type="button">✏️ Editar Datos</button>
-            <button class="tab-button" onclick="openTab(event, 'nuevo-integrante')" type="button">➕ Nuevo Integrante</button>
-            <button class="tab-button" onclick="openTab(event, 'cierre-anio')" type="button">🏁 Cierre de Año</button>
-        </div>
-    </div>
-
-    <!-- TAB 1: INTEGRANTES (Todos) -->
     <div id="perseverantes" class="tab-content active">
         <div class="card">
             <div class="card-title">👥 Listado completo de integrantes</div>
-
-            <!-- Buscador -->
-            <div class="search-box" id="searchBoxIntegrantes">
-                <input type="text" id="searchIntegrantes" placeholder="Buscar por nombre, email o rol..." autocomplete="off">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </div>
-
-            <!-- Stats -->
-            <div class="stats-row" id="statsIntegrantes">
-                <div class="stat-box stat-total">
-                    <div class="stat-number" id="statTotal">0</div>
-                    <div class="stat-label">Total</div>
-                </div>
-                <div class="stat-box stat-activo">
-                    <div class="stat-number" id="statActivos">0</div>
-                    <div class="stat-label">Activos</div>
-                </div>
-                <div class="stat-box stat-perseverante">
-                    <div class="stat-number" id="statPerseverantes">0</div>
-                    <div class="stat-label">Perseverantes</div>
-                </div>
-            </div>
-
-            <!-- Lista -->
-            <div id="listaIntegrantes" class="item-list">
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <div>Cargando integrantes...</div>
-                </div>
-            </div>
-
-            <!-- Formulario para guardar cambios de perseverancia -->
-            <form id="perseverantes-form" style="margin-top:20px; display:none;">
-                <div style="text-align:right;">
-                    <button type="submit" class="btn btn-primary">💾 Guardar cambios de perseverancia</button>
-                </div>
-            </form>
+            <div class="search-box"><input type="text" id="searchIntegrantes" placeholder="Buscar por nombre, email o rol..." autocomplete="off"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+            <div class="stats-row"><div class="stat-box stat-total"><div class="stat-number" id="statTotal">0</div><div class="stat-label">Total</div></div><div class="stat-box stat-activo"><div class="stat-number" id="statActivos">0</div><div class="stat-label">Activos</div></div><div class="stat-box stat-perseverante"><div class="stat-number" id="statPerseverantes">0</div><div class="stat-label">Perseverantes</div></div></div>
+            <div id="listaIntegrantes" class="item-list"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div>Cargando integrantes...</div></div></div>
+            <form id="perseverantes-form" style="margin-top:20px; display:none;"><div style="text-align:right;"><button type="submit" class="btn btn-primary">💾 Guardar cambios de perseverancia</button></div></form>
         </div>
     </div>
 
-    <!-- TAB 2: EDITAR DATOS -->
     <div id="editar-datos" class="tab-content">
         <div class="card">
             <div class="card-title">✏️ Editar datos de miembros</div>
             <p class="section-desc" style="margin-bottom:14px;">Completa o corrige la fecha de nacimiento, fecha de ingreso y primera asamblea.</p>
-
-            <div style="max-width:500px; margin-bottom:20px;">
-                <div class="search-box" style="margin-bottom:0;">
-                    <input type="text" id="edit-search" placeholder="Filtrar por nombre..." autocomplete="off">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </div>
-            </div>
-
-            <div id="edit-members-list" class="item-list">
-                <div class="empty-state">Cargando miembros...</div>
-            </div>
+            <div style="max-width:500px; margin-bottom:20px;"><div class="search-box" style="margin-bottom:0;"><input type="text" id="edit-search" placeholder="Filtrar por nombre..." autocomplete="off"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div></div>
+            <div id="edit-members-list" class="item-list"><div class="empty-state">Cargando miembros...</div></div>
         </div>
     </div>
 
-    <!-- TAB 3: NUEVO INTEGRANTE -->
     <div id="nuevo-integrante" class="tab-content">
         <div class="card">
             <div class="card-title">➕ Agregar nuevo integrante</div>
             <p class="section-desc" style="margin-bottom:20px;">Registra a un nuevo miembro en el grupo. Luego podrá crear su cuenta en la página de registro.</p>
-
-            <form id="new-member-form">
-                <div class="form-grid">
-                    <div>
-                        <label for="new-member-name">Nombre completo:</label>
-                        <input type="text" id="new-member-name" required placeholder="Ej. Juan Pérez">
-                    </div>
-                    <div>
-                        <label for="new-member-birthdate">Fecha de nacimiento:</label>
-                        <input type="date" id="new-member-birthdate" required>
-                    </div>
-                </div>
-                <div style="margin-top:14px; max-width:320px;">
-                    <label for="new-member-first-assembly">Fecha de primera asamblea:</label>
-                    <input type="date" id="new-member-first-assembly" required>
-                </div>
-                <div style="margin-top:20px;">
-                    <button type="submit" class="btn btn-primary">✓ Agregar integrante</button>
-                </div>
-            </form>
+            <form id="new-member-form"><div class="form-grid"><div><label for="new-member-name">Nombre completo:</label><input type="text" id="new-member-name" required placeholder="Ej. Juan Pérez"></div><div><label for="new-member-birthdate">Fecha de nacimiento:</label><input type="date" id="new-member-birthdate" required></div></div><div style="margin-top:14px; max-width:320px;"><label for="new-member-first-assembly">Fecha de primera asamblea:</label><input type="date" id="new-member-first-assembly" required></div><div style="margin-top:20px;"><button type="submit" class="btn btn-primary">✓ Agregar integrante</button></div></form>
             <div id="new-member-result" style="margin-top:16px;"></div>
         </div>
     </div>
 
-    <!-- TAB 4: CIERRE DE AÑO -->
     <div id="cierre-anio" class="tab-content">
         <div class="card" style="border-color:rgba(224,60,60,.3);">
             <div class="card-title">🏁 Cierre de Año Académico</div>
             <p class="section-desc" style="margin-bottom:14px;">Calcula las métricas finales de todos los miembros y guarda todo en el histórico.</p>
-
-            <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25); margin-bottom:24px;">
-                <div class="item-title" style="color:#f08080;">⚠️ Importante</div>
-                <div class="item-meta">Esta operación no se puede deshacer. Asegúrese de haber revisado todos los datos antes de proceder.</div>
-            </div>
-
-            <div style="max-width:280px; margin-bottom:20px;">
-                <label for="year-to-close">Año a cerrar:</label>
-                <input type="number" id="year-to-close" min="2020" max="2030" value="2026">
-            </div>
-            <div style="margin-top:8px;">
-                <button id="close-year-button" class="btn btn-ok" style="padding:14px 28px; font-size:15px;" type="button">
-                    🏁 Cerrar Año Académico
-                </button>
-            </div>
+            <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25); margin-bottom:24px;"><div class="item-title" style="color:#f08080;">⚠️ Importante</div><div class="item-meta">Esta operación no se puede deshacer. Asegúrese de haber revisado todos los datos antes de proceder.</div></div>
+            <div style="max-width:280px; margin-bottom:20px;"><label for="year-to-close">Año a cerrar:</label><input type="number" id="year-to-close" min="2020" max="2030" value="2026"></div>
+            <div style="margin-top:8px;"><button id="close-year-button" class="btn btn-ok" style="padding:14px 28px; font-size:15px;" type="button">🏁 Cerrar Año Académico</button></div>
             <div id="close-year-result" style="margin-top:16px;"></div>
         </div>
     </div>
-
 </main>
-
 <div id="toast"></div>
 
 <script>
+    // ── DOM Elements (declarados ANTES de cualquier función que los use) ──
+    var listaIntegrantesDiv = document.getElementById('listaIntegrantes');
+    var searchIntegrantesInput = document.getElementById('searchIntegrantes');
+    var statTotal = document.getElementById('statTotal');
+    var statActivos = document.getElementById('statActivos');
+    var statPerseverantes = document.getElementById('statPerseverantes');
+    var perseverantesForm = document.getElementById('perseverantes-form');
+    var editSearchInput = document.getElementById('edit-search');
+    var editMembersListDiv = document.getElementById('edit-members-list');
+    var newMemberForm = document.getElementById('new-member-form');
+    var newMemberResult = document.getElementById('new-member-result');
+    var closeYearButton = document.getElementById('close-year-button');
+    var closeYearResult = document.getElementById('close-year-result');
+    var yearToCloseInput = document.getElementById('year-to-close');
+
     // Firebase Init
-    const firebaseConfig = {
-        apiKey: "«reda...…»",
-        authDomain: "luxto-nsp.firebaseapp.com",
-        projectId: "luxto-nsp",
-        storageBucket: "luxto-nsp.firebasestorage.app",
-        messagingSenderId: "3542836325",
-        appId: "1:3542836325:web:cf65cd50edcc431500d28c",
-        databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
-    };
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-
-    // DOM Elements
-    const listaIntegrantesDiv = document.getElementById('listaIntegrantes');
-    const searchIntegrantesInput = document.getElementById('searchIntegrantes');
-    const statTotal = document.getElementById('statTotal');
-    const statActivos = document.getElementId('statActivos');
-    const statPerseverantes = document.getElementById('statPerseverantes');
-    const perseverantesForm = document.getElementById('perseverantes-form');
-
-    const editSearchInput = document.getElementById('edit-search');
-    const editMembersListDiv = document.getElementById('edit-members-list');
-
-    const newMemberForm = document.getElementById('new-member-form');
-    const newMemberResult = document.getElementById('new-member-result');
-
-    const closeYearButton = document.getElementById('close-year-button');
-    const closeYearResult = document.getElementById('close-year-result');
-    const yearToCloseInput = document.getElementById('year-to-close');
+    var firebaseConfig = { apiKey: "«reda...…»", authDomain: "luxto-nsp.firebaseapp.com", projectId: "luxto-nsp", storageBucket: "luxto-nsp.firebasestorage.app", messagingSenderId: "3542836325", appId: "1:3542836325:web:cf65cd50edcc431500d28c", databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+    var auth = firebase.auth();
 
     // State
-    let allMembersCache = [];
-    let allMembersForEdit = [];
+    var allMembersCache = [];
+    var allMembersForEdit = [];
 
     // Toast
-    function toast(msg, tipo = "") {
-        const t = document.getElementById("toast");
-        t.textContent = msg;
-        t.className = "show " + tipo;
-        setTimeout(() => t.className = "", 3200);
+    function toast(msg, tipo) {
+        var t = document.getElementById("toast");
+        t.textContent = msg; t.className = "show " + (tipo || "");
+        setTimeout(function() { t.className = ""; }, 3200);
     }
-
-    function cerrarSesion() {
-        firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
-    }
+    function cerrarSesion() { firebase.auth().signOut().then(function() { window.location.href = 'login.html'; }); }
 
     // Tab switching
     function openTab(evt, tabName) {
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('.tab-button').forEach(function(b) { b.classList.remove('active'); });
         document.getElementById(tabName).classList.add('active');
         evt.currentTarget.classList.add('active');
-
-        if (tabName === 'editar-datos') {
-            initEditTab();
-        }
+        if (tabName === 'editar-datos') initEditTab();
     }
 
     // Initialize
-    auth.onAuthStateChanged(async (user) => {
+    auth.onAuthStateChanged(async function(user) {
         if (user) {
-            try {
-                await AuthPermissions.initStaffPermissionCheck();
-            } catch (e) {
-                console.warn('AuthPermissions check failed, continuando:', e);
-            }
+            try { await AuthPermissions.initStaffPermissionCheck(); }
+            catch (e) { console.warn('AuthPermissions check failed, continuando:', e); }
             await loadAllMembersForTab1();
-        } else {
-            window.location.href = 'login.html';
-        }
+        } else { window.location.href = 'login.html'; }
     });
 
-    // TAB 1: TODOS LOS INTEGRANTES (activo + perseverante)
+    // ═══ TAB 1: INTEGRANTES ═══
     async function loadAllMembersForTab1() {
         try {
             listaIntegrantesDiv.innerHTML = '<div class="empty-state">Cargando integrantes...</div>';
-
-            const snapshot = await db.collection('members')
-                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
-                .get();
-
+            var snapshot = await db.collection('members').where('estadoAnioActual', 'in', ['activo', 'perseverante']).get();
             allMembersCache = [];
-            snapshot.forEach(doc => {
-                allMembersCache.push({ id: doc.id, ...doc.data() });
-            });
-
-            allMembersCache.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-
+            snapshot.forEach(function(doc) { allMembersCache.push({ id: doc.id, ...doc.data() }); });
+            allMembersCache.sort(function(a, b) { return (a.nombre || '').localeCompare(b.nombre || ''); });
             renderIntegrantesList(allMembersCache);
             updateStats(allMembersCache);
             setupSearchIntegrantes();
-
-        } catch (error) {
-            console.error("Error loading members for tab 1:", error);
-            listaIntegrantesDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando integrantes</div>';
-        }
+        } catch (error) { console.error("Error loading members for tab 1:", error); listaIntegrantesDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando integrantes</div>'; }
     }
-
     function updateStats(members) {
-        const total = members.length;
-        const activos = members.filter(m => m.estadoAnioActual === 'activo').length;
-        const perseverantes = members.filter(m => m.estadoAnioActual === 'perseverante').length;
-
-        statTotal.textContent = total;
-        statActivos.textContent = activos;
-        statPerseverantes.textContent = perseverantes;
+        var total = members.length;
+        var activos = members.filter(function(m) { return m.estadoAnioActual === 'activo'; }).length;
+        var perseverantes = members.filter(function(m) { return m.estadoAnioActual === 'perseverante'; }).length;
+        statTotal.textContent = total; statActivos.textContent = activos; statPerseverantes.textContent = perseverantes;
     }
-
     function setupSearchIntegrantes() {
-        searchIntegrantesInput.addEventListener('input', (e) => {
-            const term = e.target.value.trim().toLowerCase();
-            if (!term) {
-                renderIntegrantesList(allMembersCache);
-            } else {
-                const filtered = allMembersCache.filter(m =>
-                    (m.nombre || '').toLowerCase().includes(term) ||
-                    (m.email || '').toLowerCase().includes(term) ||
-                    (m.rol || '').toLowerCase().includes(term) ||
-                    (m.estadoAnioActual || '').toLowerCase().includes(term)
-                );
+        searchIntegrantesInput.addEventListener('input', function(e) {
+            var term = e.target.value.trim().toLowerCase();
+            if (!term) renderIntegrantesList(allMembersCache);
+            else {
+                var filtered = allMembersCache.filter(function(m) {
+                    return (m.nombre || '').toLowerCase().includes(term) || (m.email || '').toLowerCase().includes(term) || (m.rol || '').toLowerCase().includes(term) || (m.estadoAnioActual || '').toLowerCase().includes(term);
+                });
                 renderIntegrantesList(filtered);
             }
         });
     }
-
     function renderIntegrantesList(members) {
         if (members.length === 0) {
-            listaIntegrantesDiv.innerHTML = `
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <div>No se encontraron integrantes</div>
-                </div>
-            `;
-            perseverantesForm.style.display = 'none';
-            return;
+            listaIntegrantesDiv.innerHTML = '<div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><div>No se encontraron integrantes</div></div>';
+            perseverantesForm.style.display = 'none'; return;
         }
-
         perseverantesForm.style.display = 'block';
-
-        let html = '';
-        members.forEach(member => {
-            const nombre = member.nombre || 'Sin nombre';
-            const email = member.email || '';
-            const rol = member.rol || 'miembro';
-            const estado = member.estadoAnioActual || 'activo';
-            const isPerseverante = estado === 'perseverante';
-
-            const photoUrl = getPhotoUrl(member);
-            const hasPhoto = isValidImageUrl(photoUrl);
-            const initial = nombre.charAt(0).toUpperCase();
-
-            const avatarHtml = hasPhoto
-                ? '<img class="member-avatar" src="' + photoUrl + '" alt="' + escapeHtml(nombre) + '" crossorigin="anonymous" onerror="this.onerror=null; this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">'
-                : '';
-            const placeholderHtml = hasPhoto
-                ? '<div class="member-avatar-placeholder" style="display:none;">' + initial + '</div>'
-                : '<div class="member-avatar-placeholder">' + initial + '</div>';
-
-            html += `
-                <div class="member-card" data-id="` + member.id + `">
-                    ` + avatarHtml + `
-                    ` + placeholderHtml + `
-                    <div class="member-info">
-                        <div class="member-name">` + escapeHtml(nombre) + `</div>
-                        <div class="member-meta">
-                            ` + (email ? '<span class="member-email">' + escapeHtml(email) + '</span>' : '') + `
-                            ` + getRoleBadge(rol) + `
-                            ` + getStatusBadge(estado) + `
-                        </div>
-                    </div>
-                    <div class="member-actions">
-                        <label class="checkbox-wrapper">
-                            <input type="checkbox"
-                                id="perseverante-` + member.id + `"
-                                name="perseverante"
-                                value="` + member.id + `"
-                                ` + (isPerseverante ? 'checked' : '') + `
-                                onchange="togglePerseverante('` + member.id + `', this.checked)">
-                            <span>` + (isPerseverante ? 'Perseverante' : 'Activo') + `</span>
-                        </label>
-                    </div>
-                </div>
-            `;
+        var html = '';
+        members.forEach(function(member) {
+            var nombre = member.nombre || 'Sin nombre';
+            var email = member.email || '';
+            var rol = member.rol || 'miembro';
+            var estado = member.estadoAnioActual || 'activo';
+            var isPerseverante = estado === 'perseverante';
+            var photoUrl = getPhotoUrl(member);
+            var hasPhoto = isValidImageUrl(photoUrl);
+            var initial = nombre.charAt(0).toUpperCase();
+            var avatarHtml = hasPhoto ? '<img class="member-avatar" src="' + photoUrl + '" alt="' + escapeHtml(nombre) + '" crossorigin="anonymous" onerror="this.onerror=null; this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">' : '';
+            var placeholderHtml = hasPhoto ? '<div class="member-avatar-placeholder" style="display:none;">' + initial + '</div>' : '<div class="member-avatar-placeholder">' + initial + '</div>';
+            html += '<div class="member-card" data-id="' + member.id + '">' + avatarHtml + placeholderHtml + '<div class="member-info"><div class="member-name">' + escapeHtml(nombre) + '</div><div class="member-meta">' + (email ? '<span class="member-email">' + escapeHtml(email) + '</span>' : '') + getRoleBadge(rol) + getStatusBadge(estado) + '</div></div><div class="member-actions"><label class="checkbox-wrapper"><input type="checkbox" id="perseverante-' + member.id + '" name="perseverante" value="' + member.id + '"' + (isPerseverante ? ' checked' : '') + ' onchange="togglePerseverante(\'' + member.id + '\', this.checked)"><span>' + (isPerseverante ? 'Perseverante' : 'Activo') + '</span></label></div></div>';
         });
-
         listaIntegrantesDiv.innerHTML = html;
     }
-
-    // Toggle perseverante (actualiza UI inmediatamente, se guarda al submit)
     window.togglePerseverante = function(memberId, checked) {
-        const card = document.querySelector('.member-card[data-id="' + memberId + '"]');
+        var card = document.querySelector('.member-card[data-id="' + memberId + '"]');
         if (!card) return;
-
-        const span = card.querySelector('.checkbox-wrapper span');
-        const badge = card.querySelector('.status-badge');
-
-        if (checked) {
-            span.textContent = 'Perseverante';
-            badge.textContent = '🟡 Perseverante';
-            badge.className = 'status-badge status-perseverante';
-        } else {
-            span.textContent = 'Activo';
-            badge.textContent = '🟢 Activo';
-            badge.className = 'status-badge status-activo';
-        }
+        var span = card.querySelector('.checkbox-wrapper span');
+        var badge = card.querySelector('.status-badge');
+        if (checked) { span.textContent = 'Perseverante'; badge.textContent = '🟡 Perseverante'; badge.className = 'status-badge status-perseverante'; }
+        else { span.textContent = 'Activo'; badge.textContent = '🟢 Activo'; badge.className = 'status-badge status-activo'; }
     };
-
-    // Save perseverancia (submit form)
-    perseverantesForm.addEventListener('submit', async (e) => {
+    perseverantesForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-
-        const checkboxes = document.querySelectorAll('#perseverantes-form input[name="perseverante"]');
-        const updates = [];
-
-        checkboxes.forEach(checkbox => {
-            const memberId = checkbox.value;
-            const isPerseverante = checkbox.checked;
-            updates.push(updateMemberStatus(memberId, isPerseverante ? 'perseverante' : 'activo'));
-        });
-
-        try {
-            await Promise.all(updates);
-            toast('Estado de perseverancia guardado exitosamente', 'ok');
-            await loadAllMembersForTab1();
-        } catch (error) {
-            console.error("Error saving perseverance:", error);
-            toast('Error al guardar estado de perseverancia', 'err');
-        }
+        var checkboxes = document.querySelectorAll('#perseverantes-form input[name="perseverante"]');
+        var updates = [];
+        checkboxes.forEach(function(checkbox) { var memberId = checkbox.value; var isPerseverante = checkbox.checked; updates.push(updateMemberStatus(memberId, isPerseverante ? 'perseverante' : 'activo')); });
+        try { await Promise.all(updates); toast('Estado de perseverancia guardado exitosamente', 'ok'); await loadAllMembersForTab1(); }
+        catch (error) { console.error("Error saving perseverance:", error); toast('Error al guardar estado de perseverancia', 'err'); }
     });
-
     async function updateMemberStatus(memberId, status) {
-        const memberRef = db.collection('members').doc(memberId);
-        return memberRef.update({
-            estadoAnioActual: status,
-            fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        var memberRef = db.collection('members').doc(memberId);
+        return memberRef.update({ estadoAnioActual: status, fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp() });
     }
 
-    // TAB 2: EDITAR DATOS
-    async function initEditTab() {
-        await loadMembersForEdit();
-    }
-
+    // ═══ TAB 2: EDITAR DATOS ═══
+    async function initEditTab() { await loadMembersForEdit(); }
     async function loadMembersForEdit() {
         try {
             editMembersListDiv.innerHTML = '<div class="empty-state">Cargando miembros...</div>';
-
-            const snapshot = await db.collection('members')
-                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
-                .get();
-
+            var snapshot = await db.collection('members').where('estadoAnioActual', 'in', ['activo', 'perseverante']).get();
             allMembersForEdit = [];
-            snapshot.forEach(doc => {
-                allMembersForEdit.push({ id: doc.id, ...doc.data() });
-            });
-
-            allMembersForEdit.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+            snapshot.forEach(function(doc) { allMembersForEdit.push({ id: doc.id, ...doc.data() }); });
+            allMembersForEdit.sort(function(a, b) { return (a.nombre || '').localeCompare(b.nombre || ''); });
             displayEditMembers(allMembersForEdit);
             setupEditSearch();
-
-        } catch (error) {
-            console.error("Error loading members for edit:", error);
-            editMembersListDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>';
-        }
+        } catch (error) { console.error("Error loading members for edit:", error); editMembersListDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>'; }
     }
-
     function setupEditSearch() {
-        editSearchInput.addEventListener('input', (e) => {
-            const term = e.target.value.trim().toLowerCase();
-            if (!term) {
-                displayEditMembers(allMembersForEdit);
-            } else {
-                const filtered = allMembersForEdit.filter(m =>
-                    (m.nombre || '').toLowerCase().includes(term)
-                );
-                displayEditMembers(filtered);
-            }
+        editSearchInput.addEventListener('input', function(e) {
+            var term = e.target.value.trim().toLowerCase();
+            if (!term) displayEditMembers(allMembersForEdit);
+            else { var filtered = allMembersForEdit.filter(function(m) { return (m.nombre || '').toLowerCase().includes(term); }); displayEditMembers(filtered); }
         });
     }
-
     function displayEditMembers(members) {
-        if (members.length === 0) {
-            editMembersListDiv.innerHTML = '<div class="empty-state">No se encontraron miembros</div>';
-            return;
-        }
-
-        let html = '';
-        members.forEach(member => {
-            const birthdate = formatDateInput(member.fechaNacimiento);
-            const ingreso = formatDateInput(member.fechaIngresoGrupo);
-            const primera = formatDateInput(member.fechaPrimeraAsamblea);
-            const hasBirth = birthdate ? '✓' : '✗';
-            const hasIngreso = ingreso ? '✓' : '✗';
-            const hasPrimera = primera ? '✓' : '✗';
-
-            html += `
-                <div class="item" style="border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:12px; background:var(--bg2);">
-                    <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap;">
-                        <strong style="font-size:16px; color:var(--ink);">` + (member.nombre || 'Sin nombre') + `</strong>
-                        ` + (member.email ? '<span style="font-size:12px; color:var(--muted);">(' + member.email + ')</span>' : '') + `
-                        ` + getRoleBadge(member.rol || 'miembro') + `
-                        ` + getStatusBadge(member.estadoAnioActual || 'activo') + `
-                    </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
-                        <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ` + hasBirth + `</label>
-                            <input type="date" id="edit-birth-` + member.id + `" value="` + birthdate + `" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ` + hasIngreso + `</label>
-                            <input type="date" id="edit-ingreso-` + member.id + `" value="` + ingreso + `" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ` + hasPrimera + `</label>
-                            <input type="date" id="edit-primera-` + member.id + `" value="` + primera + `" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);">
-                        </div>
-                    </div>
-                    <div style="margin-top:16px; text-align:right;">
-                        <button type="button" class="btn btn-primary" onclick="saveMemberData('` + member.id + `')" style="padding:12px 24px; font-size:14px;">💾 Guardar</button>
-                    </div>
-                </div>
-            `;
+        if (members.length === 0) { editMembersListDiv.innerHTML = '<div class="empty-state">No se encontraron miembros</div>'; return; }
+        var html = '';
+        members.forEach(function(member) {
+            var birthdate = formatDateInput(member.fechaNacimiento);
+            var ingreso = formatDateInput(member.fechaIngresoGrupo);
+            var primera = formatDateInput(member.fechaPrimeraAsamblea);
+            var hasBirth = birthdate ? '✓' : '✗'; var hasIngreso = ingreso ? '✓' : '✗'; var hasPrimera = primera ? '✓' : '✗';
+            html += '<div class="item" style="border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:12px; background:var(--bg2);"><div style="display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap;"><strong style="font-size:16px; color:var(--ink);">' + (member.nombre || 'Sin nombre') + '</strong>' + (member.email ? '<span style="font-size:12px; color:var(--muted);">(' + member.email + ')</span>' : '') + getRoleBadge(member.rol || 'miembro') + getStatusBadge(member.estadoAnioActual || 'activo') + '</div><div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;"><div><label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ' + hasBirth + '</label><input type="date" id="edit-birth-' + member.id + '" value="' + birthdate + '" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);"></div><div><label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ' + hasIngreso + '</label><input type="date" id="edit-ingreso-' + member.id + '" value="' + ingreso + '" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);"></div><div><label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ' + hasPrimera + '</label><input type="date" id="edit-primera-' + member.id + '" value="' + primera + '" style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; background:var(--bg3); color:var(--ink);"></div></div><div style="margin-top:16px; text-align:right;"><button type="button" class="btn btn-primary" onclick="saveMemberData(\'' + member.id + '\')" style="padding:12px 24px; font-size:14px;">💾 Guardar</button></div></div>';
         });
-
         editMembersListDiv.innerHTML = html;
     }
-
-    function formatDateInput(ts) {
-        if (!ts) return '';
-        const date = ts.toDate ? ts.toDate() : new Date(ts);
-        if (isNaN(date.getTime())) return '';
-        return date.toISOString().split('T')[0];
-    }
-
+    function formatDateInput(ts) { if (!ts) return ''; var date = ts.toDate ? ts.toDate() : new Date(ts); if (isNaN(date.getTime())) return ''; return date.toISOString().split('T')[0]; }
     window.saveMemberData = async function(memberId) {
-        const birthdate = document.getElementById('edit-birth-' + memberId).value;
-        const ingreso = document.getElementById('edit-ingreso-' + memberId).value;
-        const primera = document.getElementById('edit-primera-' + memberId).value;
-
-        if (!birthdate && !ingreso && !primera) {
-            toast('Complete al menos un campo', 'err');
-            return;
-        }
-
+        var birthdate = document.getElementById('edit-birth-' + memberId).value;
+        var ingreso = document.getElementById('edit-ingreso-' + memberId).value;
+        var primera = document.getElementById('edit-primera-' + memberId).value;
+        if (!birthdate && !ingreso && !primera) { toast('Complete al menos un campo', 'err'); return; }
         try {
-            const updateData = {};
-            if (birthdate) {
-                updateData.fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate));
-                updateData.fechaNacimientoMMdd = birthdate.substring(5, 10);
-            }
+            var updateData = {};
+            if (birthdate) { updateData.fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate)); updateData.fechaNacimientoMMdd = birthdate.substring(5, 10); }
             if (ingreso) updateData.fechaIngresoGrupo = firebase.firestore.Timestamp.fromDate(new Date(ingreso));
             if (primera) updateData.fechaPrimeraAsamblea = firebase.firestore.Timestamp.fromDate(new Date(primera));
             updateData.fechaActualizacion = firebase.firestore.FieldValue.serverTimestamp();
-
             await db.collection('members').doc(memberId).update(updateData);
             toast('Datos guardados correctamente', 'ok');
-
-            const idx = allMembersForEdit.findIndex(m => m.id === memberId);
-            if (idx !== -1) {
-                if (birthdate) {
-                    allMembersForEdit[idx].fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate));
-                    allMembersForEdit[idx].fechaNacimientoMMdd = birthdate.substring(5, 10);
-                }
-                if (ingreso) allMembersForEdit[idx].fechaIngresoGrupo = firebase.firestore.Timestamp.fromDate(new Date(ingreso));
-                if (primera) allMembersForEdit[idx].fechaPrimeraAsamblea = firebase.firestore.Timestamp.fromDate(new Date(primera));
-            }
-        } catch (error) {
-            console.error("Error saving member data:", error);
-            toast('Error al guardar datos', 'err');
-        }
+            var idx = allMembersForEdit.findIndex(function(m) { return m.id === memberId; });
+            if (idx !== -1) { if (birthdate) { allMembersForEdit[idx].fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate)); allMembersForEdit[idx].fechaNacimientoMMdd = birthdate.substring(5, 10); } if (ingreso) allMembersForEdit[idx].fechaIngresoGrupo = firebase.firestore.Timestamp.fromDate(new Date(ingreso)); if (primera) allMembersForEdit[idx].fechaPrimeraAsamblea = firebase.firestore.Timestamp.fromDate(new Date(primera)); }
+        } catch (error) { console.error("Error saving member data:", error); toast('Error al guardar datos', 'err'); }
     };
 
-    // TAB 3: NUEVO INTEGRANTE
-    newMemberForm.addEventListener('submit', async (e) => {
+    // ═══ TAB 3: NUEVO INTEGRANTE ═══
+    newMemberForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-
         try {
-            const name = document.getElementById('new-member-name').value.trim();
-            const birthdate = document.getElementById('new-member-birthdate').value;
-            const firstAssembly = document.getElementById('new-member-first-assembly').value;
-
-            if (!name || !birthdate || !firstAssembly) {
-                toast('Por favor, complete todos los campos', 'err');
-                return;
-            }
-
-            // Check if name already exists in miembros_registro
-            const nameQuery = await db.collection('miembros_registro').where('nombre', '==', name).limit(1).get();
-            if (!nameQuery.empty) {
-                toast('Ya existe un miembro con este nombre en el registro', 'err');
-                return;
-            }
-
-            const birthMMdd = birthdate.substring(5, 10);
-
-            const newMemberRef = await db.collection('members').add({
-                nombre: name,
-                fechaNacimiento: birthdate,
-                fechaNacimientoMMdd: birthMMdd,
-                fechaPrimeraAsamblea: firstAssembly,
-                rol: 'miembro',
-                estadoAnioActual: 'activo',
-                fechaIngresoGrupo: firebase.firestore.FieldValue.serverTimestamp(),
-                fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            // Also create public lookup in miembros_registro (for registro.html validation)
-            await db.collection('miembros_registro').doc(newMemberRef.id).set({
-                nombre: name,
-                memberId: newMemberRef.id
-            });
-
-            newMemberResult.innerHTML = `
-                <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
-                    <div class="item-title" style="color:#7fe8aa;">✓ Nuevo integrante agregado exitosamente</div>
-                    <div class="item-meta">ID: ` + newMemberRef.id + ` — Ya puede registrarse en la página de registro</div>
-                </div>
-            `;
-
-            newMemberForm.reset();
-            await loadAllMembersForTab1(); // Refresh tab 1
-
-        } catch (error) {
-            console.error("Error adding new member:", error);
-            newMemberResult.innerHTML = `
-                <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);">
-                    <div class="item-title" style="color:#f08080;">✗ Error al agregar integrante</div>
-                    <div class="item-meta">` + error.message + `</div>
-                </div>
-            `;
-        }
+            var name = document.getElementById('new-member-name').value.trim();
+            var birthdate = document.getElementById('new-member-birthdate').value;
+            var firstAssembly = document.getElementById('new-member-first-assembly').value;
+            if (!name || !birthdate || !firstAssembly) { toast('Por favor, complete todos los campos', 'err'); return; }
+            var nameQuery = await db.collection('miembros_registro').where('nombre', '==', name).limit(1).get();
+            if (!nameQuery.empty) { toast('Ya existe un miembro con este nombre en el registro', 'err'); return; }
+            var birthMMdd = birthdate.substring(5, 10);
+            var newMemberRef = await db.collection('members').add({ nombre: name, fechaNacimiento: birthdate, fechaNacimientoMMdd: birthMMdd, fechaPrimeraAsamblea: firstAssembly, rol: 'miembro', estadoAnioActual: 'activo', fechaIngresoGrupo: firebase.firestore.FieldValue.serverTimestamp(), fechaCreacion: firebase.firestore.FieldValue.serverTimestamp() });
+            await db.collection('miembros_registro').doc(newMemberRef.id).set({ nombre: name, memberId: newMemberRef.id });
+            newMemberResult.innerHTML = '<div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);"><div class="item-title" style="color:#7fe8aa;">✓ Nuevo integrante agregado exitosamente</div><div class="item-meta">ID: ' + newMemberRef.id + ' — Ya puede registrarse en la página de registro</div></div>';
+            newMemberForm.reset(); await loadAllMembersForTab1();
+        } catch (error) { console.error("Error adding new member:", error); newMemberResult.innerHTML = '<div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);"><div class="item-title" style="color:#f08080;">✗ Error al agregar integrante</div><div class="item-meta">' + error.message + '</div></div>'; }
     });
 
-    // TAB 4: CIERRE DE AÑO
-    closeYearButton.addEventListener('click', async () => {
-        const yearToClose = parseInt(yearToCloseInput.value);
-
-        if (isNaN(yearToClose) || yearToClose < 2020 || yearToClose > 2030) {
-            toast('Por favor, ingrese un año válido entre 2020 y 2030', 'err');
-            return;
-        }
-
-        if (!confirm('¿Está seguro de que desea cerrar el año ' + yearToClose + '?\n\nEsta operación:\n1. Calculará las métricas finales de todos los miembros activos\n2. Guardará los datos en el histórico/' + yearToClose + '/\n3. Preparará el sistema para el año ' + (yearToClose + 1) + '\n\nEsta acción no se puede deshacer.')) {
-            return;
-        }
-
+    // ═══ TAB 4: CIERRE DE AÑO ═══
+    closeYearButton.addEventListener('click', async function() {
+        var yearToClose = parseInt(yearToCloseInput.value);
+        if (isNaN(yearToClose) || yearToClose < 2020 || yearToClose > 2030) { toast('Por favor, ingrese un año válido entre 2020 y 2030', 'err'); return; }
+        if (!confirm('¿Está seguro de que desea cerrar el año ' + yearToClose + '?\n\nEsta operación:\n1. Calculará las métricas finales de todos los miembros activos\n2. Guardará los datos en el histórico/' + yearToClose + '/\n3. Preparará el sistema para el año ' + (yearToClose + 1) + '\n\nEsta acción no se puede deshacer.')) return;
         try {
-            closeYearButton.disabled = true;
-            closeYearButton.textContent = 'Cerrando año...';
-            closeYearResult.innerHTML = '<div class="empty-state">Iniciando proceso de cierre de año...</div>';
-
-            const membersSnapshot = await db.collection('members')
-                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
-                .get();
-
-            const members = [];
-            membersSnapshot.forEach(doc => members.push({ id: doc.id, ...doc.data() }));
-
+            closeYearButton.disabled = true; closeYearButton.textContent = 'Cerrando año...'; closeYearResult.innerHTML = '<div class="empty-state">Iniciando proceso de cierre de año...</div>';
+            var membersSnapshot = await db.collection('members').where('estadoAnioActual', 'in', ['activo', 'perseverante']).get();
+            var members = []; membersSnapshot.forEach(function(doc) { members.push({ id: doc.id, ...doc.data() }); });
             closeYearResult.innerHTML = '<div class="empty-state">Procesando ' + members.length + ' miembros...</div>';
-
-            const batch = db.batch();
-            const historicalMembersRef = db.collection('historico').doc(yearToClose.toString()).collection('members');
-
-            for (const member of members) {
-                const metrics = await calculateMemberMetrics(member.id, yearToClose);
-                const historicalMemberRef = historicalMembersRef.doc(member.id);
-                batch.set(historicalMemberRef, {
-                    ...member,
-                    año: yearToClose,
-                    fechacierre: firebase.firestore.FieldValue.serverTimestamp(),
-                    ...metrics
-                });
-            }
-
+            var batch = db.batch(); var historicalMembersRef = db.collection('historico').doc(yearToClose.toString()).collection('members');
+            for (var i = 0; i < members.length; i++) { var member = members[i]; var metrics = await calculateMemberMetrics(member.id, yearToClose); var historicalMemberRef = historicalMembersRef.doc(member.id); batch.set(historicalMemberRef, { ...member, año: yearToClose, fechacierre: firebase.firestore.FieldValue.serverTimestamp(), ...metrics }); }
             await copyCollectionToHistorical('asistencia', yearToClose, batch);
             await copyCollectionToHistorical('tablas_dinamicas', yearToClose, batch);
             await copyCollectionToHistorical('asambleas_kahoot', yearToClose, batch);
             await copyCollectionToHistorical('sugerencias', yearToClose, batch);
             await copyCollectionToHistorical('feedback', yearToClose, batch);
-
             await batch.commit();
-
-            const nonPerseverantes = members.filter(m => m.estadoAnioActual !== 'perseverante');
-            const updateBatch = db.batch();
-            for (const member of nonPerseverantes) {
-                const memberRef = db.collection('members').doc(member.id);
-                updateBatch.update(memberRef, {
-                    estadoAnioActual: 'dado_de_baja',
-                    fechaBaja: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
+            var nonPerseverantes = members.filter(function(m) { return m.estadoAnioActual !== 'perseverante'; });
+            var updateBatch = db.batch();
+            for (var j = 0; j < nonPerseverantes.length; j++) { var memberRef = db.collection('members').doc(nonPerseverantes[j].id); updateBatch.update(memberRef, { estadoAnioActual: 'dado_de_baja', fechaBaja: firebase.firestore.FieldValue.serverTimestamp() }); }
             await updateBatch.commit();
-
-            closeYearResult.innerHTML = `
-                <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
-                    <div class="item-title" style="color:#7fe8aa;">🎉 ¡Año ` + yearToClose + ` cerrado exitosamente!</div>
-                    <div class="item-meta">
-                        • ` + members.length + ` miembros procesados y guardados en histórico<br>
-                        • ` + nonPerseverantes.length + ` miembros marcados como dados de baja<br>
-                        • Datos copiados a colecciones históricas<br>
-                        • Sistema preparado para año ` + (yearToClose + 1) + `
-                    </div>
-                </div>
-            `;
-
-        } catch (error) {
-            console.error("Error closing year:", error);
-            closeYearResult.innerHTML = `
-                <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);">
-                    <div class="item-title" style="color:#f08080;">✗ Error al cerrar el año</div>
-                    <div class="item-meta">` + error.message + `</div>
-                </div>
-            `;
-        } finally {
-            closeYearButton.disabled = false;
-            closeYearButton.textContent = '🏁 Cerrar Año Académico';
-        }
+            closeYearResult.innerHTML = '<div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);"><div class="item-title" style="color:#7fe8aa;">🎉 ¡Año ' + yearToClose + ' cerrado exitosamente!</div><div class="item-meta">• ' + members.length + ' miembros procesados y guardados en histórico<br>• ' + nonPerseverantes.length + ' miembros marcados como dados de baja<br>• Datos copiados a colecciones históricas<br>• Sistema preparado para año ' + (yearToClose + 1) + '</div></div>';
+        } catch (error) { console.error("Error closing year:", error); closeYearResult.innerHTML = '<div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);"><div class="item-title" style="color:#f08080;">✗ Error al cerrar el año</div><div class="item-meta">' + error.message + '</div></div>'; }
+        finally { closeYearButton.disabled = false; closeYearButton.textContent = '🏁 Cerrar Año Académico'; }
     });
-
-    async function calculateMemberMetrics(memberId, year) {
-        return {
-            porcentajeAsistencia: 0,
-            notaRendimiento: 0,
-            tardanzasTotales: 0,
-            estadoFinal: 'activo'
-        };
-    }
-
+    async function calculateMemberMetrics(memberId, year) { return { porcentajeAsistencia: 0, notaRendimiento: 0, tardanzasTotales: 0, estadoFinal: 'activo' }; }
     async function copyCollectionToHistorical(collectionName, year, batch) {
         try {
-            const collections = {
-                'asistencia': ['historico', year, 'asistencia'],
-                'tablas_dinamicas': ['historico', year, 'tablas_dinamicas'],
-                'asambleas_kahoot': ['historico', year, 'asambleas_kahoot'],
-                'sugerencias': ['historico', year, 'sugerencias'],
-                'feedback': ['historico', year, 'feedback']
-            };
-
-            const pathParts = collections[collectionName];
-            if (!pathParts) return;
-
-            const collectionRef = db.collection(...pathParts);
-            const snapshot = await collectionRef.get();
-
-            snapshot.forEach(doc => {
-                const historicalRef = db.collection(...pathParts).doc(doc.id);
-                batch.set(historicalRef, {
-                    ...doc.data(),
-                    año: year,
-                    fechacopiado: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            });
-        } catch (error) {
-            console.error('Error copying ' + collectionName + ' to historical:', error);
-        }
+            var collections = { 'asistencia': ['historico', year, 'asistencia'], 'tablas_dinamicas': ['historico', year, 'tablas_dinamicas'], 'asambleas_kahoot': ['historico', year, 'asambleas_kahoot'], 'sugerencias': ['historico', year, 'sugerencias'], 'feedback': ['historico', year, 'feedback'] };
+            var pathParts = collections[collectionName]; if (!pathParts) return;
+            var collectionRef = db.collection.apply(db, pathParts); var snapshot = await collectionRef.get();
+            snapshot.forEach(function(doc) { var historicalRef = db.collection.apply(db, pathParts).doc(doc.id); batch.set(historicalRef, { ...doc.data(), año: year, fechacopiado: firebase.firestore.FieldValue.serverTimestamp() }); });
+        } catch (error) { console.error('Error copying ' + collectionName + ' to historical:', error); }
     }
 </script>
 </body>
