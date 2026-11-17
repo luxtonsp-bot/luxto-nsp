@@ -60,7 +60,7 @@ service cloud.firestore {
 
     match /miembros_registro/{uid} {
       allow read: if true;
-      allow create, update: if isAuth() && request.auth.uid == uid;
+      allow create, update: if isStaff();
       allow delete: if isCoordinator();
     }
 

@@ -473,7 +473,8 @@
 
             // Also create public lookup in miembros_registro (for registro.html validation)
             await db.collection('miembros_registro').doc(newMemberRef.id).set({
-                nombre: name
+                nombre: name,
+                memberId: newMemberRef.id  // ✅ Requerido para que registro.html lo detecte
             });
 
             newMemberResult.innerHTML = `
