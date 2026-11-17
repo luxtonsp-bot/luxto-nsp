@@ -39,7 +39,7 @@
         }
         function escapeHtml(str) {
             if (!str) return '';
-            return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, ''');
+            return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, '&apos;');
         }
         function getRoleBadge(rol) {
             const badges = { 'coordinador': { label: '👑 Coordinador', class: 'badge-coordinador' }, 'servidor': { label: '⚔️ Servidor', class: 'badge-servidor' }, 'apoyo': { label: '🤝 Apoyo', class: 'badge-apoyo' }, 'miembro': { label: '👤 Miembro', class: 'badge-miembro' } };
