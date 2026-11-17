@@ -86,29 +86,27 @@ function showAccessDenied(message = 'No tienes permisos para acceder a esta secc
 }
 
 async function initStaffPermissionCheck() {
-    return new Promise((resolve) => {
-        const auth = getFirebase().auth();
-        auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
+    const auth = getFirebase().auth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+        // No hay usuario logueado aún - dejar que la página maneje el redirect
+        return null;
+    }
 
-            const hasPermission = await checkPermission(user.uid);
-            if (!hasPermission) {
-                const role = await getUserRole(user.uid);
-                const currentPage = window.location.pathname.split('/').pop();
-                let msg = 'No tienes permisos para acceder a esta sección.';
-                if (currentPage === 'admin.html' && role !== 'coordinador') {
-                    msg = 'Solo el coordinador puede acceder al Panel de Administración.';
-                }
-                showAccessDenied(msg);
-                return;
-            }
+    const hasPermission = await checkPermission(user.uid);
+    if (!hasPermission) {
+        const role = await getUserRole(user.uid);
+        const currentPage = window.location.pathname.split('/').pop();
+        let msg = 'No tienes permisos para acceder a esta sección.';
+        if (currentPage === 'admin.html' && role !== 'coordinador') {
+            msg = 'Solo el coordinador puede acceder al Panel de Administración.';
+        }
+        showAccessDenied(msg);
+        return null;
+    }
 
-            resolve(user);
-        });
-    });
+    return user;
 }
 
 window.AuthPermissions = {
