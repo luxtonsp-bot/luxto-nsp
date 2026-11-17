@@ -216,6 +216,18 @@
             waitForAuthThenListen();
         }
 
+        // FALLBACK: Verificar auth.currentUser de nuevo tras 3s (por si onAuthStateChanged no dispara user real)
+        setTimeout(function() {
+            var fallbackUser = auth.currentUser;
+            if (fallbackUser && !initAttempted) {
+                console.log('[GESTION-GRUPO] >>> FALLBACK: Usuario detectado tras timeout:', fallbackUser.uid);
+                initIfReady(fallbackUser);
+            } else if (!fallbackUser && !initAttempted) {
+                console.warn('[GESTION-GRUPO] >>> FALLBACK: Sin usuario tras 3s - posible bloqueo de ad blocker / red');
+                listaIntegrantesDiv.innerHTML = '<div class="empty-state" style="color:var(--err);"><div style="font-size:24px;margin-bottom:12px;">🛡️</div><div style="font-weight:600;margin-bottom:8px;">No se pudo restaurar la sesión</div><div style="font-size:13px;color:var(--muted);max-width:300px;">Posible causa: bloqueador de anuncios (uBlock, AdBlock) impidiendo la conexión con Firebase.<br><br>Solución: Desactiva el bloqueador para <strong>luzdecristo.dpdns.org</strong> y recarga la página (Ctrl+Shift+R).</div></div>';
+            }
+        }, 3000);
+
         // ─────────────────────────────────────────────────────────────
         // Inicializar cuando AuthPermissions esté listo
         // ─────────────────────────────────────────────────────────────
