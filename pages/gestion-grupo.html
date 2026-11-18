@@ -9,6 +9,188 @@
     <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/portal.css">
+    <style>
+        .management-heading { margin-bottom:30px; }
+        .management-heading .section-desc { margin-bottom:0; }
+        .management-tabs {
+            display:grid;
+            grid-template-columns:repeat(4, minmax(0, 1fr));
+            gap:10px;
+            padding:10px;
+            margin-bottom:24px;
+            border:1px solid var(--border);
+            border-radius:18px;
+            background:rgba(255,255,255,.025);
+        }
+        .management-tabs .tab-button {
+            display:flex;
+            align-items:center;
+            gap:12px;
+            min-height:66px;
+            padding:10px 14px;
+            border:1px solid transparent;
+            border-radius:13px;
+            text-align:left;
+            line-height:1.25;
+        }
+        .management-tabs .tab-button:hover { background:rgba(255,255,255,.055); }
+        .management-tabs .tab-button.active {
+            color:var(--cream);
+            border-color:rgba(245,197,24,.25);
+            background:linear-gradient(135deg,rgba(245,197,24,.15),rgba(196,112,58,.08));
+            box-shadow:inset 0 0 0 1px rgba(245,197,24,.04);
+        }
+        .tab-icon {
+            display:grid;
+            width:38px;
+            height:38px;
+            flex:0 0 38px;
+            place-items:center;
+            border-radius:12px;
+            background:rgba(255,255,255,.06);
+            font-size:17px;
+        }
+        .tab-copy { display:grid; gap:4px; }
+        .tab-copy strong { font-size:13px; font-weight:700; }
+        .tab-copy small { color:var(--muted); font-size:11px; font-weight:400; }
+        .management-card { border-color:var(--border2); box-shadow:var(--shadow); }
+        .management-card .card-title { margin-bottom:8px; }
+        .card-intro { margin-bottom:20px; color:var(--muted); font-size:14px; }
+        .member-list { display:grid; gap:10px; }
+        .member-row {
+            display:flex;
+            align-items:center;
+            gap:14px;
+            min-width:0;
+            padding:13px 15px;
+            border:1px solid var(--border);
+            border-radius:15px;
+            background:linear-gradient(120deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+            transition:border-color var(--t), transform var(--t), background var(--t);
+        }
+        .member-row:hover {
+            transform:translateY(-1px);
+            border-color:rgba(245,197,24,.22);
+            background:rgba(255,255,255,.045);
+        }
+        .member-avatar {
+            position:relative;
+            display:grid;
+            width:48px;
+            height:48px;
+            flex:0 0 48px;
+            place-items:center;
+            overflow:hidden;
+            border:2px solid rgba(245,197,24,.24);
+            border-radius:50%;
+            background:var(--bg3);
+            color:var(--y);
+            font-size:16px;
+            font-weight:700;
+            text-transform:uppercase;
+        }
+        .member-avatar img {
+            position:absolute;
+            inset:0;
+            width:100%;
+            height:100%;
+            object-fit:cover;
+        }
+        .member-avatar img[hidden] { display:none; }
+        .member-avatar-fallback { position:absolute; inset:0; display:grid; place-items:center; }
+        .member-avatar-fallback[hidden] { display:none; }
+        .member-info { flex:1; min-width:0; }
+        .member-name { display:block; overflow:hidden; color:var(--cream); font-size:15px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+        .member-meta { display:block; overflow:hidden; margin-top:3px; color:var(--muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+        .member-status {
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            margin-top:7px;
+            padding:3px 9px;
+            border:1px solid rgba(245,197,24,.2);
+            border-radius:99px;
+            background:rgba(245,197,24,.08);
+            color:var(--y);
+            font-size:10px;
+            font-weight:700;
+            letter-spacing:.5px;
+            text-transform:uppercase;
+        }
+        .member-check {
+            width:20px;
+            height:20px;
+            flex:0 0 20px;
+            accent-color:var(--y);
+            cursor:pointer;
+        }
+        .member-row--check { cursor:pointer; }
+        .member-row--check .member-info { cursor:pointer; }
+        .member-edit-card { align-items:flex-start; flex-wrap:wrap; }
+        .member-edit-card .member-info { flex:1 1 190px; padding-top:5px; }
+        .member-edit-fields {
+            display:grid;
+            width:100%;
+            grid-template-columns:repeat(3, minmax(0, 1fr));
+            gap:12px;
+            padding-top:4px;
+        }
+        .member-edit-fields label { font-size:10px; letter-spacing:1px; }
+        .member-edit-actions { display:flex; width:100%; justify-content:flex-end; padding-top:2px; }
+        .member-search-wrap { max-width:560px; margin:18px 0 20px; }
+        .member-search-wrap input { padding-left:44px; }
+        .member-search { position:relative; }
+        .member-search::before {
+            position:absolute;
+            z-index:1;
+            top:50%;
+            left:15px;
+            color:var(--muted);
+            content:"⌕";
+            font-size:22px;
+            line-height:1;
+            transform:translateY(-55%);
+        }
+        .form-grid { gap:18px; }
+        .new-member-date { max-width:280px; margin-top:18px; }
+        .form-field-hint { display:block; margin-top:6px; color:var(--muted); font-size:12px; }
+        .form-actions { margin-top:22px; }
+        .form-actions .btn { min-height:46px; }
+        .result-message { margin-top:16px; }
+        .close-year-card { border-color:rgba(224,60,60,.25); }
+        .close-year-warning {
+            display:flex;
+            align-items:flex-start;
+            gap:12px;
+            padding:16px;
+            border:1px solid rgba(224,60,60,.2);
+            border-radius:14px;
+            background:rgba(224,60,60,.06);
+            color:var(--muted);
+            font-size:13px;
+        }
+        .close-year-warning strong { display:block; margin-bottom:3px; color:#f08080; }
+        .close-year-year { max-width:260px; margin-top:22px; }
+        .close-year-action { margin-top:18px; }
+        @media (max-width:760px) {
+            .management-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+            .management-tabs .tab-button { min-height:60px; padding:9px 10px; }
+            .tab-icon { width:34px; height:34px; flex-basis:34px; }
+            .member-edit-fields { grid-template-columns:1fr; }
+        }
+        @media (max-width:480px) {
+            .management-tabs { gap:6px; padding:7px; }
+            .management-tabs .tab-button { gap:8px; min-height:56px; padding:8px; }
+            .tab-copy strong { font-size:12px; }
+            .tab-copy small { font-size:10px; }
+            .tab-icon { width:30px; height:30px; flex-basis:30px; font-size:14px; }
+            .member-row { gap:10px; padding:11px; }
+            .member-avatar { width:42px; height:42px; flex-basis:42px; }
+            .member-name { font-size:14px; }
+            .member-meta { font-size:11px; }
+            .management-card { padding:20px 16px; }
+        }
+    </style>
     <!-- Firebase imports (same as other pages) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -31,60 +213,75 @@
 
 <main class="container">
 
-    <div class="section-eyebrow">Coordinación</div>
-    <h1>Gestión de Grupo</h1>
-    <p class="section-desc">Marca a los perseverantes del próximo año, agrega nuevos integrantes y realiza el cierre académico del año.</p>
+    <div class="management-heading">
+        <div class="section-eyebrow">Coordinación</div>
+        <h1>Gestión de Grupo</h1>
+        <p class="section-desc">Administra la continuidad y los datos de los integrantes de forma sencilla.</p>
+    </div>
 
-    <div class="tabs">
-        <button class="tab-button active" onclick="openTab(event, 'perseverantes')" type="button">Perseverantes y Nuevos</button>
-        <button class="tab-button" onclick="openTab(event, 'editar-datos')" type="button">✏️ Editar Datos</button>
-        <button class="tab-button" onclick="openTab(event, 'cierre-anio')" type="button">Cierre de Año</button>
+    <div class="tabs management-tabs" role="tablist" aria-label="Secciones de gestión">
+        <button class="tab-button active" onclick="openTab(event, 'perseverantes')" type="button" role="tab" aria-selected="true">
+            <span class="tab-icon" aria-hidden="true">🏅</span><span class="tab-copy"><strong>Perseverantes</strong><small>Continuarán el próximo año</small></span>
+        </button>
+        <button class="tab-button" onclick="openTab(event, 'editar-datos')" type="button" role="tab" aria-selected="false">
+            <span class="tab-icon" aria-hidden="true">✏️</span><span class="tab-copy"><strong>Editar datos</strong><small>Fechas de integrantes</small></span>
+        </button>
+        <button class="tab-button" onclick="openTab(event, 'agregar-integrante')" type="button" role="tab" aria-selected="false">
+            <span class="tab-icon" aria-hidden="true">➕</span><span class="tab-copy"><strong>Nuevo integrante</strong><small>Agregar al grupo</small></span>
+        </button>
+        <button class="tab-button" onclick="openTab(event, 'cierre-anio')" type="button" role="tab" aria-selected="false">
+            <span class="tab-icon" aria-hidden="true">🏁</span><span class="tab-copy"><strong>Cierre anual</strong><small>Guardar histórico</small></span>
+        </button>
     </div>
 
     <div id="perseverantes" class="tab-content active">
 
-        <div class="card">
-            <div class="card-title">🏅 Marcar Perseverantes <span class="card-sub">Continuarán el próximo año</span></div>
+        <div class="card management-card">
+            <div class="card-title">Integrantes del grupo</div>
+            <p class="card-intro">Selecciona quiénes continuarán como perseverantes el próximo año.</p>
             <div id="current-year-members">
                 <div class="empty-state">Cargando miembros...</div>
             </div>
         </div>
+    </div>
 
-        <div class="card">
-            <div class="card-title">➕ Agregar Nuevo Integrante</div>
+    <div id="agregar-integrante" class="tab-content">
+        <div class="card management-card">
+            <div class="card-title">Agregar integrante</div>
+            <p class="card-intro">Registra a una persona nueva para que pueda incorporarse al grupo.</p>
             <form id="new-member-form">
                 <div class="form-grid">
                     <div>
                         <label for="new-member-name">Nombre completo:</label>
                         <input type="text" id="new-member-name" required placeholder="Ej. Juan Pérez">
+                        <span class="form-field-hint">Escribe el nombre y los apellidos.</span>
                     </div>
                     <div>
                         <label for="new-member-birthdate">Fecha de nacimiento:</label>
                         <input type="date" id="new-member-birthdate" required>
                     </div>
                 </div>
-                <div style="margin-top:14px; max-width:280px;">
+                <div class="new-member-date">
                     <label for="new-member-first-assembly">Fecha primera asamblea:</label>
                     <input type="date" id="new-member-first-assembly" required>
                 </div>
-                <div style="margin-top:18px;">
-                    <button type="submit" class="btn btn-primary">✓ Agregar Nuevo Integrante</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">✓ Guardar integrante</button>
                 </div>
             </form>
-            <div id="new-member-result" style="margin-top:14px;"></div>
+            <div id="new-member-result" class="result-message"></div>
         </div>
-
     </div>
 
     <div id="editar-datos" class="tab-content">
-        <div class="card">
-            <div class="card-title">✏️ Editar Datos de Miembros</div>
-            <p class="section-desc" style="margin-bottom:14px;">Complete o corrija la fecha de nacimiento, fecha de ingreso y primera asamblea de los miembros.</p>
-            <div style="max-width:600px; margin-bottom:16px;">
-                <label style="display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Buscar miembro</label>
-                <input type="text" id="edit-search" placeholder="Escribe nombre para filtrar..." style="width:100%; padding:12px 16px; border:1.5px solid var(--border); border-radius:10px; font-size:15px;">
+        <div class="card management-card">
+            <div class="card-title">Editar datos de integrantes</div>
+            <p class="card-intro">Actualiza las fechas importantes de cada persona.</p>
+            <div class="member-search-wrap">
+                <label for="edit-search">Buscar integrante</label>
+                <div class="member-search"><input type="text" id="edit-search" placeholder="Escribe un nombre para filtrar..."></div>
             </div>
-            <div id="edit-members-list" class="item-list">
+            <div id="edit-members-list" class="member-list">
                 <div class="empty-state">Cargando miembros...</div>
             </div>
         </div>
@@ -92,24 +289,24 @@
 
     <div id="cierre-anio" class="tab-content">
 
-        <div class="card" style="border-color:rgba(224,60,60,.3);">
-            <div class="card-title">🏁 Cierre de Año Académico</div>
-            <p class="section-desc" style="margin-bottom:14px;">Esta operación guardará en el histórico una copia de los miembros, asistencias, tablas dinámicas y registros KAHOOT del año seleccionado.</p>
-            <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25); margin-bottom:20px;">
-                <div class="item-title" style="color:#f08080;">⚠️ Importante</div>
-                <div class="item-meta">El cierre no calcula notas ni cambia el estado de los miembros. Un cierre completado no se puede volver a ejecutar; si ocurre un error, puede reintentarlo sin duplicar registros.</div>
+        <div class="card management-card close-year-card">
+            <div class="card-title">Cierre de año académico</div>
+            <p class="card-intro">Guarda una copia de los registros del año en el histórico.</p>
+            <div class="close-year-warning">
+                <span aria-hidden="true">⚠️</span>
+                <div><strong>Antes de continuar</strong>El cierre no calcula notas ni cambia el estado de los miembros. Un cierre completado no se puede volver a ejecutar; si ocurre un error, puede reintentarlo sin duplicar registros.</div>
             </div>
 
-            <div style="max-width:240px;">
+            <div class="close-year-year">
                 <label for="year-to-close">Año a cerrar:</label>
                 <input type="number" id="year-to-close" min="2020" max="2030" value="2026">
             </div>
-            <div style="margin-top:18px;">
-                <button id="close-year-button" class="btn btn-ok" style="padding:14px 28px; font-size:15px;" type="button">
+            <div class="close-year-action">
+                <button id="close-year-button" class="btn btn-ok" type="button">
                     🏁 Cerrar Año Académico
                 </button>
             </div>
-            <div id="close-year-result" style="margin-top:14px;"></div>
+            <div id="close-year-result" class="result-message"></div>
         </div>
 
     </div>
@@ -148,6 +345,13 @@
     const editSearchInput = document.getElementById('edit-search');
     const editMembersListDiv = document.getElementById('edit-members-list');
 
+    currentYearMembersDiv.addEventListener('change', (event) => {
+        const checkbox = event.target.closest('input[id^="perseverante-"]');
+        if (!checkbox) return;
+        const status = checkbox.closest('.member-row')?.querySelector('.member-status');
+        if (status) status.textContent = checkbox.checked ? 'Perseverante' : 'Activo';
+    });
+
     // ── Toast ──
     function toast(msg, tipo = "") {
         const t = document.getElementById("toast");
@@ -164,6 +368,40 @@
             '"': '&quot;',
             "'": '&#39;'
         })[char]);
+    }
+
+    function getMemberPhotoUrl(member) {
+        const thumbnail = member.fotoThumb;
+        if (typeof thumbnail === 'string' && thumbnail.startsWith('data:image/')) {
+            return thumbnail;
+        }
+
+        const driveId = member.fotoDriveId;
+        if (typeof driveId === 'string' && /^[a-zA-Z0-9_-]{20,}$/.test(driveId)) {
+            return `https://drive.google.com/uc?export=view&id=${driveId}`;
+        }
+
+        const photoUrl = member.fotoUrl;
+        if (typeof photoUrl !== 'string' || !/^https?:\/\//i.test(photoUrl)) {
+            return '';
+        }
+
+        const fileId = photoUrl.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)?.[1]
+            || photoUrl.match(/\/(?:d|file\/d)\/([a-zA-Z0-9_-]{20,})/)?.[1];
+        if (fileId && photoUrl.includes('drive.google.com')) {
+            return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        }
+        return photoUrl;
+    }
+
+    function getMemberAvatarHtml(member) {
+        const name = String(member.nombre || member.name || 'Sin nombre');
+        const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase() || '?';
+        const photoUrl = getMemberPhotoUrl(member);
+        const image = photoUrl
+            ? `<img src="${escapeHtml(photoUrl)}" alt="" loading="lazy" decoding="async" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">`
+            : '';
+        return `<span class="member-avatar">${image}<span class="member-avatar-fallback" ${photoUrl ? 'hidden' : ''} aria-hidden="true">${escapeHtml(initials)}</span></span>`;
     }
 
     function toDateInputValue(value) {
@@ -228,11 +466,13 @@
         const tabButtons = document.getElementsByClassName('tab-button');
         for (let i = 0; i < tabButtons.length; i++) {
             tabButtons[i].classList.remove('active');
+            tabButtons[i].setAttribute('aria-selected', 'false');
         }
 
         // Show selected tab content and activate button
         document.getElementById(tabName).classList.add('active');
         evt.currentTarget.classList.add('active');
+        evt.currentTarget.setAttribute('aria-selected', 'true');
 
         // Initialize edit tab when opened
         if (tabName === 'editar-datos') {
@@ -276,32 +516,30 @@
         }
 
         let html = `
-            <p style="font-size:14px; color:var(--muted); margin-bottom:14px;">Marque los miembros que continuarán como perseverantes el próximo año:</p>
             <form id="perseverantes-form">
-                <div class="item-list">
+                <div class="member-list">
         `;
 
         members.forEach(member => {
             const perseverante = member.estadoAnioActual === 'perseverante' || member.perseverante === true;
             html += `
-                    <div class="item member-perseverante" style="display:flex; align-items:center; gap:12px;">
-                        <input type="checkbox" id="perseverante-${escapeHtml(member.id)}" ${perseverante ? 'checked' : ''} style="width:18px; height:18px; flex-shrink:0; accent-color:var(--y); cursor:pointer;">
-                        <label for="perseverante-${escapeHtml(member.id)}" style="font-size:14px; font-weight:600; color:var(--cream); letter-spacing:0; text-transform:none; margin:0; cursor:pointer; display:block;">
-                            <strong>${escapeHtml(member.nombre || 'Sin nombre')}</strong>
-                            ${member.email ? ` — ${escapeHtml(member.email)}` : ''}
+                    <div class="member-row member-row--check">
+                        ${getMemberAvatarHtml(member)}
+                        <label class="member-info" for="perseverante-${escapeHtml(member.id)}">
+                            <span class="member-name">${escapeHtml(member.nombre || 'Sin nombre')}</span>
+                            <span class="member-meta">${escapeHtml(member.email || 'Integrante del grupo')}</span>
+                            <span class="member-status">${perseverante ? 'Perseverante' : 'Activo'}</span>
                         </label>
+                        <input class="member-check" type="checkbox" id="perseverante-${escapeHtml(member.id)}" ${perseverante ? 'checked' : ''} aria-label="Marcar a ${escapeHtml(member.nombre || 'Sin nombre')} como perseverante">
                     </div>
             `;
         });
 
         html += `
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Guardar cambios</button>
                 </div>
             </form>
-            <div style="margin-top:16px;">
-                <button type="submit" form="perseverantes-form" class="btn btn-secondary" style="border-color:rgba(245,197,24,.4); color:var(--y);">
-                    💾 Guardar Estado de Perseverantes
-                </button>
-            </div>
         `;
 
         currentYearMembersDiv.innerHTML = html;
@@ -352,32 +590,30 @@
             const birthdate = toDateInputValue(member.fechaNacimiento);
             const ingreso = toDateInputValue(member.fechaIngresoGrupo);
             const primera = toDateInputValue(member.fechaPrimeraAsamblea);
-            const hasBirth = birthdate ? '✓' : '✗';
-            const hasIngreso = ingreso ? '✓' : '✗';
-            const hasPrimera = primera ? '✓' : '✗';
 
             html += `
-                <div class="item" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; background:var(--bg2);">
-                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                        <strong style="font-size:15px; color:var(--ink);">${escapeHtml(member.nombre || 'Sin nombre')}</strong>
-                        ${member.email ? `<span style="font-size:12px; color:var(--muted);">(${escapeHtml(member.email)})</span>` : ''}
+                <div class="member-row member-edit-card">
+                    ${getMemberAvatarHtml(member)}
+                    <div class="member-info">
+                        <span class="member-name">${escapeHtml(member.nombre || 'Sin nombre')}</span>
+                        <span class="member-meta">${escapeHtml(member.email || 'Integrante del grupo')}</span>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+                    <div class="member-edit-fields">
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ${hasBirth}</label>
-                            <input type="date" id="edit-birth-${escapeHtml(member.id)}" value="${escapeHtml(birthdate)}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <label for="edit-birth-${escapeHtml(member.id)}">Fecha de nacimiento</label>
+                            <input type="date" id="edit-birth-${escapeHtml(member.id)}" value="${escapeHtml(birthdate)}">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ${hasIngreso}</label>
-                            <input type="date" id="edit-ingreso-${escapeHtml(member.id)}" value="${escapeHtml(ingreso)}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <label for="edit-ingreso-${escapeHtml(member.id)}">Fecha de ingreso</label>
+                            <input type="date" id="edit-ingreso-${escapeHtml(member.id)}" value="${escapeHtml(ingreso)}">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ${hasPrimera}</label>
-                            <input type="date" id="edit-primera-${escapeHtml(member.id)}" value="${escapeHtml(primera)}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <label for="edit-primera-${escapeHtml(member.id)}">Primera asamblea</label>
+                            <input type="date" id="edit-primera-${escapeHtml(member.id)}" value="${escapeHtml(primera)}">
                         </div>
                     </div>
-                    <div style="margin-top:12px; text-align:right;">
-                        <button type="button" class="btn btn-primary" data-save-member data-member-id="${escapeHtml(member.id)}" style="padding:10px 20px; font-size:13px;">💾 Guardar</button>
+                    <div class="member-edit-actions">
+                        <button type="button" class="btn btn-primary" data-save-member data-member-id="${escapeHtml(member.id)}">💾 Guardar datos</button>
                     </div>
                 </div>
             `;
