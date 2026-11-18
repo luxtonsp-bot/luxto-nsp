@@ -1603,6 +1603,7 @@
         getRankingGlobalUsuario,
         getTopRankingGlobal,
       } from "../assets/js/asamblea-engine.js";
+      import { getAnnualEvaluationAssemblies } from "../assets/js/attendance-scoring.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
@@ -1935,7 +1936,7 @@
           }
 
           // 4. Calcular estadísticas completas (replicando Code.gs / Excel)
-          await calcularYRenderizarEstadisticas(realUidActual, data);
+          await calcularYRenderizarEstadisticas(data);
 
           // 5. Poblar selector de asamblea para feedback (después de cargar asambleas)
           const asambleasParaFeedback = await cargarAsambleas();
@@ -2026,33 +2027,19 @@
       }
 
       /* ── Calcular y renderizar estadísticas (getDashboard nativo) ── */
-      async function calcularYRenderizarEstadisticas(realUid, memberData) {
+      async function calcularYRenderizarEstadisticas(memberData) {
         try {
           // --- 4.1 Asambleas con reunión (cacheadas) ---
           const asambleasValidas = await cargarAsambleas();
+          const asistenciasMap = await leerAsistenciasMiembro(idsAsistencia);
 
-          // --- 4.2 Filtrar desde fechaIngresoGrupo del miembro ---
-          let fechaIngreso = memberData.fechaIngresoGrupo;
-          if (fechaIngreso && fechaIngreso.toDate)
-            fechaIngreso = fechaIngreso.toDate().toISOString().split("T")[0];
-          else if (typeof fechaIngreso === "object" && fechaIngreso.seconds)
-            fechaIngreso = new Date(fechaIngreso.seconds * 1000)
-              .toISOString()
-              .split("T")[0];
-          else if (
-            typeof fechaIngreso === "string" &&
-            fechaIngreso.length >= 10
-          )
-            fechaIngreso = fechaIngreso.slice(0, 10);
-          // Si no hay fechaIngreso, usar la primera asamblea del año
-          const fechaLimite = fechaIngreso || asambleasValidas[0]?.fecha || "";
-
-          const asambleasDesdeIngreso = asambleasValidas.filter(
-            (a) =>
-              a.fecha >= fechaLimite &&
-              a.fecha <= new Date().toISOString().split("T")[0],
+          // Empezar la evaluación anual en la primera asamblea a la que asistió.
+          const asambleasEvaluadas = getAnnualEvaluationAssemblies(
+            asambleasValidas,
+            asistenciasMap,
+            memberData.fechaIngresoGrupo || memberData.fechaPrimeraAsamblea,
           );
-          const totalAsambleas = asambleasDesdeIngreso.length;
+          const totalAsambleas = asambleasEvaluadas.length;
 
           // --- 4.3 Leer asistencias del miembro (getDoc por asamblea, en paralelo) ---
           let asistencias = 0;
@@ -2062,9 +2049,7 @@
           let ultimaAsistencia = null;
           let ultimaFechaAsistencia = null;
 
-          const asistenciasMap = await leerAsistenciasMiembro(idsAsistencia);
-
-          for (const a of asambleasDesdeIngreso) {
+          for (const a of asambleasEvaluadas) {
             const aData = asistenciasMap.get(a.fecha);
             if (aData) {
               asistencias++;

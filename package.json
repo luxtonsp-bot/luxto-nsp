@@ -11,6 +11,7 @@
     "validate:html": "html-validate *.html --config html-validate.json",
     "validate:rules": "node scripts/validate-rules.js",
     "check:imports": "node scripts/check-imports.mjs",
+    "test:attendance-scoring": "node assets/js/attendance-scoring.test.mjs",
     "test:registration": "node assets/js/registro-name-match.test.mjs",
     "test": "node assets/js/firebase-init.test.mjs && node assets/js/asamblea-engine.test.mjs && node assets/js/serial-queue.test.mjs && node assets/js/migration.test.mjs",
     "migrate:ranking": "node migrate-ranking-global.mjs"

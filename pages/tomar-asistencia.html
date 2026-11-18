@@ -587,8 +587,6 @@
                         };
                         if (!['activo', 'perseverante'].includes(memberData.estadoAnioActual)) {
                             memberUpdate.estadoAnioActual = 'perseverante';
-                            // Actualizar fecha de ingreso al reactivar: desde esta asamblea cuenta su asistencia
-                            memberUpdate.fechaIngresoGrupo = currentAssemblyDate;
                         }
                         transaction.update(memberRef, memberUpdate);
                     }
