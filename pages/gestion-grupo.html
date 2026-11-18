@@ -68,6 +68,71 @@
         }
         .member-list-summary strong { color:var(--cream); font-size:13px; }
         .member-list-summary span { color:var(--muted); font-size:12px; }
+        .continuity-tabs {
+            display:flex;
+            gap:8px;
+            margin:18px 0 12px;
+            padding:5px;
+            border:1px solid var(--border);
+            border-radius:14px;
+            background:rgba(0,0,0,.12);
+        }
+        .continuity-tab {
+            display:flex;
+            flex:1;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+            min-height:42px;
+            padding:8px 12px;
+            border:1px solid transparent;
+            border-radius:10px;
+            background:transparent;
+            color:var(--muted);
+            cursor:pointer;
+            font-size:13px;
+            font-weight:700;
+            transition:all var(--t);
+        }
+        .continuity-tab:hover { background:rgba(255,255,255,.05); color:var(--cream); }
+        .continuity-tab.active { border-color:var(--border2); background:var(--bg3); color:var(--cream); }
+        .continuity-tab-count {
+            display:inline-grid;
+            min-width:23px;
+            height:23px;
+            padding:0 6px;
+            place-items:center;
+            border-radius:99px;
+            background:rgba(255,255,255,.08);
+            color:inherit;
+            font-size:11px;
+        }
+        .continuity-tab[data-continuity-tab="perseverantes"].active .continuity-tab-count { background:rgba(245,197,24,.15); color:var(--y); }
+        .continuity-tab[data-continuity-tab="inactivos"].active .continuity-tab-count { background:rgba(255,255,255,.1); }
+        .continuity-note { margin:0 2px 14px; color:var(--muted); font-size:12px; }
+        .continuity-search { margin-bottom:12px; }
+        .continuity-search input { padding:10px 13px; font-size:14px; }
+        .continuity-pagination {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin-top:14px;
+            color:var(--muted);
+            font-size:12px;
+        }
+        .continuity-pagination-actions { display:flex; gap:8px; }
+        .continuity-pagination button {
+            min-width:76px;
+            padding:7px 11px;
+            border:1px solid var(--border2);
+            border-radius:9px;
+            background:rgba(255,255,255,.04);
+            color:var(--cream);
+            cursor:pointer;
+            font-size:12px;
+        }
+        .continuity-pagination button:disabled { cursor:not-allowed; opacity:.4; }
         .member-row {
             display:flex;
             align-items:center;
@@ -203,6 +268,9 @@
             .member-name { font-size:14px; }
             .member-meta { font-size:11px; }
             .management-card { padding:20px 16px; }
+            .continuity-tabs { gap:4px; padding:4px; }
+            .continuity-tab { gap:5px; min-height:40px; padding:7px 5px; font-size:12px; }
+            .continuity-pagination { align-items:flex-start; flex-direction:column; }
         }
     </style>
     <!-- Firebase imports (same as other pages) -->
@@ -252,7 +320,11 @@
 
         <div class="card management-card">
             <div class="card-title">Integrantes del grupo</div>
-            <p class="card-intro">La lista incluye todos los registros de miembros, sin excluir a nadie por su estado actual. Selecciona quiénes continuarán el próximo año; los demás quedarán inactivos.</p>
+            <p class="card-intro">Todos los registros se incluyen en la decisión anual. Revisa las dos pestañas; quienes no estén marcados como perseverantes quedarán inactivos.</p>
+            <div class="continuity-search">
+                <label for="continuity-search-input">Buscar en todos los integrantes</label>
+                <input type="search" id="continuity-search-input" placeholder="Filtrar por nombre o correo..." autocomplete="off">
+            </div>
             <div id="current-year-members">
                 <div class="empty-state">Cargando miembros...</div>
             </div>
@@ -358,15 +430,45 @@
     const yearToCloseInput = document.getElementById('year-to-close');
     const editSearchInput = document.getElementById('edit-search');
     const editMembersListDiv = document.getElementById('edit-members-list');
+    const continuitySearchInput = document.getElementById('continuity-search-input');
+    let continuityMembers = [];
+    let continuityView = 'inactivos';
+    let continuityPage = 1;
+    let continuitySearch = '';
+    const continuityPageSize = 50;
 
     currentYearMembersDiv.addEventListener('change', (event) => {
         const checkbox = event.target.closest('input[id^="perseverante-"]');
         if (!checkbox) return;
+        const member = continuityMembers.find(item => item.id === checkbox.dataset.memberId);
+        if (member) member._continuaraProximoAnio = checkbox.checked;
         const status = checkbox.closest('.member-row')?.querySelector('.member-status');
         if (status) {
-            status.textContent = checkbox.checked ? 'Perseverante' : 'Inactivo';
+            status.textContent = checkbox.checked ? 'Perseverante' : 'No seleccionada';
             status.className = `member-status ${checkbox.checked ? 'member-status--perseverante' : 'member-status--inactivo'}`;
         }
+        updateContinuityTabCounts();
+    });
+
+    continuitySearchInput.addEventListener('input', () => {
+        continuitySearch = continuitySearchInput.value.trim().toLocaleLowerCase('es');
+        continuityPage = 1;
+        renderContinuityMembers();
+    });
+
+    currentYearMembersDiv.addEventListener('click', (event) => {
+        const tab = event.target.closest('[data-continuity-tab]');
+        if (tab) {
+            continuityView = tab.dataset.continuityTab;
+            continuityPage = 1;
+            renderContinuityMembers();
+            return;
+        }
+
+        const paginationButton = event.target.closest('[data-continuity-page]');
+        if (!paginationButton || paginationButton.disabled) return;
+        continuityPage += Number(paginationButton.dataset.continuityPage);
+        renderContinuityMembers();
     });
 
     // ── Toast ──
@@ -516,7 +618,13 @@
             // Sort by name
             members.sort((a, b) => String(a.nombre || a.name || '').localeCompare(String(b.nombre || b.name || ''), 'es'));
 
-            displayCurrentYearMembers(members);
+            continuityMembers = members.map(member => ({
+                ...member,
+                _continuaraProximoAnio: member.estadoAnioActual
+                    ? member.estadoAnioActual === 'perseverante'
+                    : member.perseverante === true
+            }));
+            displayCurrentYearMembers(continuityMembers);
         } catch (error) {
             console.error("Error loading current year members:", error);
             currentYearMembersDiv.innerHTML = `<div class="empty-state" style="color:var(--err);">Error cargando miembros: ${escapeHtml(error.message || error.code || 'error desconocido')}</div>`;
@@ -530,43 +638,77 @@
             return;
         }
 
-        let html = `
-            <div class="member-list-summary"><strong>Todos los miembros</strong><span>${members.length} registros incluidos</span></div>
-            <form id="perseverantes-form">
-                <div class="member-list">
-        `;
+        continuityPage = 1;
+        renderContinuityMembers();
+    }
 
-        members.forEach(member => {
-            const perseverante = member.estadoAnioActual
-                ? member.estadoAnioActual === 'perseverante'
-                : member.perseverante === true;
-            const statusLabel = perseverante ? 'Perseverante' : member.estadoAnioActual === 'activo' ? 'Activo' : 'Inactivo';
-            const statusClass = perseverante ? 'member-status--perseverante' : member.estadoAnioActual === 'activo' ? 'member-status--activo' : 'member-status--inactivo';
-            html += `
-                    <div class="member-row member-row--check">
-                        ${getMemberAvatarHtml(member)}
-                        <label class="member-info" for="perseverante-${escapeHtml(member.id)}">
-                            <span class="member-name">${escapeHtml(member.nombre || member.name || 'Sin nombre')}</span>
-                            <span class="member-meta">${escapeHtml(member.email || 'Integrante del grupo')}</span>
-                            <span class="member-status ${statusClass}">${statusLabel}</span>
-                        </label>
-                        <input class="member-check" type="checkbox" id="perseverante-${escapeHtml(member.id)}" ${perseverante ? 'checked' : ''} aria-label="Marcar a ${escapeHtml(member.nombre || member.name || 'Sin nombre')} como perseverante">
-                    </div>
-            `;
+    function updateContinuityTabCounts() {
+        const perseverantes = continuityMembers.filter(member => member._continuaraProximoAnio).length;
+        const inactivos = continuityMembers.length - perseverantes;
+        const perseverantesCount = currentYearMembersDiv.querySelector('[data-count="perseverantes"]');
+        const inactivosCount = currentYearMembersDiv.querySelector('[data-count="inactivos"]');
+        if (perseverantesCount) perseverantesCount.textContent = perseverantes;
+        if (inactivosCount) inactivosCount.textContent = inactivos;
+    }
+
+    function renderContinuityMembers() {
+        const perseverantes = continuityMembers.filter(member => member._continuaraProximoAnio);
+        const inactivos = continuityMembers.filter(member => !member._continuaraProximoAnio);
+        const selectedMembers = continuityView === 'perseverantes' ? perseverantes : inactivos;
+        const filteredMembers = selectedMembers.filter(member => {
+            const name = String(member.nombre || member.name || '').toLocaleLowerCase('es');
+            const email = String(member.email || '').toLocaleLowerCase('es');
+            return !continuitySearch || name.includes(continuitySearch) || email.includes(continuitySearch);
         });
+        const pageCount = Math.max(1, Math.ceil(filteredMembers.length / continuityPageSize));
+        continuityPage = Math.min(continuityPage, pageCount);
+        const start = (continuityPage - 1) * continuityPageSize;
+        const visibleMembers = filteredMembers.slice(start, start + continuityPageSize);
+        const rows = visibleMembers.map(member => {
+            const name = String(member.nombre || member.name || 'Sin nombre');
+            const perseverante = member._continuaraProximoAnio;
+            return `
+                <div class="member-row member-row--check">
+                    ${getMemberAvatarHtml(member)}
+                    <label class="member-info" for="perseverante-${escapeHtml(member.id)}">
+                        <span class="member-name">${escapeHtml(name)}</span>
+                        <span class="member-meta">${escapeHtml(member.email || 'Integrante del grupo')}</span>
+                        <span class="member-status ${perseverante ? 'member-status--perseverante' : 'member-status--inactivo'}">${perseverante ? 'Perseverante' : 'No seleccionada'}</span>
+                    </label>
+                    <input class="member-check" type="checkbox" id="perseverante-${escapeHtml(member.id)}" data-member-id="${escapeHtml(member.id)}" ${perseverante ? 'checked' : ''} aria-label="Marcar a ${escapeHtml(name)} como perseverante">
+                </div>
+            `;
+        }).join('');
+        const rangeStart = filteredMembers.length ? start + 1 : 0;
+        const rangeEnd = Math.min(start + continuityPageSize, filteredMembers.length);
 
-        html += `
+        currentYearMembersDiv.innerHTML = `
+            <div class="continuity-tabs" role="tablist" aria-label="Estado para el próximo año">
+                <button class="continuity-tab ${continuityView === 'perseverantes' ? 'active' : ''}" type="button" role="tab" aria-selected="${continuityView === 'perseverantes'}" data-continuity-tab="perseverantes">
+                    Perseverantes <span class="continuity-tab-count" data-count="perseverantes">${perseverantes.length}</span>
+                </button>
+                <button class="continuity-tab ${continuityView === 'inactivos' ? 'active' : ''}" type="button" role="tab" aria-selected="${continuityView === 'inactivos'}" data-continuity-tab="inactivos">
+                    Inactivos <span class="continuity-tab-count" data-count="inactivos">${inactivos.length}</span>
+                </button>
+            </div>
+            ${continuityView === 'inactivos' ? '<p class="continuity-note">Incluye a todos los que no estén seleccionados para perseverar; al guardar quedarán inactivos.</p>' : ''}
+            <form id="perseverantes-form">
+                <div class="member-list">${rows || '<div class="empty-state">No hay integrantes en esta pestaña con ese filtro.</div>'}</div>
+                ${filteredMembers.length > continuityPageSize ? `
+                    <div class="continuity-pagination">
+                        <span>Mostrando ${rangeStart}–${rangeEnd} de ${filteredMembers.length} · página ${continuityPage} de ${pageCount}</span>
+                        <div class="continuity-pagination-actions">
+                            <button type="button" data-continuity-page="-1" ${continuityPage === 1 ? 'disabled' : ''}>Anterior</button>
+                            <button type="button" data-continuity-page="1" ${continuityPage === pageCount ? 'disabled' : ''}>Siguiente</button>
+                        </div>
+                    </div>` : `<div class="continuity-pagination"><span>${filteredMembers.length} de ${selectedMembers.length} integrantes</span></div>`}
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">💾 Guardar cambios</button>
+                    <button type="submit" class="btn btn-primary">💾 Guardar decisión anual (${continuityMembers.length})</button>
                 </div>
             </form>
         `;
 
-        currentYearMembersDiv.innerHTML = html;
-
-        // Add form submit handler
-        const perseverantesForm = document.getElementById('perseverantes-form');
-        perseverantesForm.addEventListener('submit', savePerseverantes);
+        document.getElementById('perseverantes-form').addEventListener('submit', savePerseverantes);
     }
 
     // ── EDITAR DATOS TAB ──
@@ -722,10 +864,9 @@
         e.preventDefault();
 
         try {
-            const checkboxes = document.querySelectorAll('input[id^="perseverante-"]');
-            const updates = [...checkboxes].map(checkbox => ({
-                memberId: checkbox.id.replace('perseverante-', ''),
-                estadoAnioActual: checkbox.checked ? 'perseverante' : 'inactivo'
+            const updates = continuityMembers.map(member => ({
+                memberId: member.id,
+                estadoAnioActual: member._continuaraProximoAnio ? 'perseverante' : 'inactivo'
             }));
             const perseverantesCount = updates.filter(member => member.estadoAnioActual === 'perseverante').length;
             const inactiveCount = updates.length - perseverantesCount;
