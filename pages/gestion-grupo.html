@@ -175,6 +175,29 @@
         }
     });
 
+    // Detección de ad blocker / bloqueo de Firebase
+    // Si Firebase no se conecta en 5s, es probable que un bloqueador (uBlock, AdBlock) lo impida
+    setTimeout(() => {
+        if (!firebase.auth().currentUser) {
+            console.warn('[GESTION-GRUPO] Firebase no restauró sesión tras 5s - posible ad blocker');
+            currentYearMembersDiv.innerHTML = `
+                <div class="empty-state" style="color:var(--err); text-align:center; padding:40px 20px;">
+                    <div style="font-size:48px; margin-bottom:16px;">🛡️</div>
+                    <div style="font-weight:600; font-size:18px; margin-bottom:12px;">No se pudo conectar con Firebase</div>
+                    <div style="font-size:14px; color:var(--muted); max-width:400px; margin:0 auto 24px; line-height:1.6;">
+                        Probablemente un bloqueador de anuncios (uBlock, AdBlock, Brave Shield, etc.) 
+                        está impidiendo la conexión con Firebase.
+                    </div>
+                    <div style="background:rgba(245,197,24,.1); border:1px solid rgba(245,197,24,.3); border-radius:12px; padding:16px; margin:20px auto; max-width:400px; font-size:13px;">
+                        <strong>Solución:</strong> Desactiva el bloqueador para <strong>luzdecristo.dpdns.org</strong> 
+                        y recarga la página (Ctrl+Shift+R).
+                    </div>
+                    <button onclick="location.reload()" class="btn btn-primary" style="margin-top:20px;">🔄 Reintentar conexión</button>
+                </div>
+            `;
+        }
+    }, 5000);
+
     // Tab functionality
     function openTab(evt, tabName) {
         // Hide all tab content
