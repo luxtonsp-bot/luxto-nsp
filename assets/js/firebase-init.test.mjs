@@ -109,6 +109,9 @@ assert(dbRules.includes("'servidor'"), "RTDB rules include servidor role");
 assert(dbRules.includes("'apoyo'"), "RTDB rules include apoyo role");
 assert(firestoreRules.includes("allow create, update: if isStaff();"), "Firestore rules allow staff to create KAHOOT sessions");
 assert(firestoreRules.includes("request.auth.token.email == \"henry.alfaro1@unmsm.edu.pe\""), "Firestore rules include the email fallback for authorized coordinators");
+assert(firestoreRules.includes("getAfter(/databases/$(database)/documents/uid_map/$(request.auth.uid)).data.memberId == resource.data.memberId"), "registration lookup update must match the new uid_map member");
+assert(firestoreRules.includes("resource.data.get('tieneCuenta', false) == false"), "registration lookup cannot be claimed a second time");
+assert(firestoreRules.includes("resource.data.get('uid', null) in [null, '']"), "registration cannot overwrite a member already linked to another account");
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
