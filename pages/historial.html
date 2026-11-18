@@ -476,36 +476,30 @@
                 return;
             }
 
-            // Group by table ID
-            const tablesById = {};
+            const tablesById = new Map();
             tablesSnapshot.forEach(doc => {
-                const tableId = doc.id; // This would be the table definition ID
-                if (!tablesById[tableId]) {
-                    tablesById[tableId] = [];
-                }
-                tablesById[tableId].push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                const tableId = data.tablaDefId || doc.id;
+                if (!tablesById.has(tableId)) tablesById.set(tableId, []);
+                tablesById.get(tableId).push({ id: doc.id, ...data });
             });
 
             let html = `<h2 style="font-family:'Lora',serif; font-size:22px; color:var(--cream); margin-bottom:18px;">Tablas Dinámicas — Año ${year}</h2>`;
 
-            // For each table, we would need to get the definition from historical definitions
-            // For now, we'll show the data we have
-            Object.keys(tablesById).forEach(tableId => {
-                const records = tablesById[tableId];
+            for (const [tableId, records] of tablesById) {
+                const tableName = records[0].tablaNombre || tableId;
                 html += `
                     <div class="historical-table">
-                        <h3>Tabla ID: ${tableId} (${records.length} registros)</h3>
+                        <h3>${escapeHtml(tableName)} (${records.length} registros)</h3>
                         <div class="table-records">
                     `;
 
-                // Show first few records as sample
                 const sampleSize = Math.min(5, records.length);
                 records.slice(0, sampleSize).forEach(record => {
                     html += `<div class="record">`;
-                    // Show some fields - in reality we'd format based on table definition
                     Object.keys(record).forEach(key => {
-                        if (!['id', 'fechaCreacion'].includes(key)) {
-                            html += `<span><strong>${key}:</strong> ${record[key]} </span> · `;
+                        if (!['id', 'fechaCreacion', 'fechaArchivado', 'fechacopiado', 'tablaDefId', 'tablaNombre', 'idFilaOriginal', 'año'].includes(key)) {
+                            html += `<span><strong>${escapeHtml(key)}:</strong> ${escapeHtml(formatHistoricalValue(record[key]))} </span> · `;
                         }
                     });
                     html += `</div>`;
@@ -516,7 +510,7 @@
                 }
 
                 html += `</div></div>`;
-            });
+            }
 
             historyContentDiv.innerHTML = html;
 
@@ -653,6 +647,25 @@
     }
 
     // Helper function to format date
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[char]);
+    }
+
+    function formatHistoricalValue(value) {
+        if (value && typeof value.toDate === 'function') {
+            return value.toDate().toLocaleString();
+        }
+        if (value instanceof Date) return value.toLocaleString();
+        if (value && typeof value === 'object') return JSON.stringify(value);
+        return String(value ?? '');
+    }
+
     function formatDate(dateString) {
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         return new Date(dateString).toLocaleDateString('es-ES', options);

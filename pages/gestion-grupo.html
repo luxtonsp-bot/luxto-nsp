@@ -13,8 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <!-- Shared permissions module -->
-    <script type="module" src="../assets/js/auth-permissions.js"></script>
+    <script src="../assets/js/auth-permissions.js"></script>
 </head>
 <body>
 
@@ -95,10 +94,10 @@
 
         <div class="card" style="border-color:rgba(224,60,60,.3);">
             <div class="card-title">🏁 Cierre de Año Académico</div>
-            <p class="section-desc" style="margin-bottom:14px;">Esta operación calculará las métricas finales de todos los miembros activos y las guardará en el histórico.</p>
+            <p class="section-desc" style="margin-bottom:14px;">Esta operación guardará en el histórico una copia de los miembros, asistencias, tablas dinámicas y registros KAHOOT del año seleccionado.</p>
             <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25); margin-bottom:20px;">
                 <div class="item-title" style="color:#f08080;">⚠️ Importante</div>
-                <div class="item-meta">Esta operación no se puede deshacer. Asegúrese de haber revisado todos los datos antes de proceder.</div>
+                <div class="item-meta">El cierre no calcula notas ni cambia el estado de los miembros. Un cierre completado no se puede volver a ejecutar; si ocurre un error, puede reintentarlo sin duplicar registros.</div>
             </div>
 
             <div style="max-width:240px;">
@@ -134,6 +133,7 @@
         firebase.initializeApp(firebaseConfig);
     }
     const db = firebase.firestore();
+    db.settings({ experimentalForceLongPolling: true });
     const auth = firebase.auth();
 
     let currentYear = new Date().getFullYear();
@@ -156,6 +156,22 @@
         setTimeout(() => t.className = "", 3200);
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[char]);
+    }
+
+    function toDateInputValue(value) {
+        if (!value) return '';
+        const date = value.toDate ? value.toDate() : new Date(value);
+        return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+    }
+
     function cerrarSesion() {
         firebase.auth().signOut().then(() => { window.location.href = 'login.html'; });
     }
@@ -163,13 +179,15 @@
     // Initialize
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
             try {
                 await AuthPermissions.initStaffPermissionCheck();
-            } catch (e) {
-                console.warn('AuthPermissions check failed, continuando:', e);
+                await loadCurrentYearMembers();
+            } catch (error) {
+                console.error('[GESTION-GRUPO] No se pudo inicializar la página:', error);
+                const message = error.message || 'No se pudo verificar el acceso.';
+                currentYearMembersDiv.innerHTML = `<div class="empty-state" style="color:var(--err);">${escapeHtml(message)}</div>`;
+                editMembersListDiv.innerHTML = `<div class="empty-state" style="color:var(--err);">${escapeHtml(message)}</div>`;
             }
-            loadCurrentYearMembers();
         } else {
             window.location.href = 'login.html';
         }
@@ -228,7 +246,7 @@
             currentYearMembersDiv.innerHTML = '<div class="empty-state">Cargando miembros...</div>';
 
             const membersSnapshot = await db.collection('members')
-                .where('estadoAnioActual', '==', 'activo')
+                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
                 .get();
 
             const members = [];
@@ -241,12 +259,12 @@
             });
 
             // Sort by name
-            members.sort((a, b) => a.nombre.localeCompare(b.nombre));
+            members.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
 
             displayCurrentYearMembers(members);
         } catch (error) {
             console.error("Error loading current year members:", error);
-            currentYearMembersDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>';
+            currentYearMembersDiv.innerHTML = `<div class="empty-state" style="color:var(--err);">Error cargando miembros: ${escapeHtml(error.message || error.code || 'error desconocido')}</div>`;
         }
     }
 
@@ -267,10 +285,10 @@
             const perseverante = member.estadoAnioActual === 'perseverante' || member.perseverante === true;
             html += `
                     <div class="item member-perseverante" style="display:flex; align-items:center; gap:12px;">
-                        <input type="checkbox" id="perseverante-${member.id}" ${perseverante ? 'checked' : ''} style="width:18px; height:18px; flex-shrink:0; accent-color:var(--y); cursor:pointer;">
-                        <label for="perseverante-${member.id}" style="font-size:14px; font-weight:600; color:var(--cream); letter-spacing:0; text-transform:none; margin:0; cursor:pointer; display:block;">
-                            <strong>${member.nombre || 'Sin nombre'}</strong>
-                            ${member.email ? ` — ${member.email}` : ''}
+                        <input type="checkbox" id="perseverante-${escapeHtml(member.id)}" ${perseverante ? 'checked' : ''} style="width:18px; height:18px; flex-shrink:0; accent-color:var(--y); cursor:pointer;">
+                        <label for="perseverante-${escapeHtml(member.id)}" style="font-size:14px; font-weight:600; color:var(--cream); letter-spacing:0; text-transform:none; margin:0; cursor:pointer; display:block;">
+                            <strong>${escapeHtml(member.nombre || 'Sin nombre')}</strong>
+                            ${member.email ? ` — ${escapeHtml(member.email)}` : ''}
                         </label>
                     </div>
             `;
@@ -314,12 +332,12 @@
             });
 
             // Sort by name
-            allMembersForEdit.sort((a, b) => a.nombre.localeCompare(b.nombre));
+            allMembersForEdit.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
 
             displayEditMembers(allMembersForEdit);
         } catch (error) {
             console.error("Error loading members for edit:", error);
-            editMembersListDiv.innerHTML = '<div class="empty-state" style="color:var(--err);">Error cargando miembros</div>';
+            editMembersListDiv.innerHTML = `<div class="empty-state" style="color:var(--err);">Error cargando miembros: ${escapeHtml(error.message || error.code || 'error desconocido')}</div>`;
         }
     }
 
@@ -331,9 +349,9 @@
 
         let html = '';
         members.forEach(member => {
-            const birthdate = member.fechaNacimiento ? (member.fechaNacimiento.toDate ? member.fechaNacimiento.toDate().toISOString().split('T')[0] : member.fechaNacimiento) : '';
-            const ingreso = member.fechaIngresoGrupo ? (member.fechaIngresoGrupo.toDate ? member.fechaIngresoGrupo.toDate().toISOString().split('T')[0] : member.fechaIngresoGrupo) : '';
-            const primera = member.fechaPrimeraAsamblea ? (member.fechaPrimeraAsamblea.toDate ? member.fechaPrimeraAsamblea.toDate().toISOString().split('T')[0] : member.fechaPrimeraAsamblea) : '';
+            const birthdate = toDateInputValue(member.fechaNacimiento);
+            const ingreso = toDateInputValue(member.fechaIngresoGrupo);
+            const primera = toDateInputValue(member.fechaPrimeraAsamblea);
             const hasBirth = birthdate ? '✓' : '✗';
             const hasIngreso = ingreso ? '✓' : '✗';
             const hasPrimera = primera ? '✓' : '✗';
@@ -341,25 +359,25 @@
             html += `
                 <div class="item" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; background:var(--bg2);">
                     <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                        <strong style="font-size:15px; color:var(--ink);">${member.nombre || 'Sin nombre'}</strong>
-                        ${member.email ? `<span style="font-size:12px; color:var(--muted);">(${member.email})</span>` : ''}
+                        <strong style="font-size:15px; color:var(--ink);">${escapeHtml(member.nombre || 'Sin nombre')}</strong>
+                        ${member.email ? `<span style="font-size:12px; color:var(--muted);">(${escapeHtml(member.email)})</span>` : ''}
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
                         <div>
                             <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha nacimiento ${hasBirth}</label>
-                            <input type="date" id="edit-birth-${member.id}" value="${birthdate}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <input type="date" id="edit-birth-${escapeHtml(member.id)}" value="${escapeHtml(birthdate)}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
                         </div>
                         <div>
                             <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Fecha ingreso ${hasIngreso}</label>
-                            <input type="date" id="edit-ingreso-${member.id}" value="${ingreso}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <input type="date" id="edit-ingreso-${escapeHtml(member.id)}" value="${escapeHtml(ingreso)}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
                         </div>
                         <div>
                             <label style="display:block; font-size:11px; font-weight:600; color:var(--ink); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Primera asamblea ${hasPrimera}</label>
-                            <input type="date" id="edit-primera-${member.id}" value="${primera}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
+                            <input type="date" id="edit-primera-${escapeHtml(member.id)}" value="${escapeHtml(primera)}" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; background:var(--bg3); color:var(--ink);">
                         </div>
                     </div>
                     <div style="margin-top:12px; text-align:right;">
-                        <button type="button" class="btn btn-primary" onclick="saveMemberData('${member.id}')" style="padding:10px 20px; font-size:13px;">💾 Guardar</button>
+                        <button type="button" class="btn btn-primary" data-save-member data-member-id="${escapeHtml(member.id)}" style="padding:10px 20px; font-size:13px;">💾 Guardar</button>
                     </div>
                 </div>
             `;
@@ -367,6 +385,11 @@
 
         editMembersListDiv.innerHTML = html;
     }
+
+    editMembersListDiv.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-save-member]');
+        if (button) window.saveMemberData(button.dataset.memberId);
+    });
 
     // Search filter for edit tab
     editSearchInput.addEventListener('input', (e) => {
@@ -394,12 +417,19 @@
 
         try {
             const updateData = {};
-            if (birthdate) {
+            if (birthdate !== '') {
                 updateData.fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate));
                 updateData.fechaNacimientoMMdd = birthdate.substring(5, 10);
+            } else {
+                updateData.fechaNacimiento = null;
+                updateData.fechaNacimientoMMdd = null;
             }
-            if (ingreso) updateData.fechaIngresoGrupo = firebase.firestore.Timestamp.fromDate(new Date(ingreso));
-            if (primera) updateData.fechaPrimeraAsamblea = firebase.firestore.Timestamp.fromDate(new Date(primera));
+            updateData.fechaIngresoGrupo = ingreso
+                ? firebase.firestore.Timestamp.fromDate(new Date(ingreso))
+                : null;
+            updateData.fechaPrimeraAsamblea = primera
+                ? firebase.firestore.Timestamp.fromDate(new Date(primera))
+                : null;
             updateData.fechaActualizacion = firebase.firestore.FieldValue.serverTimestamp();
 
             await db.collection('members').doc(memberId).update(updateData);
@@ -408,16 +438,22 @@
             // Refresh the member in our cache
             const idx = allMembersForEdit.findIndex(m => m.id === memberId);
             if (idx !== -1) {
-                if (birthdate) {
-                    allMembersForEdit[idx].fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate));
-                    allMembersForEdit[idx].fechaNacimientoMMdd = birthdate.substring(5, 10);
-                }
-                if (ingreso) allMembersForEdit[idx].fechaIngresoGrupo = firebase.firestore.Timestamp.fromDate(new Date(ingreso));
-                if (primera) allMembersForEdit[idx].fechaPrimeraAsamblea = firebase.firestore.Timestamp.fromDate(new Date(primera));
+                allMembersForEdit[idx].fechaNacimiento = birthdate
+                    ? firebase.firestore.Timestamp.fromDate(new Date(birthdate))
+                    : null;
+                allMembersForEdit[idx].fechaNacimientoMMdd = birthdate
+                    ? birthdate.substring(5, 10)
+                    : null;
+                allMembersForEdit[idx].fechaIngresoGrupo = ingreso
+                    ? firebase.firestore.Timestamp.fromDate(new Date(ingreso))
+                    : null;
+                allMembersForEdit[idx].fechaPrimeraAsamblea = primera
+                    ? firebase.firestore.Timestamp.fromDate(new Date(primera))
+                    : null;
             }
         } catch (error) {
             console.error("Error saving member data:", error);
-            toast('Error al guardar datos', 'err');
+            toast(`Error al guardar: ${error.message || error.code || 'verifica los permisos'}`, 'err');
         }
     };
 
@@ -432,30 +468,25 @@
 
         try {
             const checkboxes = document.querySelectorAll('input[id^="perseverante-"]');
-            const updates = [];
+            const batch = db.batch();
 
             checkboxes.forEach(checkbox => {
                 const memberId = checkbox.id.replace('perseverante-', '');
                 const isPerseverante = checkbox.checked;
-                updates.push(updateMemberStatus(memberId, isPerseverante ? 'perseverante' : 'activo'));
+                const memberRef = db.collection('members').doc(memberId);
+                batch.update(memberRef, {
+                    estadoAnioActual: isPerseverante ? 'perseverante' : 'activo',
+                    fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+                });
             });
 
-            await Promise.all(updates);
+            await batch.commit();
             toast('Estado de perseverantes guardado exitosamente', 'ok');
-            loadCurrentYearMembers(); // Refresh display
+            await loadCurrentYearMembers();
         } catch (error) {
             console.error("Error saving perseverance status:", error);
-            toast('Error al guardar estado de perseverantes', 'err');
+            toast(`Error al guardar: ${error.message || error.code || 'verifica los permisos'}`, 'err');
         }
-    }
-
-    // Update member status (activo/perseverante/dado_de_baja)
-    async function updateMemberStatus(memberId, status) {
-        const memberRef = db.collection('members').doc(memberId);
-        return memberRef.update({
-            estadoAnioActual: status,
-            fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
-        });
     }
 
     // Add new member
@@ -463,7 +494,7 @@
         e.preventDefault();
 
         try {
-            const name = document.getElementById('new-member-name').value.trim();
+            const name = document.getElementById('new-member-name').value.trim().replace(/\s+/g, ' ');
             const birthdate = document.getElementById('new-member-birthdate').value;
             const firstAssembly = document.getElementById('new-member-first-assembly').value;
 
@@ -482,8 +513,10 @@
             // Calcular MM-DD para consultas de cumpleaños
             const birthMMdd = birthdate.substring(5, 10); // YYYY-MM-DD -> MM-DD
 
-            // Create new member document with auto-generated ID (temporal UID)
-            const newMemberRef = await db.collection('members').add({
+            // Create member and registration lookup together to avoid partial records.
+            const newMemberRef = db.collection('members').doc();
+            const batch = db.batch();
+            batch.set(newMemberRef, {
                 nombre: name,
                 fechaNacimiento: birthdate,
                 fechaNacimientoMMdd: birthMMdd,
@@ -494,11 +527,11 @@
                 fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Also create public lookup in miembros_registro (for registro.html validation)
-            await db.collection('miembros_registro').doc(newMemberRef.id).set({
+            batch.set(db.collection('miembros_registro').doc(newMemberRef.id), {
                 nombre: name,
-                memberId: newMemberRef.id  // ✅ Requerido para que registro.html lo detecte
+                memberId: newMemberRef.id
             });
+            await batch.commit();
 
             newMemberResult.innerHTML = `
                 <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
@@ -511,14 +544,14 @@
             newMemberForm.reset();
 
             // Refresh members list
-            loadCurrentYearMembers();
+            await loadCurrentYearMembers();
 
         } catch (error) {
             console.error("Error adding new member:", error);
             newMemberResult.innerHTML = `
                 <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);">
                     <div class="item-title" style="color:#f08080;">✗ Error al agregar nuevo miembro</div>
-                    <div class="item-meta">${error.message}</div>
+                    <div class="item-meta">${escapeHtml(error.message || error.code || 'Error desconocido')}</div>
                 </div>
             `;
         }
@@ -526,81 +559,33 @@
 
     // Close year functionality
     closeYearButton.addEventListener('click', async () => {
-        const yearToClose = parseInt(yearToCloseInput.value);
+        const yearToClose = Number(yearToCloseInput.value);
 
-        if (isNaN(yearToClose) || yearToClose < 2020 || yearToClose > 2030) {
-            toast('Por favor, ingrese un año válido entre 2020 y 2030', 'err');
+        if (!Number.isInteger(yearToClose) || yearToClose < 2020 || yearToClose > new Date().getFullYear()) {
+            toast(`Ingrese un año válido entre 2020 y ${new Date().getFullYear()}`, 'err');
             return;
         }
 
-        if (!confirm(`¿Está seguro de que desea cerrar el año ${yearToClose}?\\n\\nEsta operación:\\n1. Calculará las métricas finales de todos los miembros activos\\n2. Guardará los datos en el histórico/${yearToClose}/\\n3. Preparará el sistema para el año ${yearToClose + 1}\\n\\nEsta acción no se puede deshacer.`)) {
+        if (!confirm(`¿Desea archivar el año ${yearToClose}?\\n\\nSe guardarán copias de los miembros, asistencias, tablas dinámicas y registros KAHOOT en el histórico/${yearToClose}.\\n\\nNo se calcularán notas ni se cambiarán estados de miembros. El cierre completado no se puede sobrescribir.`)) {
             return;
         }
 
         try {
             closeYearButton.disabled = true;
-            closeYearButton.textContent = 'Cerrando año...';
-            closeYearResult.innerHTML = '<div class="empty-state">Iniciando proceso de cierre de año...</div>';
+            closeYearButton.textContent = 'Archivando año...';
+            closeYearResult.innerHTML = '<div class="empty-state">Leyendo los datos del año antes de archivarlos...</div>';
 
-            // Step 1: Get all active members for the year
-            const membersSnapshot = await db.collection('members')
-                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
-                .get();
-
-            const members = [];
-            membersSnapshot.forEach(doc => {
-                members.push({ id: doc.id, ...doc.data() });
-            });
-
-            closeYearResult.innerHTML = `<div class="empty-state">Procesando ${members.length} miembros...</div>`;
-
-            // Step 2: For each member, calculate final metrics and save to historical
-            const batch = db.batch();
-            const historicalMembersRef = db.collection('historico').doc(yearToClose.toString()).collection('members');
-
-            for (const member of members) {
-                // Calculate metrics (simplified - in reality would be more complex)
-                const metrics = await calculateMemberMetrics(member.id, yearToClose);
-
-                const historicalMemberRef = historicalMembersRef.doc(member.id);
-                batch.set(historicalMemberRef, {
-                    ...member,
-                    año: yearToClose,
-                    fechacierre: firebase.firestore.FieldValue.serverTimestamp(),
-                    ...metrics
-                });
-            }
-
-            // Step 3: Copy other collections to historical
-            await copyCollectionToHistorical('asistencia', yearToClose, batch);
-            await copyCollectionToHistorical('tablas_dinamicas', yearToClose, batch);
-            await copyCollectionToHistorical('asambleas_kahoot', yearToClose, batch);
-            await copyCollectionToHistorical('sugerencias', yearToClose, batch);
-            await copyCollectionToHistorical('feedback', yearToClose, batch);
-
-            // Step 4: Commit the batch
-            await batch.commit();
-
-            // Step 5: Update members who are not perseverantes to 'dado_de_baja'
-            const nonPerseverantes = members.filter(m => m.estadoAnioActual !== 'perseverante');
-            const updateBatch = db.batch();
-            for (const member of nonPerseverantes) {
-                const memberRef = db.collection('members').doc(member.id);
-                updateBatch.update(memberRef, {
-                    estadoAnioActual: 'dado_de_baja',
-                    fechaBaja: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
-            await updateBatch.commit();
+            const counts = await archiveAcademicYear(yearToClose);
 
             closeYearResult.innerHTML = `
                 <div class="item" style="background:rgba(45,186,111,.08); border-color:rgba(45,186,111,.25);">
-                    <div class="item-title" style="color:#7fe8aa;">🎉 ¡Año ${yearToClose} cerrado exitosamente!</div>
+                    <div class="item-title" style="color:#7fe8aa;">✓ Año ${yearToClose} archivado exitosamente</div>
                     <div class="item-meta">
-                        • ${members.length} miembros procesados y guardados en histórico<br>
-                        • ${nonPerseverantes.length} miembros marcados como dados de baja<br>
-                        • Datos copiados a colecciones históricas<br>
-                        • Sistema preparado para año ${yearToClose + 1}
+                        • ${counts.members} miembros archivados<br>
+                        • ${counts.attendance} registros de asistencia archivados en ${counts.assemblies} fechas<br>
+                        • ${counts.tableDefinitions} definiciones y ${counts.tableRows} filas de tablas archivadas<br>
+                        • ${counts.kahoot} registros KAHOOT archivados; ${counts.kahootSessions} sesiones ya presentes en el histórico<br>
+                        • No se modificaron los estados de los miembros
                     </div>
                 </div>
             `;
@@ -610,7 +595,7 @@
             closeYearResult.innerHTML = `
                 <div class="item" style="background:rgba(224,60,60,.08); border-color:rgba(224,60,60,.25);">
                     <div class="item-title" style="color:#f08080;">✗ Error al cerrar el año</div>
-                    <div class="item-meta">${error.message}</div>
+                    <div class="item-meta">${escapeHtml(error.message || error.code || 'Error desconocido')}</div>
                 </div>
             `;
         } finally {
@@ -619,52 +604,162 @@
         }
     });
 
-    // Calculate member metrics for historical record
-    async function calculateMemberMetrics(memberId, year) {
-        // This is a simplified version - in reality would calculate:
-        // - % de asistencia
-        // - Nota de rendimiento
-        // - Tardanzas
-        // - Estado final
-        // etc.
-
-        return {
-            porcentajeAsistencia: 0, // Would calculate from asistencia records
-            notaRendimiento: 0,     // Would calculate from asistencia and puntualidad
-            tardanzasTotales: 0,    // Would count from asistencia records
-            estadoFinal: 'activo'   // Would determine based on rules
-        };
+    async function commitArchiveWrites(writes) {
+        for (let index = 0; index < writes.length; index += 400) {
+            const batch = db.batch();
+            writes.slice(index, index + 400).forEach(({ ref, data }) => batch.set(ref, data));
+            await batch.commit();
+        }
     }
 
-    // Copy collection to historical
-    async function copyCollectionToHistorical(collectionName, year, batch) {
-        try {
-            const collections = {
-                'asistencia': ['historico', year, 'asistencia'],
-                'tablas_dinamicas': ['historico', year, 'tablas_dinamicas'],
-                'asambleas_kahoot': ['historico', year, 'asambleas_kahoot'],
-                'sugerencias': ['historico', year, 'sugerencias'],
-                'feedback': ['historico', year, 'feedback']
-            };
+    async function archiveAcademicYear(year) {
+        const yearString = String(year);
+        const historicalRef = db.collection('historico').doc(yearString);
+        const existingYear = await historicalRef.get();
+        if (existingYear.data()?.cierreAnual?.estado === 'completado') {
+            throw new Error(`El año ${year} ya tiene un cierre completado. No se sobrescribieron sus datos.`);
+        }
 
-            const pathParts = collections[collectionName];
-            if (!pathParts) return;
+        const historicalMembersRef = historicalRef.collection('members');
+        const historicalAttendanceRef = historicalRef.collection('asistencia');
+        const historicalTablesRef = historicalRef.collection('tablas_dinamicas');
+        const historicalDefinitionsRef = historicalRef.collection('tablas_definiciones');
+        const historicalKahootRef = historicalRef.collection('asambleas_kahoot');
+        const writes = [];
+        const counts = {
+            members: 0,
+            assemblies: 0,
+            attendance: 0,
+            tableDefinitions: 0,
+            tableRows: 0,
+            kahoot: 0,
+            kahootSessions: 0
+        };
+        const copiedAt = firebase.firestore.FieldValue.serverTimestamp();
 
-            const collectionRef = db.collection(...pathParts);
-            const snapshot = await collectionRef.get();
+        const [membersSnapshot, assembliesSnapshot, definitionsSnapshot, kahootSnapshot, savedKahootSnapshot, kahootSessionsSnapshot] = await Promise.all([
+            db.collection('members').get(),
+            db.collection('asambleas').get(),
+            db.collection('tablas_definiciones').where('año', '==', year).get(),
+            db.collection('asambleas_kahoot')
+                .where('fecha', '>=', `${yearString}-01-01`)
+                .where('fecha', '<=', `${yearString}-12-31`)
+                .get(),
+            historicalKahootRef.get(),
+            historicalRef.collection('kahoot_sessions').get()
+        ]);
 
-            snapshot.forEach(doc => {
-                const historicalRef = db.collection(...pathParts).doc(doc.id);
-                batch.set(historicalRef, {
-                    ...doc.data(),
+        membersSnapshot.forEach(memberDoc => {
+            writes.push({
+                ref: historicalMembersRef.doc(memberDoc.id),
+                data: {
+                    ...memberDoc.data(),
                     año: year,
-                    fechacopiado: firebase.firestore.FieldValue.serverTimestamp()
+                    fechacopiado: copiedAt
+                }
+            });
+            counts.members++;
+        });
+
+        const assemblyDates = [];
+        assembliesSnapshot.forEach(assemblyDoc => {
+            const date = assemblyDoc.id;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date.startsWith(`${yearString}-`)) {
+                assemblyDates.push(date);
+            }
+        });
+        const uniqueAssemblyDates = [...new Set(assemblyDates)].sort();
+        const attendanceDates = new Set();
+
+        for (let index = 0; index < uniqueAssemblyDates.length; index += 10) {
+            const dateSnapshots = await Promise.all(uniqueAssemblyDates.slice(index, index + 10).map(date =>
+                db.collection('asistencia').doc(yearString).collection(date).get()
+            ));
+
+            dateSnapshots.forEach((attendanceSnapshot, snapshotIndex) => {
+                const date = uniqueAssemblyDates[index + snapshotIndex];
+                if (!attendanceSnapshot.empty) attendanceDates.add(date);
+                attendanceSnapshot.forEach(attendanceDoc => {
+                    writes.push({
+                        ref: historicalAttendanceRef.doc(`${date}_${attendanceDoc.id}`),
+                        data: {
+                            ...attendanceDoc.data(),
+                            año: year,
+                            fecha: date,
+                            uid: attendanceDoc.data().uid || attendanceDoc.id,
+                            idMiembro: attendanceDoc.id,
+                            fechacopiado: copiedAt
+                        }
+                    });
+                    counts.attendance++;
                 });
             });
-        } catch (error) {
-            console.error(`Error copying ${collectionName} to historical:`, error);
-            // Don't throw - continue with other collections
         }
+        counts.assemblies = attendanceDates.size;
+
+        for (let index = 0; index < definitionsSnapshot.docs.length; index += 10) {
+            const definitions = definitionsSnapshot.docs.slice(index, index + 10);
+            const rowsByDefinition = await Promise.all(definitions.map(definition =>
+                db.collection('tablas_dinamicas').doc(yearString).collection(definition.id).get()
+            ));
+
+            definitions.forEach((definition, definitionIndex) => {
+                const definitionData = definition.data();
+                writes.push({
+                    ref: historicalDefinitionsRef.doc(definition.id),
+                    data: {
+                        ...definitionData,
+                        fechaArchivado: copiedAt
+                    }
+                });
+                counts.tableDefinitions++;
+
+                rowsByDefinition[definitionIndex].forEach(row => {
+                    writes.push({
+                        ref: historicalTablesRef.doc(`${definition.id}__${row.id}`),
+                        data: {
+                            ...row.data(),
+                            año: year,
+                            tablaDefId: definition.id,
+                            tablaNombre: definitionData.nombre || definition.id,
+                            idFilaOriginal: row.id,
+                            fechacopiado: copiedAt
+                        }
+                    });
+                    counts.tableRows++;
+                });
+            });
+        }
+
+        const existingKahootIds = new Set(savedKahootSnapshot.docs.map(doc => doc.id));
+        kahootSnapshot.forEach(kahootDoc => {
+            if (existingKahootIds.has(kahootDoc.id)) return;
+            writes.push({
+                ref: historicalKahootRef.doc(kahootDoc.id),
+                data: {
+                    ...kahootDoc.data(),
+                    año: year,
+                    fechacopiado: copiedAt
+                }
+            });
+            counts.kahoot++;
+        });
+        counts.kahootSessions = kahootSessionsSnapshot.size;
+
+        closeYearResult.innerHTML = `<div class="empty-state">Guardando ${writes.length} documentos históricos en lotes seguros...</div>`;
+        await commitArchiveWrites(writes);
+
+        await historicalRef.set({
+            año: year,
+            cierreAnual: {
+                estado: 'completado',
+                version: 1,
+                fechaCierre: firebase.firestore.FieldValue.serverTimestamp(),
+                conteos: counts
+            }
+        }, { merge: true });
+
+        return counts;
     }
 </script>
 </body>

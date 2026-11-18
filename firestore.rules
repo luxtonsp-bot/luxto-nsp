@@ -45,7 +45,16 @@ service cloud.firestore {
     match /members/{memberId} {
       allow read: if isAuth();
       allow list: if isAuth();
-      allow update: if (isOwnMemberId(memberId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])) || isCoordinator();
+      allow update: if (isCoordinator()
+        || (isStaff() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'fechaNacimiento',
+          'fechaNacimientoMMdd',
+          'fechaIngresoGrupo',
+          'fechaPrimeraAsamblea',
+          'fechaActualizacion',
+          'estadoAnioActual'
+        ]))
+        || (isOwnMemberId(memberId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])));
       allow update: if isAuth() && request.resource.data.uid == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido']);
       // Permitir a staff crear placeholders (sin uid) y a usuarios crear su propio doc con su uid
       allow create: if isAuth() && (
