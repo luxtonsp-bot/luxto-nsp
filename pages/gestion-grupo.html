@@ -57,6 +57,17 @@
         .management-card .card-title { margin-bottom:8px; }
         .card-intro { margin-bottom:20px; color:var(--muted); font-size:14px; }
         .member-list { display:grid; gap:10px; }
+        .member-list-summary {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin:0 0 12px;
+            padding:0 2px 10px;
+            border-bottom:1px solid var(--border);
+        }
+        .member-list-summary strong { color:var(--cream); font-size:13px; }
+        .member-list-summary span { color:var(--muted); font-size:12px; }
         .member-row {
             display:flex;
             align-items:center;
@@ -89,6 +100,9 @@
             font-weight:700;
             text-transform:uppercase;
         }
+        .member-status--perseverante { border-color:rgba(245,197,24,.2); background:rgba(245,197,24,.08); color:var(--y); }
+        .member-status--activo { border-color:rgba(45,186,111,.2); background:rgba(45,186,111,.08); color:#7fe8aa; }
+        .member-status--inactivo { border-color:var(--border); background:rgba(255,255,255,.035); color:var(--muted); }
         .member-avatar img {
             position:absolute;
             inset:0;
@@ -238,7 +252,7 @@
 
         <div class="card management-card">
             <div class="card-title">Integrantes del grupo</div>
-            <p class="card-intro">Selecciona quiénes continuarán como perseverantes el próximo año.</p>
+            <p class="card-intro">La lista incluye todos los registros de miembros, sin excluir a nadie por su estado actual. Selecciona quiénes continuarán el próximo año; los demás quedarán inactivos.</p>
             <div id="current-year-members">
                 <div class="empty-state">Cargando miembros...</div>
             </div>
@@ -276,7 +290,7 @@
     <div id="editar-datos" class="tab-content">
         <div class="card management-card">
             <div class="card-title">Editar datos de integrantes</div>
-            <p class="card-intro">Actualiza las fechas importantes de cada persona.</p>
+            <p class="card-intro">Se muestran todos los registros de miembros. Actualiza las fechas importantes de cada persona.</p>
             <div class="member-search-wrap">
                 <label for="edit-search">Buscar integrante</label>
                 <div class="member-search"><input type="text" id="edit-search" placeholder="Escribe un nombre para filtrar..."></div>
@@ -349,7 +363,10 @@
         const checkbox = event.target.closest('input[id^="perseverante-"]');
         if (!checkbox) return;
         const status = checkbox.closest('.member-row')?.querySelector('.member-status');
-        if (status) status.textContent = checkbox.checked ? 'Perseverante' : 'Activo';
+        if (status) {
+            status.textContent = checkbox.checked ? 'Perseverante' : 'Inactivo';
+            status.className = `member-status ${checkbox.checked ? 'member-status--perseverante' : 'member-status--inactivo'}`;
+        }
     });
 
     // ── Toast ──
@@ -480,14 +497,12 @@
         }
     }
 
-    // Load current year active members
+    // Load every member so no one is omitted from next year's continuation decision.
     async function loadCurrentYearMembers() {
         try {
             currentYearMembersDiv.innerHTML = '<div class="empty-state">Cargando miembros...</div>';
 
-            const membersSnapshot = await db.collection('members')
-                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
-                .get();
+            const membersSnapshot = await db.collection('members').get();
 
             const members = [];
             membersSnapshot.forEach(doc => {
@@ -499,7 +514,7 @@
             });
 
             // Sort by name
-            members.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
+            members.sort((a, b) => String(a.nombre || a.name || '').localeCompare(String(b.nombre || b.name || ''), 'es'));
 
             displayCurrentYearMembers(members);
         } catch (error) {
@@ -511,26 +526,31 @@
     // Display current year members with perseverance checkboxes
     function displayCurrentYearMembers(members) {
         if (members.length === 0) {
-            currentYearMembersDiv.innerHTML = '<div class="empty-state">No hay miembros activos para este año</div>';
+            currentYearMembersDiv.innerHTML = '<div class="empty-state">No hay registros en la colección de miembros</div>';
             return;
         }
 
         let html = `
+            <div class="member-list-summary"><strong>Todos los miembros</strong><span>${members.length} registros incluidos</span></div>
             <form id="perseverantes-form">
                 <div class="member-list">
         `;
 
         members.forEach(member => {
-            const perseverante = member.estadoAnioActual === 'perseverante' || member.perseverante === true;
+            const perseverante = member.estadoAnioActual
+                ? member.estadoAnioActual === 'perseverante'
+                : member.perseverante === true;
+            const statusLabel = perseverante ? 'Perseverante' : member.estadoAnioActual === 'activo' ? 'Activo' : 'Inactivo';
+            const statusClass = perseverante ? 'member-status--perseverante' : member.estadoAnioActual === 'activo' ? 'member-status--activo' : 'member-status--inactivo';
             html += `
                     <div class="member-row member-row--check">
                         ${getMemberAvatarHtml(member)}
                         <label class="member-info" for="perseverante-${escapeHtml(member.id)}">
-                            <span class="member-name">${escapeHtml(member.nombre || 'Sin nombre')}</span>
+                            <span class="member-name">${escapeHtml(member.nombre || member.name || 'Sin nombre')}</span>
                             <span class="member-meta">${escapeHtml(member.email || 'Integrante del grupo')}</span>
-                            <span class="member-status">${perseverante ? 'Perseverante' : 'Activo'}</span>
+                            <span class="member-status ${statusClass}">${statusLabel}</span>
                         </label>
-                        <input class="member-check" type="checkbox" id="perseverante-${escapeHtml(member.id)}" ${perseverante ? 'checked' : ''} aria-label="Marcar a ${escapeHtml(member.nombre || 'Sin nombre')} como perseverante">
+                        <input class="member-check" type="checkbox" id="perseverante-${escapeHtml(member.id)}" ${perseverante ? 'checked' : ''} aria-label="Marcar a ${escapeHtml(member.nombre || member.name || 'Sin nombre')} como perseverante">
                     </div>
             `;
         });
@@ -556,9 +576,7 @@
         try {
             editMembersListDiv.innerHTML = '<div class="empty-state">Cargando miembros...</div>';
 
-            const membersSnapshot = await db.collection('members')
-                .where('estadoAnioActual', 'in', ['activo', 'perseverante'])
-                .get();
+            const membersSnapshot = await db.collection('members').get();
 
             allMembersForEdit = [];
             membersSnapshot.forEach(doc => {
@@ -570,7 +588,7 @@
             });
 
             // Sort by name
-            allMembersForEdit.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
+            allMembersForEdit.sort((a, b) => String(a.nombre || a.name || '').localeCompare(String(b.nombre || b.name || ''), 'es'));
 
             displayEditMembers(allMembersForEdit);
         } catch (error) {
@@ -586,6 +604,7 @@
         }
 
         let html = '';
+        html += `<div class="member-list-summary"><strong>Resultados</strong><span>${members.length} de ${allMembersForEdit.length} miembros</span></div>`;
         members.forEach(member => {
             const birthdate = toDateInputValue(member.fechaNacimiento);
             const ingreso = toDateInputValue(member.fechaIngresoGrupo);
@@ -595,7 +614,7 @@
                 <div class="member-row member-edit-card">
                     ${getMemberAvatarHtml(member)}
                     <div class="member-info">
-                        <span class="member-name">${escapeHtml(member.nombre || 'Sin nombre')}</span>
+                        <span class="member-name">${escapeHtml(member.nombre || member.name || 'Sin nombre')}</span>
                         <span class="member-meta">${escapeHtml(member.email || 'Integrante del grupo')}</span>
                     </div>
                     <div class="member-edit-fields">
@@ -633,8 +652,8 @@
         if (!term) {
             displayEditMembers(allMembersForEdit);
         } else {
-            const filtered = allMembersForEdit.filter(m => 
-                (m.nombre || '').toLowerCase().includes(term)
+            const filtered = allMembersForEdit.filter(m =>
+                String(m.nombre || m.name || '').toLowerCase().includes(term)
             );
             displayEditMembers(filtered);
         }
@@ -704,19 +723,27 @@
 
         try {
             const checkboxes = document.querySelectorAll('input[id^="perseverante-"]');
-            const batch = db.batch();
+            const updates = [...checkboxes].map(checkbox => ({
+                memberId: checkbox.id.replace('perseverante-', ''),
+                estadoAnioActual: checkbox.checked ? 'perseverante' : 'inactivo'
+            }));
+            const perseverantesCount = updates.filter(member => member.estadoAnioActual === 'perseverante').length;
+            const inactiveCount = updates.length - perseverantesCount;
 
-            checkboxes.forEach(checkbox => {
-                const memberId = checkbox.id.replace('perseverante-', '');
-                const isPerseverante = checkbox.checked;
-                const memberRef = db.collection('members').doc(memberId);
-                batch.update(memberRef, {
-                    estadoAnioActual: isPerseverante ? 'perseverante' : 'activo',
-                    fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+            if (!confirm(`Se incluirán los ${updates.length} miembros registrados:\\n• ${perseverantesCount} perseverantes para el próximo año\\n• ${inactiveCount} inactivos\\n\\n¿Desea guardar estos cambios?`)) {
+                return;
+            }
+
+            for (let index = 0; index < updates.length; index += 400) {
+                const batch = db.batch();
+                updates.slice(index, index + 400).forEach(({ memberId, estadoAnioActual }) => {
+                    batch.update(db.collection('members').doc(memberId), {
+                        estadoAnioActual,
+                        fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                 });
-            });
-
-            await batch.commit();
+                await batch.commit();
+            }
             toast('Estado de perseverantes guardado exitosamente', 'ok');
             await loadCurrentYearMembers();
         } catch (error) {
