@@ -303,19 +303,24 @@ function puntoToken(qt, tReg) {
 function findExactMember(query, candidates) {
   const qTokens = tokens(query);
   if (qTokens.length < 2) return []; // Mínimo: un nombre + un apellido
-  
-  // Separar en "nombres" (todo menos último) y "apellidos" (último token)
-  const qNombres = qTokens.slice(0, -1);
-  const qApellidos = [qTokens[qTokens.length - 1]];
-  
+
+  // Separar en "nombres" y "apellidos" (últimos 1-2 tokens)
+  // Si query tiene 3+ tokens: últimos 2 = apellidos, resto = nombres
+  // Si query tiene 2 tokens: último 1 = apellido, primer = nombre
+  const qApellidoCount = qTokens.length >= 3 ? 2 : 1;
+  const qNombres = qTokens.slice(0, -qApellidoCount);
+  const qApellidos = qTokens.slice(-qApellidoCount);
+
   const matches = [];
   for (const c of candidates) {
     const cTokens = tokens(c.nombre);
     if (cTokens.length < 2) continue;
-    
-    const cNombres = cTokens.slice(0, -1);
-    const cApellidos = [cTokens[cTokens.length - 1]];
-    
+
+    // Mismo criterio para candidato
+    const cApellidoCount = cTokens.length >= 3 ? 2 : 1;
+    const cNombres = cTokens.slice(0, -cApellidoCount);
+    const cApellidos = cTokens.slice(-cApellidoCount);
+
     // Score nombres: al menos uno coincide bien
     let mejorNombre = 0;
     for (const qn of qNombres) {
@@ -323,22 +328,22 @@ function findExactMember(query, candidates) {
         mejorNombre = Math.max(mejorNombre, puntoToken(qn, cn));
       }
     }
-    
-    // Score apellidos: al menos uno coincide bien
+
+    // Score apellidos: mejor coincidencia entre CUALQUIER apellido query vs CUALQUIER apellido candidato
     let mejorApellido = 0;
     for (const qa of qApellidos) {
       for (const ca of cApellidos) {
         mejorApellido = Math.max(mejorApellido, puntoToken(qa, ca));
       }
     }
-    
+
     // Exigir: nombre >= 0.7 Y apellido >= 0.7
     // (exacto=1, prefijo=0.9, typo=0.7)
     if (mejorNombre >= 0.7 && mejorApellido >= 0.7) {
       matches.push({ ...c, score: mejorNombre + mejorApellido });
     }
   }
-  
+
   // Ordenar por score descendente
   return matches.sort((a, b) => b.score - a.score || a.nombre.localeCompare(b.nombre));
 }
