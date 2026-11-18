@@ -102,6 +102,24 @@ input.valid{border-color:var(--ok);}
 .validacion-nombre.ok{display:flex;background:rgba(46,158,107,.1);color:var(--ok);border:1px solid rgba(46,158,107,.25);}
 .validacion-nombre.err{display:flex;background:rgba(217,64,64,.08);color:var(--err);border:1px solid rgba(217,64,64,.2);}
 .validacion-nombre.loading{display:flex;background:rgba(74,143,168,.08);color:var(--b);border:1px solid rgba(74,143,168,.2);}
+.member-matches{
+  display:none;flex-direction:column;gap:8px;
+  width:100%;margin-top:4px;
+}
+.member-matches.visible{display:flex;}
+.member-match{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;padding:12px 14px;text-align:left;
+  border:1px solid var(--border);border-radius:12px;
+  background:white;color:var(--ink);cursor:pointer;
+  transition:border-color .2s,background .2s;
+}
+.member-match:hover:not(:disabled){border-color:var(--o);background:#fffaf0;}
+.member-match:disabled{cursor:not-allowed;opacity:.72;}
+.member-match-name{font-size:14px;font-weight:700;}
+.member-match-state{max-width:52%;color:var(--muted);font-size:11px;text-align:right;}
+.member-match-state.error{color:var(--err);}
+.member-match-heading{color:var(--muted);font-size:12px;}
 .btn-submit{
   width:100%;padding:16px;border-radius:100px;
   background:var(--grad);color:white;
@@ -180,14 +198,17 @@ input.valid{border-color:var(--ok);}
       ← Volver al inicio
     </a>
     <h1 class="form-title">Crea tu<br><em>cuenta</em></h1>
-    <p class="form-sub">Solo miembros activos pueden registrarse. Escribe tu nombre y te mostraremos coincidencias.</p>
+    <p class="form-sub">Escribe tu nombre como lo conoces. Si hay varias personas con nombres parecidos, podrás elegir tu perfil exacto.</p>
   </div>
   <form id="formRegistro" novalidate>
     <div class="field">
       <label for="nombre">Tu nombre <span style="color:var(--o)">*</span></label>
-      <span class="field-hint">Escribe tu nombre completo tal como está registrado</span>
+      <span class="field-hint">Puedes escribir uno o varios nombres y apellidos; no es necesario incluir todos.</span>
       <input type="text" id="nombre" placeholder="Ej: Juan Pérez" autocomplete="name">
       <div class="validacion-nombre" id="validNombre"></div>
+      <!-- [html-validate-disable prefer-native-element] -->
+      <div class="member-matches" id="memberMatches" role="listbox" aria-label="Coincidencias del registro"></div>
+      <!-- [html-validate-enable prefer-native-element] -->
     </div>
     <div id="paso2">
       <div class="field">
@@ -220,10 +241,11 @@ input.valid{border-color:var(--ok);}
 <div id="toast"></div>
 <script type="module">
 import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword }
+import { getAuth, createUserWithEmailAndPassword, deleteUser }
                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, query, where, getDocs, updateDoc, doc, getDoc, writeBatch, setDoc }
+import { getFirestore, collection, getDocs, doc, getDoc, writeBatch }
                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { findRegistrationNameMatches } from "../assets/js/registro-name-match.js";
 const firebaseConfig = {
   apiKey: "AIzaSyDLl5CLvdaSzZ_K6VXrlJzm4VvN9HQouJo",
   authDomain: "luxto-nsp.firebaseapp.com",
@@ -257,117 +279,95 @@ function setLoading(si) {
 function mostrarValidacion(estado, msg) {
   const el = document.getElementById("validNombre");
   el.className = "validacion-nombre " + estado;
-  el.innerHTML = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg;
-}
-
-// Buscar miembro por coincidencia tolerante de nombre + apellido
-// Inspiración: normalización + tokens + prefijos + tolerancia a typos
-const STOP = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'da', 'di', 'y']);
-
-function normalizar(s) {
-  return String(s || '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9ñ\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function tokens(s) {
-  return normalizar(s).split(' ').filter(t => t && !STOP.has(t));
-}
-
-// Distancia de edición simple (Levenshtein) para typos
-function dist(a, b) {
-  const m = a.length, n = b.length;
-  if (Math.abs(m - n) > 2) return 99;
-  const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
-  for (let j = 0; j <= n; j++) d[0][j] = j;
-  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
-    const c = a[i - 1] === b[j - 1] ? 0 : 1;
-    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
-  }
-  return d[m][n];
-}
-
-// Score de un token query contra tokens del registro
-function puntoToken(qt, tReg) {
-  if (qt === tReg) return 1;
-  if (qt.length >= 2 && tReg.startsWith(qt)) return 0.9;  // prefijo: "dom" -> "dominguez"
-  // typo tolerante: 1 error para 4-7 chars, 2 para 8+
-  const tol = qt.length >= 8 ? 2 : qt.length >= 4 ? 1 : 0;
-  if (tol && Math.abs(qt.length - tReg.length) <= tol && dist(qt, tReg) <= tol) return 0.7;
-  return 0;
-}
-
-function findExactMember(query, candidates) {
-  const qTokens = tokens(query);
-  if (qTokens.length < 2) return []; // Mínimo: un nombre + un apellido
-
-  // Separar en "nombres" y "apellidos" (últimos 1-2 tokens)
-  // Si query tiene 3+ tokens: últimos 2 = apellidos, resto = nombres
-  // Si query tiene 2 tokens: último 1 = apellido, primer = nombre
-  const qApellidoCount = qTokens.length >= 3 ? 2 : 1;
-  const qNombres = qTokens.slice(0, -qApellidoCount);
-  const qApellidos = qTokens.slice(-qApellidoCount);
-
-  const matches = [];
-  for (const c of candidates) {
-    const cTokens = tokens(c.nombre);
-    if (cTokens.length < 2) continue;
-
-    // Mismo criterio para candidato
-    const cApellidoCount = cTokens.length >= 3 ? 2 : 1;
-    const cNombres = cTokens.slice(0, -cApellidoCount);
-    const cApellidos = cTokens.slice(-cApellidoCount);
-
-    // Score nombres: al menos uno coincide bien
-    let mejorNombre = 0;
-    for (const qn of qNombres) {
-      for (const cn of cNombres) {
-        mejorNombre = Math.max(mejorNombre, puntoToken(qn, cn));
-      }
-    }
-
-    // Score apellidos: mejor coincidencia entre CUALQUIER apellido query vs CUALQUIER apellido candidato
-    let mejorApellido = 0;
-    for (const qa of qApellidos) {
-      for (const ca of cApellidos) {
-        mejorApellido = Math.max(mejorApellido, puntoToken(qa, ca));
-      }
-    }
-
-    // Exigir: nombre >= 0.7 Y apellido >= 0.7
-    // (exacto=1, prefijo=0.9, typo=0.7)
-    if (mejorNombre >= 0.7 && mejorApellido >= 0.7) {
-      matches.push({ ...c, score: mejorNombre + mejorApellido });
-    }
-  }
-
-  // Ordenar por score descendente
-  return matches.sort((a, b) => b.score - a.score || a.nombre.localeCompare(b.nombre));
+  el.textContent = (estado === "ok" ? "✅ " : estado === "err" ? "❌ " : "⏳ ") + msg;
 }
 
 // Seleccionar miembro y avanzar al paso 2
 function seleccionarMiembro(miembro) {
+  if (!miembro?.memberId) {
+    mostrarValidacion("err", "Este registro está pendiente de vincular con el perfil. Contacta a coordinación.");
+    return;
+  }
+  if (miembro.tieneCuenta) {
+    mostrarValidacion("err", "Este perfil ya tiene una cuenta. Inicia sesión en lugar de crear otra.");
+    return;
+  }
   miembroSeleccionado = miembro;
   document.getElementById("nombre").value = miembro.nombre;
   document.getElementById("nombre").classList.add("valid");
   document.getElementById("nombre").readOnly = true;
   document.getElementById("paso2").classList.add("visible");
   document.getElementById("paso2").style.display = "contents";
+  document.getElementById("memberMatches").classList.remove("visible");
   document.getElementById("step1").classList.add("done");
   document.getElementById("btnSubmit").textContent = "Crear cuenta →";
   document.getElementById("email").focus();
   mostrarValidacion("ok", "¡Bienvenido/a, " + miembro.nombre.split(" ")[0] + "! Completa tu registro.");
 }
+
+function renderMemberMatches(queryText) {
+  const container = document.getElementById("memberMatches");
+  const matches = findRegistrationNameMatches(queryText, allMiembros);
+  container.replaceChildren();
+  if (!queryText.trim() || matches.length === 0) {
+    container.classList.remove("visible");
+    return matches;
+  }
+
+  const heading = document.createElement("div");
+  heading.className = "member-match-heading";
+  heading.textContent = matches.length > 1
+    ? "Hay varias coincidencias. Elige tu nombre exacto:"
+    : "Confirma que este es tu perfil:";
+  container.appendChild(heading);
+
+  const visibleMatches = matches.slice(0, 8);
+  for (const member of matches) {
+    if (!member.memberId && !visibleMatches.includes(member)) visibleMatches.push(member);
+  }
+  visibleMatches.forEach(member => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "member-match";
+    button.setAttribute("role", "option");
+    button.disabled = !member.memberId || member.tieneCuenta === true;
+
+    const name = document.createElement("span");
+    name.className = "member-match-name";
+    name.textContent = member.nombre || "Integrante";
+    const state = document.createElement("span");
+    state.className = `member-match-state${member.memberId && !member.tieneCuenta ? "" : " error"}`;
+    state.textContent = !member.memberId
+      ? "Pendiente de vincular · contacta coordinación"
+      : member.tieneCuenta
+        ? "Cuenta ya creada · iniciar sesión"
+        : "Seleccionar perfil";
+    button.append(name, state);
+    if (member.memberId && !member.tieneCuenta) {
+      button.addEventListener("click", () => seleccionarMiembro(member));
+    }
+    container.appendChild(button);
+  });
+  container.classList.add("visible");
+  return matches;
+}
+
+function dateOnly(value) {
+  if (!value) return null;
+  const date = typeof value.toDate === "function"
+    ? value.toDate()
+    : typeof value === "object" && Number.isFinite(value.seconds)
+      ? new Date(value.seconds * 1000)
+      : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+
 async function cargarMiembrosRegistro() {
   try {
     const snap = await getDocs(collection(db, "miembros_registro"));
     allMiembros = snap.docs
       .map(d => ({ memberId: d.data().memberId, docId: d.id, ...d.data() }))
-      .filter(m => m.memberId); // Solo los que tienen memberId (UUID) pueden registrarse
-    console.log("[Registro] Cargados", allMiembros.length, "miembros con memberId válido para registro");
+    console.log("[Registro] Cargados", allMiembros.length, "registros;", allMiembros.filter(m => !m.memberId).length, "requieren vincular perfil");
   } catch (e) {
     console.error("[Registro] Error cargando miembros_registro:", e);
     toast("Error cargando registro. Recarga la página.", "err");
@@ -377,6 +377,7 @@ document.getElementById("nombre").addEventListener("input", (e) => {
   const query = e.target.value.trim();
   document.getElementById("nombre").classList.remove("error", "valid");
   document.getElementById("validNombre").className = "validacion-nombre";
+  document.getElementById("memberMatches").classList.remove("visible");
   if (miembroSeleccionado) {
     miembroSeleccionado = null;
     document.getElementById("nombre").readOnly = false;
@@ -385,9 +386,9 @@ document.getElementById("nombre").addEventListener("input", (e) => {
     document.getElementById("step1").classList.remove("done");
     document.getElementById("btnSubmit").textContent = "Buscar mi nombre →";
   }
-  // Validación visual simple mientras escribe
   if (query.length >= 2) {
-    document.getElementById("nombre").classList.add("valid");
+    const matches = renderMemberMatches(query);
+    if (matches.length > 0) document.getElementById("nombre").classList.add("valid");
   }
 });
 document.getElementById("formRegistro").addEventListener("submit", async (e) => {
@@ -398,16 +399,12 @@ document.getElementById("formRegistro").addEventListener("submit", async (e) => 
       toast("Escribe al menos 2 letras de tu nombre", "err");
       return;
     }
-    const matches = findExactMember(query, allMiembros);
-    if (matches.length === 1) {
-      seleccionarMiembro(matches[0]);
-      return;
-    }
+    const matches = renderMemberMatches(query);
     if (matches.length === 0) {
       toast("No se encontró ese nombre en el registro. ¿Escribiste bien?", "err");
-    } else {
-      toast("Múltiples coincidencias. Escribe tu nombre completo tal como está registrado.", "err");
+      return;
     }
+    toast("Selecciona tu perfil en la lista de coincidencias.", "");
     return;
   }
   await crearCuenta();
@@ -434,8 +431,10 @@ async function crearCuenta() {
     toast("Las contraseñas no coinciden", "err"); return;
   }
   setLoading(true);
+  let userToRollback = null;
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    userToRollback = cred.user;
     const uid  = cred.user.uid;
     const memberRef = doc(db, "members", miembroSeleccionado.memberId);
     const memberSnap = await getDoc(memberRef);
@@ -443,6 +442,12 @@ async function crearCuenta() {
       throw new Error("Documento del miembro no encontrado en members/");
     }
     const memberData = memberSnap.data();
+    const registeredBirthdate = dateOnly(memberData.fechaNacimiento || memberData.birthDate);
+    if (registeredBirthdate && registeredBirthdate !== fechaNac) {
+      const error = new Error("La fecha de nacimiento no coincide con la registrada. Contacta a coordinación si hay un error.");
+      error.code = "registration/birthdate-mismatch";
+      throw error;
+    }
     const batch = writeBatch(db);
     const fechaNacMMdd = fechaNac.substring(5, 10);
     batch.update(memberRef, {
@@ -463,16 +468,28 @@ async function crearCuenta() {
       tieneCuenta: true
     });
     await batch.commit();
+    userToRollback = null;
     document.getElementById("step2").classList.add("done");
     document.getElementById("step3").classList.add("done");
     toast("¡Cuenta creada! Redirigiendo a tu dashboard...", "ok");
     setTimeout(() => window.location.href = "dashboard.html", 1800);
   } catch (e) {
+    let accountCleanupFailed = false;
+    if (userToRollback) {
+      try {
+        await deleteUser(userToRollback);
+      } catch (cleanupError) {
+        accountCleanupFailed = true;
+        console.error("[Registro] No se pudo eliminar la cuenta Auth sin vincular:", cleanupError);
+      }
+    }
     let msg = "Error al crear la cuenta.";
     if (e.code === "auth/email-already-in-use") msg = "Este email ya tiene una cuenta. ¿Quieres iniciar sesión?";
     if (e.code === "auth/invalid-email")        msg = "El email no es válido.";
     if (e.code === "auth/weak-password")        msg = "La contraseña es muy débil.";
     if (e.code === "permission-denied")         msg = "Error de permisos. Contacta al coordinador.";
+    if (e.code === "registration/birthdate-mismatch") msg = e.message;
+    if (accountCleanupFailed) msg = "No se pudo vincular tu perfil y no pudimos limpiar la cuenta creada. Contacta a coordinación antes de volver a registrarte.";
     toast(msg, "err");
     console.error("[Registro] Error:", e);
   }
