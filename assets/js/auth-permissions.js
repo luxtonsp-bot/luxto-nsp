@@ -86,27 +86,35 @@ function showAccessDenied(message = 'No tienes permisos para acceder a esta secc
 }
 
 async function initStaffPermissionCheck() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const auth = getFirebase().auth();
-        auth.onAuthStateChanged(async (user) => {
+        let unsubscribe = () => {};
+        unsubscribe = auth.onAuthStateChanged(async (user) => {
+            unsubscribe();
             if (!user) {
                 window.location.href = 'login.html';
+                reject(new Error('Debes iniciar sesión para acceder a esta sección.'));
                 return;
             }
 
-            const hasPermission = await checkPermission(user.uid);
-            if (!hasPermission) {
-                const role = await getUserRole(user.uid);
-                const currentPage = window.location.pathname.split('/').pop();
-                let msg = 'No tienes permisos para acceder a esta sección.';
-                if (currentPage === 'admin.html' && role !== 'coordinador') {
-                    msg = 'Solo el coordinador puede acceder al Panel de Administración.';
+            try {
+                const hasPermission = await checkPermission(user.uid);
+                if (!hasPermission) {
+                    const role = await getUserRole(user.uid);
+                    const currentPage = window.location.pathname.split('/').pop();
+                    let msg = 'No tienes permisos para acceder a esta sección.';
+                    if (currentPage === 'admin.html' && role !== 'coordinador') {
+                        msg = 'Solo el coordinador puede acceder al Panel de Administración.';
+                    }
+                    showAccessDenied(msg);
+                    reject(new Error(msg));
+                    return;
                 }
-                showAccessDenied(msg);
-                return;
-            }
 
-            resolve(user);
+                resolve(user);
+            } catch (error) {
+                reject(error);
+            }
         });
     });
 }
