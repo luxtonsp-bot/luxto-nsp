@@ -86,7 +86,7 @@
             <div class="card-title">🔍 Buscar miembro</div>
             <div class="form-row">
                 <div style="flex:1;">
-                    <input type="text" id="member-search" placeholder="Buscar miembro por nombre...">
+                    <input type="text" id="member-search" placeholder="Buscar por nombre (incluye inactivos que regresan)...">
                 </div>
                 <div style="flex:0;">
                     <button id="search-button" class="btn btn-primary" type="button">Buscar</button>
@@ -434,10 +434,7 @@
         try {
             let query;
             if (searchTerm) {
-                const normalizedTerm = searchTerm.trim().toLowerCase();
-                query = db.collection('members')
-                    .where('estadoAnioActual', '==', 'activo')
-                    .orderBy('nombre');
+                query = db.collection('members');
             } else {
                 query = db.collection('members')
                     .where('estadoAnioActual', '==', 'activo')
@@ -451,11 +448,12 @@
                 const filteredDocs = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const nombre = (data.nombre || '').toLowerCase();
+                    const nombre = String(data.nombre || data.name || '').toLowerCase();
                     if (nombre.includes(normalizedTerm)) {
                         filteredDocs.push(doc);
                     }
                 });
+                filteredDocs.sort((a, b) => String(a.data().nombre || a.data().name || '').localeCompare(String(b.data().nombre || b.data().name || ''), 'es'));
                 displayMembers({ docs: filteredDocs, empty: filteredDocs.length === 0, forEach: (fn) => filteredDocs.forEach(fn) });
             } else {
                 displayMembers(snapshot);
@@ -478,9 +476,10 @@
             const data = doc.data();
             const nombre = data.nombre || data.name || 'Sin nombre';
             const email = data.email || '';
-            const initial = nombre.charAt(0).toUpperCase();
+            const initial = escapeHtml(String(nombre).charAt(0).toUpperCase());
             const photoUrl = getPhotoUrl(data);
             const hasValidPhoto = isValidImageUrl(photoUrl);
+            const isInactive = !['activo', 'perseverante'].includes(data.estadoAnioActual);
 
             membersNameMap[doc.id] = nombre;
 
@@ -499,6 +498,7 @@
                         <div>
                             <div class="item-title">${escapeHtml(nombre)}</div>
                             ${email ? `<div class="item-meta">${escapeHtml(email)}</div>` : ''}
+                            ${isInactive ? '<div class="item-meta" style="color:var(--warn);">Inactivo · si asiste, se reactivará como perseverante</div>' : ''}
                         </div>
                     </div>
                     <div style="display:flex; gap:8px;">
@@ -579,11 +579,16 @@
                 await db.runTransaction(async (transaction) => {
                     const memberDoc = await transaction.get(memberRef);
                     if (memberDoc.exists) {
-                        const currentTotal = memberDoc.data().asistenciasTotales || 0;
-                        transaction.update(memberRef, {
+                        const memberData = memberDoc.data();
+                        const currentTotal = memberData.asistenciasTotales || 0;
+                        const memberUpdate = {
                             asistenciasTotales: currentTotal + 1,
                             ultimaAsistencia: currentAssemblyDate
-                        });
+                        };
+                        if (!['activo', 'perseverante'].includes(memberData.estadoAnioActual)) {
+                            memberUpdate.estadoAnioActual = 'perseverante';
+                        }
+                        transaction.update(memberRef, memberUpdate);
                     }
                 });
             }
