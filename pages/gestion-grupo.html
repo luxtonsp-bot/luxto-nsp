@@ -196,25 +196,116 @@
         // ══════════════════════════════════════════════════════════════
         // INICIALIZACIÓN: Chequear usuario YA logueado INMEDIATAMENTE
         // ══════════════════════════════════════════════════════════════
+        var authReady = false;
+        var initAttempted = false;
+
         console.log('[GESTION-GRUPO] ===== SCRIPT INICIADO =====', { 
+            authReady, 
+            initAttempted, 
             currentUser: auth.currentUser?.uid,
             AuthPermissions: typeof window.AuthPermissions 
         });
 
-        // Initialize - Simple como la versión que funcionaba
-        auth.onAuthStateChanged(async function(user) {
-            if (user) {
-                console.log('[GESTION-GRUPO] Usuario autenticado:', user.uid);
-                try { 
-                    await AuthPermissions.initStaffPermissionCheck(); 
-                } catch (e) { 
-                    console.warn('AuthPermissions check failed, continuando:', e); 
-                }
-                await loadAllMembersForTab1();
-            } else {
-                window.location.href = 'login.html';
+        // 1. VERIFICAR USUARIO YA LOGUEADO (viene de dashboard) - INMEDIATO
+        var currentUser = auth.currentUser;
+        if (currentUser) {
+            console.log('[GESTION-GRUPO] >>> Usuario YA logueado (currentUser):', currentUser.uid, '- esperando AuthPermissions...');
+            initIfReady(currentUser);
+        } else {
+            console.log('[GESTION-GRUPO] >>> Sin usuario actual, esperando onAuthStateChanged...');
+            waitForAuthThenListen();
+        }
+
+        // FALLBACK: Verificar auth.currentUser de nuevo tras 3s (por si onAuthStateChanged no dispara user real)
+        setTimeout(function() {
+            var fallbackUser = auth.currentUser;
+            if (fallbackUser && !initAttempted) {
+                console.log('[GESTION-GRUPO] >>> FALLBACK: Usuario detectado tras timeout:', fallbackUser.uid);
+                initIfReady(fallbackUser);
+            } else if (!fallbackUser && !initAttempted) {
+                console.warn('[GESTION-GRUPO] >>> FALLBACK: Sin usuario tras 3s - posible bloqueo de ad blocker / red');
+                listaIntegrantesDiv.innerHTML = '<div class="empty-state" style="color:var(--err);"><div style="font-size:24px;margin-bottom:12px;">🛡️</div><div style="font-weight:600;margin-bottom:8px;">No se pudo restaurar la sesión</div><div style="font-size:13px;color:var(--muted);max-width:300px;">Posible causa: bloqueador de anuncios (uBlock, AdBlock) impidiendo la conexión con Firebase.<br><br>Solución: Desactiva el bloqueador para <strong>luzdecristo.dpdns.org</strong> y recarga la página (Ctrl+Shift+R).</div></div>';
             }
-        });
+        }, 3000);
+
+        // ─────────────────────────────────────────────────────────────
+        // Inicializar cuando AuthPermissions esté listo
+        // ─────────────────────────────────────────────────────────────
+        function initIfReady(user) {
+            if (initAttempted) return;
+            console.log('[GESTION-GRUPO] >>> Preparando inicialización para:', user.uid);
+        
+            waitForAuthPermissions().then(async function() {
+                if (initAttempted) return; // Evitar doble init
+                initAttempted = true;
+                authReady = true;
+            
+                console.log('[GESTION-GRUPO] >>> AuthPermissions listo, inicializando para:', user.uid);
+                try { 
+                    console.log('[GESTION-GRUPO] >>> Llamando AuthPermissions.initStaffPermissionCheck()...');
+                    await AuthPermissions.initStaffPermissionCheck(); 
+                    console.log('[GESTION-GRUPO] >>> AuthPermissions OK');
+                } catch (e) { 
+                    console.error('[GESTION-GRUPO] >>> ERROR en AuthPermissions:', e); 
+                }
+                console.log('[GESTION-GRUPO] >>> Cargando miembros...');
+                await loadAllMembersForTab1();
+                console.log('[GESTION-GRUPO] >>> Inicialización COMPLETA');
+            });
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Si no hay usuario, esperar AuthPermissions y luego escuchar auth
+        // ─────────────────────────────────────────────────────────────
+        function waitForAuthThenListen() {
+            waitForAuthPermissions().then(function() {
+                console.log('[GESTION-GRUPO] ===== INICIANDO LISTENER AUTH =====');
+                auth.onAuthStateChanged(async function(user) {
+                    console.log('[GESTION-GRUPO] ===== onAuthStateChanged =====', { 
+                        user: user ? user.uid : 'NULL', 
+                        authReady, 
+                        initAttempted,
+                        timestamp: Date.now()
+                    });
+                    if (user) {
+                        if (!initAttempted) {
+                            initAttempted = true;
+                            authReady = true;
+                            console.log('[GESTION-GRUPO] >>> User llegó por onAuthStateChanged:', user.uid);
+                            await initIfReady(user); // initIfReady maneja el await
+                        }
+                    } else if (authReady) {
+                        console.log('[GESTION-GRUPO] >>> USER SE DESLOGUEÓ -> REDIRECT LOGIN');
+                        window.location.href = 'login.html';
+                    } else {
+                        console.log('[GESTION-GRUPO] >>> NULL inicial ignorado');
+                    }
+                });
+            });
+        }
+
+        function waitForAuthPermissions() {
+            return new Promise(function(resolve) {
+                if (window.AuthPermissions && typeof window.AuthPermissions.initStaffPermissionCheck === 'function') {
+                    console.log('[GESTION-GRUPO] AuthPermissions YA disponible');
+                    resolve();
+                } else {
+                    console.log('[GESTION-GRUPO] Esperando AuthPermissions...');
+                    var checkInterval = setInterval(function() {
+                        if (window.AuthPermissions && typeof window.AuthPermissions.initStaffPermissionCheck === 'function') {
+                            clearInterval(checkInterval);
+                            console.log('[GESTION-GRUPO] AuthPermissions CARGADO');
+                            resolve();
+                        }
+                    }, 50);
+                    setTimeout(function() {
+                        clearInterval(checkInterval);
+                        console.error('[GESTION-GRUPO] TIMEOUT esperando AuthPermissions');
+                        resolve();
+                    }, 5000);
+                }
+            });
+        }
 
     // ═══ TAB 1: INTEGRANTES ═══
     async function loadAllMembersForTab1() {
