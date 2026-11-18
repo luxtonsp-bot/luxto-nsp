@@ -454,7 +454,9 @@ async function crearCuenta() {
       email: email,
       uid: uid,
       fechaNacimiento: fechaNac,
-      fechaNacimientoMMdd: fechaNacMMdd
+      fechaNacimientoMMdd: fechaNacMMdd,
+      // Asegurar fechaIngresoGrupo desde fechaPrimeraAsamblea si no existe
+      fechaIngresoGrupo: memberData.fechaPrimeraAsamblea || memberData.fechaIngresoGrupo
     });
     const uidMapRef = doc(db, "uid_map", uid);
     batch.set(uidMapRef, {
