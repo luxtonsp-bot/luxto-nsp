@@ -210,7 +210,7 @@
         .member-edit-fields {
             display:grid;
             width:100%;
-            grid-template-columns:repeat(3, minmax(0, 1fr));
+            grid-template-columns:repeat(4, minmax(0, 1fr));
             gap:12px;
             padding-top:4px;
         }
@@ -761,6 +761,10 @@
                     </div>
                     <div class="member-edit-fields">
                         <div>
+                            <label for="edit-name-${escapeHtml(member.id)}">Nombre</label>
+                            <input type="text" id="edit-name-${escapeHtml(member.id)}" value="${escapeHtml(member.nombre || member.name || '')}">
+                        </div>
+                        <div>
                             <label for="edit-birth-${escapeHtml(member.id)}">Fecha de nacimiento</label>
                             <input type="date" id="edit-birth-${escapeHtml(member.id)}" value="${escapeHtml(birthdate)}">
                         </div>
@@ -803,17 +807,21 @@
 
     // Save member data
     window.saveMemberData = async function(memberId) {
+        const name = document.getElementById(`edit-name-${memberId}`).value.trim().replace(/\s+/g, ' ');
         const birthdate = document.getElementById(`edit-birth-${memberId}`).value;
         const ingreso = document.getElementById(`edit-ingreso-${memberId}`).value;
         const primera = document.getElementById(`edit-primera-${memberId}`).value;
 
-        if (!birthdate && !ingreso && !primera) {
+        if (!name && !birthdate && !ingreso && !primera) {
             toast('Complete al menos un campo', 'err');
             return;
         }
 
         try {
             const updateData = {};
+            if (name !== '') {
+                updateData.nombre = name;
+            }
             if (birthdate !== '') {
                 updateData.fechaNacimiento = firebase.firestore.Timestamp.fromDate(new Date(birthdate));
                 updateData.fechaNacimientoMMdd = birthdate.substring(5, 10);
@@ -835,6 +843,9 @@
             // Refresh the member in our cache
             const idx = allMembersForEdit.findIndex(m => m.id === memberId);
             if (idx !== -1) {
+                if (name !== '') {
+                    allMembersForEdit[idx].nombre = name;
+                }
                 allMembersForEdit[idx].fechaNacimiento = birthdate
                     ? firebase.firestore.Timestamp.fromDate(new Date(birthdate))
                     : null;

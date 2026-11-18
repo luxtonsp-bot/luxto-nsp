@@ -47,6 +47,7 @@ service cloud.firestore {
       allow list: if isAuth();
       allow update: if (isCoordinator()
         || (isStaff() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'nombre',
           'fechaNacimiento',
           'fechaNacimientoMMdd',
           'fechaIngresoGrupo',
