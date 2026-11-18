@@ -52,7 +52,9 @@ service cloud.firestore {
           'fechaIngresoGrupo',
           'fechaPrimeraAsamblea',
           'fechaActualizacion',
-          'estadoAnioActual'
+          'estadoAnioActual',
+          'asistenciasTotales',
+          'ultimaAsistencia'
         ]))
         || (isOwnMemberId(memberId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])));
       allow update: if isAuth() && request.resource.data.uid == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido']);
