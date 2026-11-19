@@ -24,6 +24,17 @@ jobs:
         with:
           ref: main
 
+      - name: Autenticar despliegue de reglas Firestore
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+
+      - name: Instalar Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Publicar reglas Firestore
+        run: firebase deploy --only firestore:rules --project luxto-nsp --non-interactive
+
       - name: Copiar sitio estático de main
         run: |
           mkdir -p /tmp/sitio

@@ -30,6 +30,7 @@ import {
   getDocs,
   collection,
   query,
+  where,
   orderBy,
   fsServerTimestamp,
   onAuthStateChanged,
@@ -66,15 +67,6 @@ import {
 } from "./asamblea-engine.js";
 import { createSerialQueue } from "./serial-queue.js";
 
-/* ── Admins hardcodeados (seguridad temporal, migrar a reglas de Firestore en el futuro) ── */
-const ADMINS = [
-  "henry.alfaro1@unmsm.edu.pe",
-  "paolosotil97@gmail.com",
-  "jorgediego.123.2002@gmail.com",
-  "gianfracamones@gmail.com",
-  "alvarorodrigosalazar.2001@gmail.com",
-];
-
 async function syncCurrentUserAdminState() {
   const user = auth.currentUser;
   if (!user) return;
@@ -85,34 +77,30 @@ async function syncCurrentUserAdminState() {
     const rol = memberSnap.exists()
       ? memberSnap.data().rol || "miembro"
       : "miembro";
-    const staffRoles = ["servidor", "apoyo", "coordinador"];
 
-    if (staffRoles.includes(rol) || ADMINS.includes(user.email)) {
-      const role = ADMINS.includes(user.email) ? "coordinador" : rol;
-      const memberData = memberSnap.data() || {};
-      const authUid = user.uid;
-      const email = user.email || memberData.email || "";
+    const memberData = memberSnap.data() || {};
+    const authUid = user.uid;
+    const email = user.email || memberData.email || "";
 
-      const adminData = { email, rol: role, ts: rtdbTS() };
-
-      // Escribir en AMBOS paths: legacy (authUid) + nuevo (memberId)
-      const writes = [];
-      writes.push(set(ref(rtdb, RTDB_PATHS.admins(authUid)), adminData));
-      if (memberId !== authUid) {
-        writes.push(set(ref(rtdb, RTDB_PATHS.admins(memberId)), adminData));
-      }
-      await Promise.all(writes);
+    const paths = [...new Set([authUid, memberId].filter(Boolean).map(RTDB_PATHS.admins))];
+    if (rol === "coordinador") {
+      const adminData = { email, rol, ts: rtdbTS() };
+      await Promise.all(paths.map((path) => set(ref(rtdb, path), adminData)));
     } else {
-      // Quitar de AMBOS paths
-      const removes = [];
-      removes.push(remove(ref(rtdb, RTDB_PATHS.admins(user.uid))));
-      if (memberId !== user.uid) {
-        removes.push(remove(ref(rtdb, RTDB_PATHS.admins(memberId))));
+      const ownAdminPath = ref(rtdb, RTDB_PATHS.admins(authUid));
+      const ownAdminSnap = await get(ownAdminPath);
+      if (["servidor", "apoyo"].includes(rol)) {
+        if (!ownAdminSnap.exists()) {
+          throw new Error("Falta el espejo RTDB del rol de servidor/apoyo.");
+        }
+        if (ownAdminSnap.val()?.rol !== rol) await remove(ownAdminPath);
+      } else if (ownAdminSnap.exists()) {
+        await remove(ownAdminPath);
       }
-      await Promise.all(removes);
     }
   } catch (error) {
-    console.warn("syncCurrentUserAdminState error:", error.message);
+    console.error("No se pudo sincronizar el rol con RTDB:", error);
+    toast("El rol es válido en el perfil, pero no se sincronizaron los controles de asamblea.", "err");
   }
 }
 
@@ -126,33 +114,25 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // Verificar si es admin (hardcodeado por ahora)
-  if (!ADMINS.includes(user.email)) {
-    // Permitir servidores, apoyos y coordinadores (verificar en Firestore)
-    try {
-      const memberId = await resolveMemberId(user.uid);
-      const memberSnap = await getDoc(doc(fsdb, "members", memberId));
-      if (!memberSnap.exists()) throw new Error("No member doc");
-      const rol = memberSnap.data().rol;
-      // Roles con acceso al panel admin: servidor, apoyo, coordinador
-      if (rol !== "servidor" && rol !== "apoyo" && rol !== "coordinador")
-        throw new Error("Not authorized");
-      // Aplicar permisos según rol (centralizado)
-      applyRolePermissions(rol);
-      // Guardar rol para usar en UI (botón finalizar asamblea)
-      window._userRol = rol;
-    } catch (e) {
-      toast("Acceso restringido", "err");
-      setTimeout(() => (window.location.href = "dashboard.html"), 2000);
-      return;
-    }
-  } else {
-    // Admin hardcodeado → tratar como coordinador
-    window._userRol = "coordinador";
-    applyRolePermissions("coordinador");
+  await syncCurrentUserAdminState();
+
+  try {
+    const memberId = await resolveMemberId(user.uid);
+    const memberSnap = await getDoc(doc(fsdb, "members", memberId));
+    if (!memberSnap.exists()) throw new Error("No member doc");
+    const rol = memberSnap.data().rol;
+    if (!["servidor", "apoyo", "coordinador"].includes(rol))
+      throw new Error("Not authorized");
+    window._currentMemberId = memberId;
+    applyRolePermissions(rol);
+    window._userRol = rol;
+  } catch (e) {
+    console.error("No se pudo verificar el rol del panel:", e);
+    toast("Acceso restringido: no se pudo validar tu rol.", "err");
+    setTimeout(() => (window.location.href = "dashboard.html"), 2000);
+    return;
   }
 
-  await syncCurrentUserAdminState();
   inicializar();
 });
 
@@ -333,7 +313,7 @@ function actualizarEstadoUI(activa, state) {
     sub.textContent =
       faseLabels[state.fase] || "Los miembros ya pueden ingresar a la asamblea";
     if (btnFin) btnFin.style.display = esCoordinador ? "inline-flex" : "none";
-    if (btnReset) btnReset.style.display = "inline-flex";
+    if (btnReset) btnReset.style.display = esCoordinador ? "inline-flex" : "none";
 
     // Botones de control según fase y host status
     const soyHost = isHost();
@@ -864,6 +844,10 @@ function escucharRankingGlobal() {
 
 /* ── Reiniciar ranking (asamblea actual) ────────────── */
 window.reiniciarRanking = async function () {
+  if (window._userRol !== "coordinador") {
+    toast("Solo el coordinador puede reiniciar el ranking de la sesión.", "err");
+    return;
+  }
   const ok = confirm(
     "¿Reiniciar el ranking de ESTA asamblea? Se borrarán todas las respuestas acumuladas.",
   );
@@ -877,6 +861,10 @@ window.reiniciarRanking = async function () {
 
 /* ── Reiniciar ranking global ───────────────────────── */
 window.reiniciarRankingGlobal = async function () {
+  if (window._userRol !== "coordinador") {
+    toast("Solo el coordinador puede reiniciar el ranking global.", "err");
+    return;
+  }
   const ok = confirm(
     "¿Reiniciar el ranking GLOBAL? Se borrará el acumulado histórico de todas las asambleas.",
   );
@@ -1112,8 +1100,18 @@ window.loadMemberDetails = async function (memberId) {
     document.getElementById("selected-member-name").textContent =
       data.nombre || "Sin nombre";
     document.getElementById("role-select").value = data.rol || "miembro";
+    document.getElementById("handoff-role-wrap").hidden = true;
     document.getElementById("role-change-form").style.display = "block";
 
+    document.getElementById("role-select").onchange = function () {
+      document.getElementById("handoff-role-wrap").hidden =
+        this.value !== "coordinador" || memberId === window._currentMemberId;
+      document.getElementById("update-role-button").textContent =
+        this.value === "coordinador" && memberId !== window._currentMemberId
+          ? "Transferir coordinación"
+          : "Actualizar Rol";
+    };
+    document.getElementById("update-role-button").textContent = "Actualizar Rol";
     document.getElementById("update-role-button").onclick = async () => {
       const newRole = document.getElementById("role-select").value;
       await window.updateMemberRole(memberId, newRole);
@@ -1124,54 +1122,190 @@ window.loadMemberDetails = async function (memberId) {
   }
 };
 
+function getAdminMirrorPaths(memberId, authUid) {
+  return [...new Set([authUid, memberId].filter(Boolean).map(RTDB_PATHS.admins))];
+}
+
+async function readAdminMirror(paths) {
+  return Promise.all(paths.map(async (path) => {
+    const snapshot = await get(ref(rtdb, path));
+    return { path, value: snapshot.exists() ? snapshot.val() : null };
+  }));
+}
+
+async function writeAdminMirror(paths, memberData, role) {
+  if (["servidor", "apoyo", "coordinador"].includes(role)) {
+    const data = {
+      email: memberData.email || "",
+      rol: role,
+      ts: rtdbTS(),
+    };
+    await Promise.all(paths.map((path) => set(ref(rtdb, path), data)));
+  } else {
+    await Promise.all(paths.map((path) => remove(ref(rtdb, path))));
+  }
+}
+
+async function restoreAdminMirror(previous) {
+  await Promise.all(previous.map(({ path, value }) =>
+    value === null
+      ? remove(ref(rtdb, path))
+      : set(ref(rtdb, path), value),
+  ));
+}
+
 window.updateMemberRole = async function (memberId, newRole) {
   try {
     const currentUserMemberId = await resolveMemberId(auth.currentUser.uid);
-    const userSnap = await getDoc(doc(fsdb, "members", currentUserMemberId));
-    const userRole = userSnap.data().rol;
+    window._currentMemberId = currentUserMemberId;
+    const currentUserRef = doc(fsdb, "members", currentUserMemberId);
+    const userSnap = await getDoc(currentUserRef);
+    if (!userSnap.exists() || userSnap.data().rol !== "coordinador") {
+      throw new Error("Solo el coordinador vigente puede cambiar roles.");
+    }
 
     const validRoles = ["miembro", "servidor", "apoyo", "coordinador"];
-    if (!validRoles.includes(newRole)) {
-      alert("Rol inválido");
-      return;
-    }
+    if (!validRoles.includes(newRole)) throw new Error("Rol inválido.");
 
-    if (newRole === "coordinador" && userRole !== "coordinador") {
-      alert("Solo los coordinadores pueden asignar el rol de coordinador");
-      return;
-    }
-
-    await updateDoc(doc(fsdb, "members", memberId), {
-      rol: newRole,
-      fechaActualizacionRol: fsServerTimestamp(),
-    });
-
-    // Sincronizar /admins RTDB — escribir en AMBOS paths (legacy authUid + nuevo memberId)
-    const staffRoles = ["servidor", "apoyo", "coordinador"];
+    const memberRef = doc(fsdb, "members", memberId);
     const memberSnap = await getDoc(doc(fsdb, "members", memberId));
-    const memberData = memberSnap.exists() ? memberSnap.data() : {};
-    const authUid = memberData.uid || "";
-    const email = memberData.email || "";
+    if (!memberSnap.exists()) throw new Error("Miembro no encontrado.");
+    const memberData = memberSnap.data();
+    const previousRole = memberData.rol || "miembro";
 
-    const adminData = { email, rol: newRole, ts: rtdbTS() };
-
-    if (staffRoles.includes(newRole)) {
-      // Escribir en AMBOS paths: legacy (authUid) + nuevo (memberId)
-      const writes = [];
-      if (authUid) writes.push(set(ref(rtdb, RTDB_PATHS.admins(authUid)), adminData));
-      writes.push(set(ref(rtdb, RTDB_PATHS.admins(memberId)), adminData));
-      await Promise.all(writes);
-    } else {
-      // Quitar de AMBOS paths
-      const removes = [];
-      if (authUid) removes.push(remove(ref(rtdb, RTDB_PATHS.admins(authUid))));
-      removes.push(remove(ref(rtdb, RTDB_PATHS.admins(memberId))));
-      await Promise.all(removes);
+    if (previousRole === "coordinador" && newRole !== "coordinador") {
+      throw new Error("Primero transfiere la coordinación a otra persona.");
     }
 
-    // Mantener sincronizado también el acceso de este usuario actual en caso de cambios de rol
-    if (auth.currentUser?.uid === authUid) {
-      await syncCurrentUserAdminState();
+    if (newRole === "coordinador") {
+      if (memberId === currentUserMemberId) {
+        throw new Error("Selecciona a la persona que recibirá la coordinación.");
+      }
+
+      const currentCoordinators = await getDocs(
+        query(collection(fsdb, "members"), where("rol", "==", "coordinador")),
+      );
+      if (
+        currentCoordinators.size !== 1 ||
+        currentCoordinators.docs[0].id !== currentUserMemberId
+      ) {
+        throw new Error("No se pudo confirmar un único coordinador vigente. No se cambiaron roles.");
+      }
+
+      if (!memberData.uid) {
+        throw new Error("La persona seleccionada debe completar su cuenta antes de recibir la coordinación.");
+      }
+      const uidMapSnap = await getDoc(doc(fsdb, "uid_map", memberData.uid));
+      if (!uidMapSnap.exists() || uidMapSnap.data().memberId !== memberId) {
+        throw new Error("El vínculo Auth del nuevo coordinador no coincide con su perfil.");
+      }
+
+      const outgoingRole = document.getElementById("handoff-role").value;
+      if (!["miembro", "servidor", "apoyo"].includes(outgoingRole)) {
+        throw new Error("Selecciona un rol válido para quien entrega la coordinación.");
+      }
+
+      const outgoingData = userSnap.data();
+      const outgoingPaths = getAdminMirrorPaths(
+        currentUserMemberId,
+        auth.currentUser.uid,
+      );
+      const incomingPaths = getAdminMirrorPaths(memberId, memberData.uid);
+      const [previousOutgoing, previousIncoming] = await Promise.all([
+        readAdminMirror(outgoingPaths),
+        readAdminMirror(incomingPaths),
+      ]);
+
+      try {
+        await writeAdminMirror(incomingPaths, memberData, "coordinador");
+        await writeAdminMirror(outgoingPaths, outgoingData, outgoingRole);
+      } catch (error) {
+        try {
+          await Promise.all([
+            restoreAdminMirror(previousOutgoing),
+            restoreAdminMirror(previousIncoming),
+          ]);
+        } catch (rollbackError) {
+          console.error("No se pudieron restaurar los espejos RTDB del traspaso:", rollbackError);
+          throw new Error("No se pudo preparar el traspaso y los permisos RTDB quedaron inconsistentes. Contacta a coordinación antes de continuar.");
+        }
+        throw error;
+      }
+
+      const batch = writeBatch(fsdb);
+      batch.update(memberRef, {
+        rol: "coordinador",
+        fechaActualizacionRol: fsServerTimestamp(),
+      });
+      batch.update(currentUserRef, {
+        rol: outgoingRole,
+        fechaActualizacionRol: fsServerTimestamp(),
+      });
+      batch.set(doc(fsdb, "role_transfer_state", "current"), {
+        fromMemberId: currentUserMemberId,
+        toMemberId: memberId,
+        outgoingRole,
+        updatedAt: fsServerTimestamp(),
+      });
+      try {
+        await batch.commit();
+      } catch (error) {
+        try {
+          await Promise.all([
+            restoreAdminMirror(previousOutgoing),
+            restoreAdminMirror(previousIncoming),
+          ]);
+        } catch (rollbackError) {
+          console.error("No se pudieron restaurar los espejos RTDB del traspaso:", rollbackError);
+          throw new Error("Falló el traspaso y los permisos RTDB quedaron inconsistentes. Contacta a coordinación antes de continuar.");
+        }
+        throw error;
+      }
+
+      window._userRol = outgoingRole;
+      applyRolePermissions(outgoingRole);
+      document.getElementById("role-change-result").innerHTML = `
+        <div style="color:var(--ok); padding:8px 0;">
+          Coordinación transferida. Tu nuevo rol es ${outgoingRole}; se cerrará este panel.
+        </div>`;
+      window.loadMembersByRole();
+      setTimeout(() => { window.location.href = "dashboard.html"; }, 2500);
+      return;
+    }
+
+    const mirrorPaths = getAdminMirrorPaths(memberId, memberData.uid || "");
+    const previousMirror = await readAdminMirror(mirrorPaths);
+    if (newRole === "miembro") {
+      await writeAdminMirror(mirrorPaths, memberData, newRole);
+      try {
+        await updateDoc(memberRef, {
+          rol: newRole,
+          fechaActualizacionRol: fsServerTimestamp(),
+        });
+      } catch (error) {
+        await restoreAdminMirror(previousMirror);
+        throw error;
+      }
+    } else {
+      await updateDoc(memberRef, {
+        rol: newRole,
+        fechaActualizacionRol: fsServerTimestamp(),
+      });
+      try {
+        await writeAdminMirror(mirrorPaths, memberData, newRole);
+      } catch (error) {
+        try {
+          await updateDoc(memberRef, {
+            rol: previousRole,
+            fechaActualizacionRol: fsServerTimestamp(),
+          });
+          await restoreAdminMirror(previousMirror);
+        } catch (rollbackError) {
+          console.error("No se pudo revertir el rol tras un fallo de sincronización:", rollbackError);
+          throw new Error("Falló la sincronización del rol y no se pudo revertir. Contacta a coordinación antes de continuar.");
+        }
+        throw new Error("No se sincronizó el permiso de asamblea; el cambio de rol fue revertido.");
+      }
     }
 
     document.getElementById("role-change-result").innerHTML = `
@@ -1753,6 +1887,10 @@ function applyRolePermissions(rol) {
   const isCoord = rol === "coordinador";
   const buttonIds = ["tab-gestion-lideres", "tab-sugerencias-feedback"];
   buttonIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !isCoord;
+  });
+  ["btnResetRanking", "btnResetGlobal"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.hidden = !isCoord;
   });

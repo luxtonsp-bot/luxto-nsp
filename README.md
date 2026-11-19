@@ -99,15 +99,15 @@ luxto-nsp/
 
 ### 5. `tomar-asistencia.html` — **Staff** (servidor/coordinador/apoyo)
 **4 Sub-vistas (tabs):**
-- 📝 **Tomar Asistencia**: Buscar miembro → ✓ Presente / ✗ Ausente → **el miembro desaparece de la lista al marcar** + tardanza automática (Lima UTC-5, tolerancia 10 min)
+- 📝 **Tomar Asistencia**: Buscar miembro → ✓ Presente / ✗ Ausente → **el miembro desaparece de la lista al marcar** + tardanza automática (Lima UTC-5, tolerancia 10 min). Apoyo solo puede registrar una asistencia aún no marcada.
 - 📅 **Día Específico**: Selector fecha → lista completa (presentes ✓ con tardanza / ausentes ✗) + resumen stats
-- ✏️ **Editar Asistencia**: Selector fecha → lista completa con checkboxes y inputs de tardanza → **Guardar Cambios** (batch write atómico a `asistencia/{año}/{fecha}/{memberId}`)
+- ✏️ **Editar Asistencia**: Solo servidor/coordinación; selector fecha → lista completa con checkboxes y tardanzas → **Guardar Cambios** (batch write a `asistencia/{año}/{fecha}/{memberId}`)
 - 📈 **Resumen Anual**: Selector año → **TODOS los miembros** (sin filtro `estadoAnioActual`) con % asistencia contra fechas reales con datos, total histórico recalculado, fotos base64 + fallback iniciales
 
 ### 6. `gestion-grupo.html` — **Staff**
-- **Perseverantes y Nuevos**: Checkbox para marcar miembros que continúan (`estadoAnioActual: 'perseverante'`)
+- **Perseverantes y Nuevos**: Solo coordinación define quién continúa (`estadoAnioActual: 'perseverante'`)
 - **Nuevos Integrantes**: Formulario (nombre, cumpleaños, primera asamblea) → crea en `members` + `miembros_registro`
-- **Cierre de Año**: Copia colecciones a `historico/{año}/` (asistencia, tablas, Kahoot, sugerencias, feedback) + actualiza `estadoAnioActual`
+- **Cierre de Año**: Solo coordinación; copia colecciones a `historico/{año}/` (asistencia, tablas, Kahoot, sugerencias, feedback) + actualiza `estadoAnioActual`
 
 ### 7. `historial.html` — **Staff**
 - **Selector año** (poblado dinámicamente desde `historico/`)
@@ -122,9 +122,8 @@ luxto-nsp/
 - Crea/actualiza doc en `asambleas/{fecha}` con `hayAsamblea: true`
 
 ### 9. `tablas.html` — **Staff**
-- **Crear tabla**: nombre, descripción, año, definir columnas (texto/número/booleano/fecha/monto)
-- **Ingresar datos**: filas dinámicas según columnas definidas
-- **Listar tablas** propias → ver/editar
+- **Crear, editar y administrar tablas**: solo coordinación.
+- **Consultar definiciones**: disponible para staff. La visualización de filas aún es un placeholder.
 - Guarda en `tablas_definiciones/` + `tablas_dinamicas/{tableId}/`
 
 ### 10. Sistema de Asambleas Kahoot en Tiempo Real (3 vistas sincronizadas vía RTDB)
@@ -177,18 +176,21 @@ const COORDINATOR_ONLY_PAGES = ['admin.html'];
 ```
 
 ### Lógica de acceso:
-| Rol | Acceso |
-|-----|--------|
-| **Coordinador** | **TODAS** las páginas (incluye `admin.html`) |
-| **Servidor / Apoyo** | **TODAS** menos `admin.html` |
-| **Miembro** | Solo páginas públicas (`dashboard.html`, `historia.html`, `proyector.html`, `asamblea.html`, `login.html`, `registro.html`) |
+| Rol | Privilegios |
+|-----|-------------|
+| **Coordinador** | Acceso máximo; asigna roles, transfiere coordinación, administra tablas, define perseverancia, cierra el año y finaliza asambleas/rankings. |
+| **Servidor** | Puede corregir asistencias, editar datos y fechas de integrantes, consultar historial/tablas y operar asambleas/Kahoot. |
+| **Apoyo** | Puede tomar asistencias no registradas, editar datos y fechas de integrantes, consultar historial/tablas y operar asambleas/Kahoot; no puede corregir asistencias. |
+| **Miembro** | Solo páginas públicas (`dashboard.html`, `historia.html`, `proyector.html`, `asamblea.html`, `login.html`, `registro.html`). |
 
 ### Flujo:
 1. Usuario logueado → `auth.onAuthStateChanged` (SDK compat global)
 2. `AuthPermissions.initStaffPermissionCheck()` → consulta `uid_map/{authUid}` → `members/{memberId}.rol`
-3. Según rol y página → permite o muestra "Acceso denegado" + botón Dashboard
+3. Las reglas de Firestore y RTDB vuelven a validar cada operación; la UI no es una frontera de seguridad.
+4. Coordinación se asigna desde el panel y se transfiere junto con el rol saliente en una operación Firestore; solo puede quedar un coordinador vigente.
 
-> **Nota**: Para dar/quitar acceso, solo edita el campo `rol` en `gestion-grupo.html` o directo en Firestore `members/{memberId}.rol`. El archivo JS **no se toca**.
+> **Nota**: `members/{memberId}.rol` es la fuente de verdad. Cambia roles desde el panel; una promoción a coordinador requiere un traspaso y no debe hacerse editando el documento directamente.
+> **Despliegue**: los cambios locales a `firestore.rules` y `database.rules.json` no entran en producción hasta desplegar ambas reglas. Valida el traspaso y permisos con Firebase Emulator antes del despliegue.
 
 ---
 
@@ -303,13 +305,14 @@ feedback/{id}
 
 | Link | Rama | Cuándo se actualiza |
 |------|------|---------------------|
-| **Producción:** `https://luxtonsp-bot.github.io/luxto-nsp/` | `main` | Push a `main` (`.github/workflows/deploy-production.yml`) |
+| **Producción:** `https://luxtonsp-bot.github.io/luxto-nsp/` | `main` | Push a `main`: reglas Firestore y sitio estático (`.github/workflows/deploy-production.yml`) |
 | **Preview:** `https://luxtonsp-bot.github.io/luxto-nsp/preview/<rama>/` | cualquier ≠ `main` | Push a esa rama (`.github/workflows/deploy-preview.yml`) |
 
 ### Cómo funciona
 - Todo en rama **`gh-pages`** (GitHub Pages sirve raíz):
   - **Raíz** = `main` → producción
   - **`gh-pages/preview/<rama>/`** = rama de trabajo → link propio
+- El deploy de producción publica **solo Firestore Rules** y el sitio; RTDB Rules no se despliegan en este flujo.
 - Workflow preview copia **solo sitio estático** (`index.html`, `pages/`, `assets/`) — **nunca** credenciales, scripts, migración (protegidos por `.gitignore`)
 
 ### ⚠️ PASO MANUAL ÚNICO (pendiente) — cambiar fuente de Pages

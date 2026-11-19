@@ -3,6 +3,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc as firestoreDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getDatabase, ref, onValue, set, get, update, remove, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -15,19 +16,13 @@ const firebaseConfig = {
   databaseURL: "https://luxto-nsp-default-rtdb.firebaseio.com"
 };
 
-const ADMINS = [
-  "henry.alfaro1@unmsm.edu.pe",
-  "paolosotil97@gmail.com",
-  "jorgediego.123.2002@gmail.com",
-  "gianfracamones@gmail.com",
-  "alvarorodrigosalazar.2001@gmail.com"
-];
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const fsdb = getFirestore(app);
 const db = getDatabase(app);
 
 let esAdmin = false;
+let esCoordinador = false;
 let preguntaActualId = null;
 let timerInterval = null;
 let tiempoRestante = 0;
@@ -88,9 +83,23 @@ function limpiarTimer() {
 // AUTH
 // ═══════════════════════════════════════════
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
-  esAdmin = ADMINS.includes(user.email);
+  try {
+    const uidMap = await getDoc(firestoreDoc(fsdb, "uid_map", user.uid));
+    if (!uidMap.exists() || !uidMap.data().memberId) {
+      throw new Error("La cuenta no tiene un perfil de integrante vinculado.");
+    }
+    const member = await getDoc(firestoreDoc(fsdb, "members", uidMap.data().memberId));
+    if (!member.exists()) throw new Error("No se encontró el perfil asociado a la cuenta.");
+    const role = member.data().rol;
+    esAdmin = ["servidor", "apoyo", "coordinador"].includes(role);
+    esCoordinador = role === "coordinador";
+  } catch (error) {
+    console.error("No se pudo validar el rol para controlar la asamblea:", error);
+    toast("No se pudo validar tu rol; el control de asamblea permanecerá desactivado.", "err");
+  }
+
   if (esAdmin) {
     document.getElementById("adminToggle").style.display = "block";
     document.getElementById("adminBar").classList.add("visible");
@@ -163,11 +172,11 @@ function actualizarBotones() {
     btnLanzar.style.display = "none";
     btnSiguiente.style.display = "inline-flex";
     btnSiguiente.textContent = `Siguiente → (${indiceActual + 1}/${total})`;
-    btnFinalizar.style.display = "inline-flex";
+    btnFinalizar.style.display = esCoordinador ? "inline-flex" : "none";
   } else {
     btnLanzar.style.display = "none";
     btnSiguiente.style.display = "none";
-    btnFinalizar.style.display = "inline-flex";
+    btnFinalizar.style.display = esCoordinador ? "inline-flex" : "none";
     label.textContent = `🏁 ${total}/${total} preguntas completadas — Finaliza`;
   }
 }
@@ -400,7 +409,8 @@ function mostrarPregunta(p) {
     document.getElementById("btnLanzar").style.display = "none";
     document.getElementById("btnSiguiente").style.display = "none";
     document.getElementById("btnCerrar").style.display = "inline-flex";
-    document.getElementById("btnFinalizar").style.display = "inline-flex";
+    document.getElementById("btnFinalizar").style.display =
+      esCoordinador ? "inline-flex" : "none";
   }
   showScreen("screenPregunta");
 }
@@ -583,7 +593,7 @@ window.mostrarRankingManual = function() {
 
 // Finalizar asamblea
 window.finalizarAsamblea = async function() {
-  if (!esAdmin) return;
+  if (!esCoordinador) return;
   const ok = confirm("¿Finalizar la asamblea? Los puntos se sumarán al ranking global.");
   if (!ok) return;
 
@@ -694,4 +704,3 @@ function iniciarCountdown(n, cb) {
     }
   }, 1000);
 }
-

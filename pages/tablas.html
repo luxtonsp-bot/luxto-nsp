@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/portal.css">
     <style>
+        [hidden] { display:none !important; }
         /* Estilos específicos de tablas dinámicas */
         .column-definition {
             display:flex; gap:14px; align-items:flex-end;
@@ -103,12 +104,12 @@
 <main class="container">
 
     <div class="section-eyebrow">Seguimiento</div>
-    <h1>Creador de Tablas Dinámicas</h1>
-    <p class="section-desc">Cree y administre tablas personalizadas para seguimiento de grupos especiales (Caporales, EJUTOR, polladas, etc.)</p>
+    <h1>Tablas Dinámicas</h1>
+    <p class="section-desc">Consulta las tablas de seguimiento de los grupos. La creación y administración corresponde al coordinador.</p>
 
     <div class="tabs">
         <button class="tab-button active" onclick="openTab(event, 'crear-tabla')" type="button">Crear Nueva Tabla</button>
-        <button class="tab-button" onclick="openTab(event, 'mis-tablas')" type="button">Mis Tablas</button>
+        <button class="tab-button" onclick="openTab(event, 'mis-tablas')" type="button">Tablas Disponibles</button>
     </div>
 
     <div id="crear-tabla" class="tab-content active">
@@ -182,6 +183,7 @@
     }
     const db = firebase.firestore();
     const auth = firebase.auth();
+    let currentUserRole = null;
 
     let currentYear = new Date().getFullYear();
     let tableColumns = []; // Stores column definitions for the current table being created
@@ -210,11 +212,20 @@
     // Initialize
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
             try {
                 await AuthPermissions.initStaffPermissionCheck();
-            } catch (e) {
-                console.warn('AuthPermissions check failed, continuando:', e);
+                currentUserRole = await AuthPermissions.getUserRole(user.uid);
+                if (!currentUserRole) throw new Error('No se pudo determinar tu rol.');
+            } catch (error) {
+                console.error('No se pudieron validar los permisos de tablas:', error);
+                toast('No se pudo validar tu rol. Recarga la página o contacta a coordinación.', 'err');
+                return;
+            }
+            if (currentUserRole !== 'coordinador') {
+                document.querySelector('.tabs button[onclick*="crear-tabla"]').hidden = true;
+                document.getElementById('crear-tabla').hidden = true;
+                document.getElementById('mis-tablas').classList.add('active');
+                document.querySelector('.tabs button[onclick*="mis-tablas"]').classList.add('active');
             }
             loadUserTables();
         } else {
@@ -224,6 +235,10 @@
 
     // Tab functionality
     function openTab(evt, tabName) {
+        if (tabName === 'crear-tabla' && currentUserRole !== 'coordinador') {
+            toast('Solo el coordinador puede crear o administrar tablas.', 'err');
+            return;
+        }
         // Hide all tab content
         const tabContents = document.getElementsByClassName('tab-content');
         for (let i = 0; i < tabContents.length; i++) {
@@ -566,15 +581,12 @@
     // Load user's tables
     async function loadUserTables() {
         try {
-            tablesListDiv.innerHTML = '<div class="empty-state">Cargando sus tablas...</div>';
+            tablesListDiv.innerHTML = '<div class="empty-state">Cargando tablas...</div>';
 
-            // Get tables definitions where user is creator
-            const tablesSnapshot = await db.collection('tablas_definiciones')
-                .where('creadorUID', '==', auth.currentUser.uid)
-                .get();
+            const tablesSnapshot = await db.collection('tablas_definiciones').get();
 
             if (tablesSnapshot.empty) {
-                tablesListDiv.innerHTML = '<div class="empty-state">Aún no ha creado ninguna tabla dinámica. Use la pestaña "Crear Nueva Tabla" para comenzar.</div>';
+                tablesListDiv.innerHTML = '<div class="empty-state">Aún no hay tablas dinámicas.</div>';
                 return;
             }
 
@@ -615,9 +627,9 @@
                         <button onclick="viewTableData('${table.id}', '${table.nombre}')" class="btn btn-secondary" type="button">
                             👁️ Ver Datos
                         </button>
-                        <button onclick="editTable('${table.id}')" class="btn btn-secondary" type="button">
-                            ✎ Editar
-                        </button>
+                        ${currentUserRole === 'coordinador'
+                            ? `<button onclick="editTable('${table.id}')" class="btn btn-secondary" type="button">✎ Editar</button>`
+                            : ''}
                     </div>
                 </div>
             `;

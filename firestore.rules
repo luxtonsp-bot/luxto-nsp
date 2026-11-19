@@ -8,16 +8,6 @@ service cloud.firestore {
 
     function isAuth() { return request.auth != null; }
 
-    function isAdminEmail() {
-      return isAuth() && (
-        request.auth.token.email == "henry.alfaro1@unmsm.edu.pe" ||
-        request.auth.token.email == "paolosotil97@gmail.com" ||
-        request.auth.token.email == "jorgediego.123.2002@gmail.com" ||
-        request.auth.token.email == "gianfracamones@gmail.com" ||
-        request.auth.token.email == "alvarorodrigosalazar.2001@gmail.com"
-      );
-    }
-
     function getMemberIdFromUid(uid) {
       let snap = get(/databases/$(database)/documents/uid_map/$(uid));
       return snap.data != null ? snap.data.memberId : null;
@@ -33,30 +23,77 @@ service cloud.firestore {
     }
 
     function isCoordinator() {
-      return isAuth() && (getUserRole(request.auth.uid) == "coordinador" || isAdminEmail());
+      return isAuth() && getUserRole(request.auth.uid) == "coordinador";
     }
 
     function isStaff() {
       let role = getUserRole(request.auth.uid);
-      return isAuth() && (role == "servidor" || role == "apoyo" || role == "coordinador" || isAdminEmail());
+      return isAuth() && (role == "servidor" || role == "apoyo" || role == "coordinador");
+    }
+
+    function roleTransferMatches(memberId, isTarget) {
+      let transferPath = /databases/$(database)/documents/role_transfer_state/current;
+      return existsAfter(transferPath)
+        && (isTarget
+          ? getAfter(transferPath).data.fromMemberId == getMemberIdFromUid(request.auth.uid)
+            && getAfter(transferPath).data.toMemberId == memberId
+          : getAfter(transferPath).data.fromMemberId == memberId
+            && getAfter(transferPath).data.toMemberId is string
+            && getAfter(transferPath).data.toMemberId != memberId
+            && getAfter(/databases/$(database)/documents/members/$(getAfter(transferPath).data.toMemberId)).data.rol == 'coordinador'
+            && memberAuthLinkMatchesAfter(getAfter(transferPath).data.toMemberId));
+    }
+
+    function memberAuthLinkMatchesAfter(memberId) {
+      let memberAfter = getAfter(/databases/$(database)/documents/members/$(memberId));
+      return memberAfter.data != null
+        && memberAfter.data.uid is string
+        && getAfter(/databases/$(database)/documents/uid_map/$(memberAfter.data.uid)).data.memberId == memberId;
+    }
+
+    function roleChangeAllowed(memberId) {
+      let roleChanged = request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol']);
+      return !roleChanged || (
+        isCoordinator() && (
+          (request.resource.data.rol == 'coordinador' && roleTransferMatches(memberId, true))
+          || (resource.data.rol == 'coordinador'
+            && request.resource.data.rol in ['miembro', 'servidor', 'apoyo']
+            && roleTransferMatches(memberId, false))
+          || (resource.data.rol != 'coordinador'
+            && request.resource.data.rol in ['miembro', 'servidor', 'apoyo'])
+        )
+      );
     }
 
     // ── ARQUITECTURA CANÓNICA: members/{memberId} (UUID permanente) ──
     match /members/{memberId} {
       allow read: if isAuth();
       allow list: if isAuth();
-      allow update: if (isCoordinator()
+      allow update: if ((isCoordinator() && roleChangeAllowed(memberId))
         || (isStaff() && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'nombre',
           'fechaNacimiento',
           'fechaNacimientoMMdd',
           'fechaIngresoGrupo',
           'fechaPrimeraAsamblea',
-          'fechaActualizacion',
-          'estadoAnioActual',
-          'asistenciasTotales',
-          'ultimaAsistencia'
+          'fechaActualizacion'
         ]))
+        || (isStaff()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'asistenciasTotales',
+            'ultimaAsistencia'
+          ])
+          && request.resource.data.asistenciasTotales == resource.data.get('asistenciasTotales', 0) + 1
+          && request.resource.data.ultimaAsistencia is string)
+        || (isStaff()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'estadoAnioActual',
+            'asistenciasTotales',
+            'ultimaAsistencia'
+          ])
+          && request.resource.data.estadoAnioActual == 'perseverante'
+          && request.resource.data.asistenciasTotales == resource.data.get('asistenciasTotales', 0) + 1
+          && request.resource.data.ultimaAsistencia is string)
         || (isOwnMemberId(memberId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rol', 'estadoAnioActual', 'fechaIngresoGrupo', 'ingresoInferido'])));
       allow update: if isAuth()
         && request.resource.data.uid == request.auth.uid
@@ -89,10 +126,29 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /role_transfer_state/{stateId} {
+      allow read: if isCoordinator();
+      allow create, update: if isCoordinator()
+        && stateId == 'current'
+        && request.resource.data.keys().hasOnly([
+          'fromMemberId',
+          'toMemberId',
+          'outgoingRole',
+          'updatedAt'
+        ])
+        && request.resource.data.fromMemberId == getMemberIdFromUid(request.auth.uid)
+        && request.resource.data.fromMemberId != request.resource.data.toMemberId
+        && request.resource.data.outgoingRole in ['miembro', 'servidor', 'apoyo']
+        && getAfter(/databases/$(database)/documents/members/$(request.resource.data.fromMemberId)).data.rol == request.resource.data.outgoingRole
+        && getAfter(/databases/$(database)/documents/members/$(request.resource.data.toMemberId)).data.rol == 'coordinador'
+        && memberAuthLinkMatchesAfter(request.resource.data.toMemberId);
+      allow delete: if false;
+    }
+
     match /miembros_registro/{uid} {
       allow read: if true;
       allow create: if isStaff();
-      allow update: if isStaff() || (
+      allow update: if isCoordinator() || (
         isAuth()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email', 'tieneCuenta'])
         && resource.data.get('tieneCuenta', false) == false
@@ -129,19 +185,20 @@ service cloud.firestore {
         get(/databases/$(database)/documents/uid_map/$(request.auth.uid)).data.memberId == memberId ||
         isStaff()
       );
-      allow create, update: if isStaff();
+      allow create: if isStaff();
+      allow update: if isCoordinator() || (isAuth() && getUserRole(request.auth.uid) == "servidor");
       allow delete: if false;
     }
 
     match /tablas_definiciones/{tablaId} {
       allow read: if isAuth();
-      allow create, update, delete: if isStaff();
+      allow create, update, delete: if isCoordinator();
     }
 
     match /tablas_dinamicas/{anio}/{tablaId}/{rowId} {
       function tablaRestringida() { return tablaId == 'lista-asistentes-ejutor-2026'; }
       allow read: if isAuth() && (!tablaRestringida() || isCoordinator());
-      allow create, update: if (isStaff() && !tablaRestringida()) || isCoordinator();
+      allow create, update: if isCoordinator();
       allow delete: if isCoordinator();
     }
 

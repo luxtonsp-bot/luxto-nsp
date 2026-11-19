@@ -9,6 +9,7 @@
     <link rel="apple-touch-icon" href="../assets/images/logo_luxto.png">
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Lora:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/portal.css">
+    <style>[hidden] { display:none !important; }</style>
     <!-- Firebase imports -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -227,6 +228,8 @@
     }
     const db = firebase.firestore();
     const auth = firebase.auth();
+    let currentUserRole = null;
+    let currentAttendanceByMember = {};
 
     // ── Zona horaria Lima (UTC-5) ──
     const LIMA_OFFSET_MIN = -300;
@@ -331,6 +334,10 @@
     // ── Sub-tab switching (scoped to #tab-ver) ──
     document.querySelectorAll('#subTabs .tab-button').forEach(btn => {
         btn.addEventListener('click', () => {
+            if (btn.dataset.subtab === 'editar' && currentUserRole === 'apoyo') {
+                toast('Solo servidor o coordinación pueden corregir asistencias.', 'err');
+                return;
+            }
             document.querySelectorAll('#subTabs .tab-button').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('#tab-ver .tab-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
@@ -341,7 +348,21 @@
     // Initialize
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            await AuthPermissions.initStaffPermissionCheck();
+            try {
+                await AuthPermissions.initStaffPermissionCheck();
+                currentUserRole = await AuthPermissions.getUserRole(user.uid);
+                if (!currentUserRole) {
+                    throw new Error('No se pudo determinar tu rol.');
+                }
+            } catch (error) {
+                console.error('No se pudieron validar los permisos de asistencia:', error);
+                toast('No se pudo validar tu rol. Recarga la página o contacta a coordinación.', 'err');
+                return;
+            }
+            if (currentUserRole === 'apoyo') {
+                document.querySelector('#subTabs [data-subtab="editar"]').hidden = true;
+                document.getElementById('subtab-editar').hidden = true;
+            }
             await loadCurrentAssembly();
             await loadMembers();
             initAnioSelector();
@@ -441,7 +462,17 @@
                     .orderBy('nombre');
             }
 
-            const snapshot = await query.get();
+            const [snapshot, attendanceSnapshot] = await Promise.all([
+                query.get(),
+                currentAssemblyDate
+                    ? db.collection('asistencia').doc(currentAssemblyDate.slice(0, 4))
+                        .collection(currentAssemblyDate).get()
+                    : Promise.resolve(null)
+            ]);
+            currentAttendanceByMember = {};
+            attendanceSnapshot?.forEach(doc => {
+                currentAttendanceByMember[doc.id] = doc.data();
+            });
 
             if (searchTerm) {
                 const normalizedTerm = searchTerm.trim().toLowerCase();
@@ -480,6 +511,7 @@
             const photoUrl = getPhotoUrl(data);
             const hasValidPhoto = isValidImageUrl(photoUrl);
             const isInactive = !['activo', 'perseverante'].includes(data.estadoAnioActual);
+            const alreadyMarked = Object.hasOwn(currentAttendanceByMember, doc.id);
 
             membersNameMap[doc.id] = nombre;
 
@@ -502,8 +534,10 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn btn-ok" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', true)" type="button">✓</button>
-                        <button class="btn btn-danger" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', false)" type="button">✗</button>
+                        ${alreadyMarked && currentUserRole === 'apoyo'
+                            ? '<span class="item-meta">Ya registrada</span>'
+                            : `<button class="btn btn-ok" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', true)" type="button">✓</button>
+                               <button class="btn btn-danger" style="padding:8px 16px; font-size:13px;" onclick="markAttendance('${doc.id}', false)" type="button">✗</button>`}
                     </div>
                 </div>
             `;
@@ -515,16 +549,11 @@
     // ── TARDANZA ──
     const TOLERANCIA_TARDANZA_MIN = 10;
 
-    async function calcularTardanza(attendanceRef, fechaAsamblea) {
-        const snap = await attendanceRef.get();
-        const arrival = snap.data() && snap.data().timestamp;
-        if (!arrival) return;
+    async function calcularTardanza(fechaAsamblea, arrivalDate) {
         const assemblyDoc = await db.collection('asambleas').doc(fechaAsamblea).get();
-        if (!assemblyDoc.exists) return;
+        if (!assemblyDoc.exists) return {};
         const assemblyData = assemblyDoc.data();
-        if (!assemblyData.horaInicio) return;
-
-        const arrivalDate = arrival.toDate ? arrival.toDate() : new Date(arrival);
+        if (!assemblyData.horaInicio) return {};
         const arrivalUTCHours = arrivalDate.getUTCHours();
         const arrivalUTCMinutes = arrivalDate.getUTCMinutes();
         const arrivalTotalUTCMinutes = arrivalUTCHours * 60 + arrivalUTCMinutes;
@@ -550,10 +579,10 @@
             horaInicio: assemblyData.horaInicio
         });
 
-        await attendanceRef.set({
+        return {
             tardanzaMinutos,
             esTardanza: tardanzaMinutos > TOLERANCIA_TARDANZA_MIN
-        }, { merge: true });
+        };
     }
 
     // Mark attendance (TOMAR ASISTENCIA) - now only receives memberId and present
@@ -566,15 +595,18 @@
 
             const anio = currentAssemblyDate.slice(0, 4);
             const attendanceRef = db.collection('asistencia').doc(anio).collection(currentAssemblyDate).doc(memberId);
+            const tardiness = present
+                ? await calcularTardanza(currentAssemblyDate, new Date())
+                : { tardanzaMinutos: null, esTardanza: false };
             await attendanceRef.set({
                 uid: memberId,
                 presente: present,
                 fecha: currentAssemblyDate,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                ...tardiness
             }, { merge: true });
 
             if (present) {
-                await calcularTardanza(attendanceRef, currentAssemblyDate);
                 const memberRef = db.collection('members').doc(memberId);
                 await db.runTransaction(async (transaction) => {
                     const memberDoc = await transaction.get(memberRef);

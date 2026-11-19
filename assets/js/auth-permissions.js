@@ -42,7 +42,10 @@ async function getMemberIdFromAuth(uid) {
         const db = getDb();
         const snap = await db.collection('uid_map').doc(uid).get();
         return snap.exists ? snap.data().memberId : null;
-    } catch { return null; }
+    } catch (error) {
+        console.error('Error resolviendo el perfil del usuario:', error);
+        return null;
+    }
 }
 
 async function getUserRole(uid) {
@@ -52,7 +55,10 @@ async function getUserRole(uid) {
         const db = getDb();
         const snap = await db.collection('members').doc(memberId).get();
         return snap.exists ? (snap.data().rol || snap.data().role || '').toLowerCase() : null;
-    } catch { return null; }
+    } catch (error) {
+        console.error('Error consultando el rol del usuario:', error);
+        return null;
+    }
 }
 
 async function checkPermission(uid) {
