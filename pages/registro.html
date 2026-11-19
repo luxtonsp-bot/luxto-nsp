@@ -227,7 +227,7 @@ input.valid{border-color:var(--ok);}
       </div>
       <div class="field">
         <label for="fechaNacimiento">Fecha de nacimiento <span style="color:var(--o)">*</span></label>
-        <span class="field-hint">Se usa para cumpleaños — la edad se calcula al vuelo</span>
+        <span class="field-hint">Confirma o actualiza tu fecha; se usa para los cumpleaños</span>
         <input type="date" id="fechaNacimiento" required>
       </div>
     </div>
@@ -352,16 +352,6 @@ function renderMemberMatches(queryText) {
   return matches;
 }
 
-function dateOnly(value) {
-  if (!value) return null;
-  const date = typeof value.toDate === "function"
-    ? value.toDate()
-    : typeof value === "object" && Number.isFinite(value.seconds)
-      ? new Date(value.seconds * 1000)
-      : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
-}
-
 async function cargarMiembrosRegistro() {
   try {
     const snap = await getDocs(collection(db, "miembros_registro"));
@@ -453,13 +443,6 @@ async function crearCuenta() {
     if (!memberSnap.exists()) {
       throw new Error("Documento del miembro no encontrado en members/");
     }
-    const memberData = memberSnap.data();
-    const registeredBirthdate = dateOnly(memberData.fechaNacimiento || memberData.birthDate);
-    if (registeredBirthdate && registeredBirthdate !== fechaNac) {
-      const error = new Error("La fecha de nacimiento no coincide con la registrada. Contacta a coordinación si hay un error.");
-      error.code = "registration/birthdate-mismatch";
-      throw error;
-    }
     const batch = writeBatch(db);
     const fechaNacMMdd = fechaNac.substring(5, 10);
     batch.update(memberRef, {
@@ -505,7 +488,6 @@ async function crearCuenta() {
         ? "Firestore rechazó vincular la cuenta. Contacta a coordinación para revisar las reglas antes de volver a registrarte."
         : "No se pudo acceder al perfil para completar el registro. Contacta a coordinación.";
     }
-    if (e.code === "registration/birthdate-mismatch") msg = e.message;
     if (accountCleanupFailed) msg = "No se pudo vincular tu perfil y no pudimos limpiar la cuenta creada. Contacta a coordinación antes de volver a registrarte.";
     toast(msg, "err");
     console.error(`[Registro] Error al ${registrationStep}:`, e);
