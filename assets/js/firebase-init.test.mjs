@@ -114,6 +114,9 @@ assert(firestoreRules.includes("getAfter(/databases/$(database)/documents/uid_ma
 assert(firestoreRules.includes("resource.data.get('tieneCuenta', false) == false"), "registration lookup cannot be claimed a second time");
 assert(firestoreRules.includes("resource.data.get('uid', null) in [null, '']"), "registration cannot overwrite a member already linked to another account");
 assert(!registrationHtml.includes('fechaIngresoGrupo: memberData.fechaPrimeraAsamblea'), "registration must not change the protected member start date");
+assert(registrationHtml.includes('fechaNacimiento: fechaNac'), "registration must save the birthday confirmed by the member");
+assert(registrationHtml.includes('fechaNacimientoMMdd: fechaNacMMdd'), "registration must update the birthday lookup field");
+assert(!registrationHtml.includes('registration/birthdate-mismatch'), "an existing birthday must not block member registration");
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
