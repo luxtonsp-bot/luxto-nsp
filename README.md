@@ -305,14 +305,14 @@ feedback/{id}
 
 | Link | Rama | Cuándo se actualiza |
 |------|------|---------------------|
-| **Producción:** `https://luxtonsp-bot.github.io/luxto-nsp/` | `main` | Push a `main`: reglas Firestore y sitio estático (`.github/workflows/deploy-production.yml`) |
+| **Producción:** `https://luxtonsp-bot.github.io/luxto-nsp/` | `main` | Push a `main` publica el sitio estático (`.github/workflows/deploy-production.yml`) |
 | **Preview:** `https://luxtonsp-bot.github.io/luxto-nsp/preview/<rama>/` | cualquier ≠ `main` | Push a esa rama (`.github/workflows/deploy-preview.yml`) |
 
 ### Cómo funciona
 - Todo en rama **`gh-pages`** (GitHub Pages sirve raíz):
   - **Raíz** = `main` → producción
   - **`gh-pages/preview/<rama>/`** = rama de trabajo → link propio
-- El deploy de producción publica **solo Firestore Rules** y el sitio; RTDB Rules no se despliegan en este flujo.
+- Las reglas Firestore se publican de forma separada del sitio; RTDB Rules no se despliegan en este flujo.
 - Workflow preview copia **solo sitio estático** (`index.html`, `pages/`, `assets/`) — **nunca** credenciales, scripts, migración (protegidos por `.gitignore`)
 
 ### ⚠️ PASO MANUAL ÚNICO (pendiente) — cambiar fuente de Pages
