@@ -404,6 +404,16 @@ document.getElementById("formRegistro").addEventListener("submit", async (e) => 
       toast("No se encontró ese nombre en el registro. ¿Escribiste bien?", "err");
       return;
     }
+    if (!matches.some(member => member.memberId && member.tieneCuenta !== true)) {
+      const needsLink = matches.some(member => !member.memberId);
+      toast(
+        needsLink
+          ? "Encontramos tu nombre, pero tu perfil aún debe vincularse. Contacta a coordinación."
+          : "Este perfil ya tiene una cuenta. Inicia sesión en lugar de registrarte otra vez.",
+        "err"
+      );
+      return;
+    }
     toast("Selecciona tu perfil en la lista de coincidencias.", "");
     return;
   }
