@@ -432,9 +432,11 @@ async function crearCuenta() {
   }
   setLoading(true);
   let userToRollback = null;
+  let registrationStep = "crear cuenta";
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     userToRollback = cred.user;
+    registrationStep = "leer perfil";
     const uid  = cred.user.uid;
     const memberRef = doc(db, "members", miembroSeleccionado.memberId);
     const memberSnap = await getDoc(memberRef);
@@ -454,9 +456,7 @@ async function crearCuenta() {
       email: email,
       uid: uid,
       fechaNacimiento: fechaNac,
-      fechaNacimientoMMdd: fechaNacMMdd,
-      // Asegurar fechaIngresoGrupo desde fechaPrimeraAsamblea si no existe
-      fechaIngresoGrupo: memberData.fechaPrimeraAsamblea || memberData.fechaIngresoGrupo
+      fechaNacimientoMMdd: fechaNacMMdd
     });
     const uidMapRef = doc(db, "uid_map", uid);
     batch.set(uidMapRef, {
@@ -469,6 +469,7 @@ async function crearCuenta() {
       email: email,
       tieneCuenta: true
     });
+    registrationStep = "vincular cuenta y perfil";
     await batch.commit();
     userToRollback = null;
     document.getElementById("step2").classList.add("done");
@@ -489,11 +490,15 @@ async function crearCuenta() {
     if (e.code === "auth/email-already-in-use") msg = "Este email ya tiene una cuenta. ¿Quieres iniciar sesión?";
     if (e.code === "auth/invalid-email")        msg = "El email no es válido.";
     if (e.code === "auth/weak-password")        msg = "La contraseña es muy débil.";
-    if (e.code === "permission-denied")         msg = "Error de permisos. Contacta al coordinador.";
+    if (e.code === "permission-denied") {
+      msg = registrationStep === "vincular cuenta y perfil"
+        ? "Firestore rechazó vincular la cuenta. Contacta a coordinación para revisar las reglas antes de volver a registrarte."
+        : "No se pudo acceder al perfil para completar el registro. Contacta a coordinación.";
+    }
     if (e.code === "registration/birthdate-mismatch") msg = e.message;
     if (accountCleanupFailed) msg = "No se pudo vincular tu perfil y no pudimos limpiar la cuenta creada. Contacta a coordinación antes de volver a registrarte.";
     toast(msg, "err");
-    console.error("[Registro] Error:", e);
+    console.error(`[Registro] Error al ${registrationStep}:`, e);
   }
   setLoading(false);
 }

@@ -102,6 +102,7 @@ assert(!path.includes("]"), "rankingGlobal should not contain ]");
 console.log("\n=== firebase-init: Rules / Staff permissions ===");
 const dbRules = fs.readFileSync(new URL('../../database.rules.json', import.meta.url), 'utf8');
 const firestoreRules = fs.readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+const registrationHtml = fs.readFileSync(new URL('../../pages/registro.html', import.meta.url), 'utf8');
 const adminRoleCheck = "root.child('admins').child(auth.uid).child('rol').val() === 'coordinador'";
 assert(dbRules.includes(adminRoleCheck), "RTDB rules rely on the admins role mirror");
 assert(!dbRules.includes("root.child('members').child(auth.uid).child('rol').val()"), "RTDB rules should not depend on a non-existent RTDB members tree");
@@ -112,6 +113,7 @@ assert(firestoreRules.includes("request.auth.token.email == \"henry.alfaro1@unms
 assert(firestoreRules.includes("getAfter(/databases/$(database)/documents/uid_map/$(request.auth.uid)).data.memberId == resource.data.memberId"), "registration lookup update must match the new uid_map member");
 assert(firestoreRules.includes("resource.data.get('tieneCuenta', false) == false"), "registration lookup cannot be claimed a second time");
 assert(firestoreRules.includes("resource.data.get('uid', null) in [null, '']"), "registration cannot overwrite a member already linked to another account");
+assert(!registrationHtml.includes('fechaIngresoGrupo: memberData.fechaPrimeraAsamblea'), "registration must not change the protected member start date");
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);
