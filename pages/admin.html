@@ -758,6 +758,15 @@ option:checked, option:hover, option:focus {
               </select>
               <button class="btn btn-primary" id="update-role-button" type="button">Actualizar Rol</button>
             </div>
+            <div id="handoff-role-wrap" hidden style="margin-top:16px;">
+              <label for="handoff-role" style="font-size:13px;color:var(--muted);">Nuevo rol de quien entrega la coordinación:</label>
+              <select id="handoff-role" class="np-select" style="width:100%;margin-top:8px;">
+                <option value="servidor">Servidor</option>
+                <option value="apoyo">Apoyo</option>
+                <option value="miembro">Miembro</option>
+              </select>
+              <p style="font-size:12px;color:var(--muted);margin-top:8px;">El cambio transfiere los privilegios de forma conjunta; solo quedará un coordinador activo.</p>
+            </div>
             <div id="role-change-result" style="margin-top:12px;"></div>
           </div>
         </div>

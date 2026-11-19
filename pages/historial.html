@@ -222,8 +222,10 @@
             // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
             try {
                 await AuthPermissions.initStaffPermissionCheck();
-            } catch (e) {
-                console.warn('AuthPermissions check failed, continuando:', e);
+            } catch (error) {
+                console.error('No se pudieron validar los permisos del historial:', error);
+                toast('No se pudo validar tu rol. Recarga la página o contacta a coordinación.', 'err');
+                return;
             }
             await populateYears();
             // Load default view when year changes

@@ -130,17 +130,13 @@ export async function isCoordinator(uid) {
 export async function getUserRole(uid) {
   try {
     const memberId = await resolveMemberId(uid);
+    if (!memberId) return null;
     const snap = await getDoc(doc(fsdb, 'members', memberId));
-    if (snap.exists() && snap.data().rol) return snap.data().rol;
-  } catch {}
-
-  try {
-    const adminSnap = await get(ref(rtdb, `admins/${uid}`));
-    const adminData = adminSnap.val();
-    if (adminData?.rol) return adminData.rol;
-  } catch {}
-
-  return null;
+    return snap.exists() ? snap.data().rol || null : null;
+  } catch (error) {
+    console.warn('getUserRole error:', error.message);
+    return null;
+  }
 }
 
 /* ── Rutas RTDB canónicas (asamblea) ───────────────────────── */
@@ -194,6 +190,7 @@ export {
   deleteDoc,
   collection,
   query,
+  where,
   orderBy,
   getDocs,
   fsServerTimestamp,

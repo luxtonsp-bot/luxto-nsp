@@ -987,8 +987,10 @@ ${addMinutes(hora, 145)} - Cierre y convivencia`;
             // Usar módulo compartido de permisos (servidor, coordinador, apoyo)
             try {
                 await AuthPermissions.initStaffPermissionCheck();
-            } catch (e) {
-                console.warn('AuthPermissions check failed, continuando:', e);
+            } catch (error) {
+                console.error('No se pudieron validar los permisos de planificación:', error);
+                toast('No se pudo validar tu rol. Recarga la página o contacta a coordinación.', 'err');
+                return;
             }
             generateYearOptions();
             generateSaturdayOptions();
